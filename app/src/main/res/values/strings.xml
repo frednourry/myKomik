@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MyNewKomik</string>
+    <string name="choose_root_text">Choose your comics root directory</string>
+    <string name="empty_cache">Empty cache</string>
+    <string name="change_root_directory">Change root directory</string>
+    <string name="ask_change_root_directory">Do you really want to change the root comics directory?</string>
+    <string name="ask_clear_cache">Do you really want to change the root comics directory?</string>
+</resources>
