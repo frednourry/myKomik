@@ -7,9 +7,9 @@ import java.io.File
 
 class DialogChooseRootDirectoryHolder {
     var button: Button? = null
-    var file: File? = null
-//    var iconView: ImageView? = null
-//    var isParentFolder = false
+    var selectableDir:SelectableDir? = null
+    var diskIcon: ImageView? = null
+    var separator:ImageView? = null
     var textView: TextView? = null
     var adapter: DialogChooseRootDirectoryAdapter? = null
 }

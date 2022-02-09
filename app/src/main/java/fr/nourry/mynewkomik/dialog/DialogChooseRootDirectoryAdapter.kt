@@ -1,6 +1,7 @@
 package fr.nourry.mynewkomik.dialog
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -12,31 +13,30 @@ import kotlinx.android.synthetic.main.dialog_choose_root_list_item.view.*
 import timber.log.Timber
 import java.io.File
 
-class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater) : BaseAdapter(), ListAdapter {
+data class SelectableDir (val label: String, val pathFile:File, val isVolume:Boolean, val isImportant:Boolean, val isParent:Boolean)
+
+class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, private val volumeList: ArrayList<VolumeLabel>) : BaseAdapter(), ListAdapter {
     interface ConfirmationDialogListener {
         fun onChooseDirectory(file:File)
     }
     var listener: ConfirmationDialogListener? = null
 
     private lateinit var rootFile: File
-    private lateinit var dirList: MutableList<File>
-    private var selectedColor: Int = Color.BLACK
-    private var defaultColor: Int = Color.DKGRAY
+    private lateinit var selectableDirList: MutableList<SelectableDir>
 
-    fun setRootPath(root:File, selectedColor:Int = Color.BLACK, defaultColor:Int = Color.DKGRAY) {
+    fun setRootPath(root:File) {
+        val dirList = getDirectoriesList(root) as MutableList<File>
         rootFile = root
-        dirList = getDirectoriesList(root) as MutableList<File>
-        updateDirListWithSelfAndParent()
-        this.selectedColor = selectedColor
-        this.defaultColor = defaultColor
+
+        updateDirListWithSelfAndParent(dirList)
     }
 
     override fun getCount(): Int {
-        return dirList.size
+        return selectableDirList.size
     }
 
     override fun getItem(index: Int): Any {
-        return dirList[index]
+        return selectableDirList[index]
     }
 
     override fun getItemId(index: Int): Long {
@@ -45,7 +45,7 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater) : B
 
     override fun getView(index: Int, convertView: View?, parent: ViewGroup?): View {
         val view: View
-        val file = dirList[index]
+        val selectableDir = selectableDirList[index]
 
         val viewHolder: DialogChooseRootDirectoryHolder
         if (convertView == null) {
@@ -60,8 +60,9 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater) : B
         viewHolder.textView = view.textView
         viewHolder.button = view.button
         viewHolder.adapter = this
-        viewHolder.file = file
-//viewHolder.isParentFolder = false
+        viewHolder.diskIcon = view.diskIcon
+        viewHolder.selectableDir = selectableDir
+        viewHolder.separator = view.separatorView
         view.tag = viewHolder
 
         view.setOnClickListener { v ->
@@ -69,12 +70,12 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater) : B
             val adapter = tag.adapter
             val textView = tag.textView
             val text = textView?.text
-            val f = tag.file
-            Timber.i("OnClickListener " + text + " " + f?.name)
-            if (f != null) {
-                if (f.exists() && f.isDirectory) {
-                    val newList = getDirectoriesList(f) as MutableList<File>
-                    adapter?.refreshDirList(f, newList)
+            val selectableDir = tag.selectableDir
+            Timber.i("OnClickListener " + text + " " + selectableDir?.pathFile?.name)
+            if (selectableDir != null) {
+                if (selectableDir.pathFile.exists() && selectableDir.pathFile.isDirectory && selectableDir.label != "") {
+                    val newList = getDirectoriesList(selectableDir.pathFile) as MutableList<File>
+                    adapter?.refreshDirList(selectableDir.pathFile, newList)
                 }
             }
         }
@@ -82,49 +83,89 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater) : B
             if (b.parent != null) {
                 val view = b.parent as View
                 val holder = view.tag as DialogChooseRootDirectoryHolder
-                holder.file?.let { listener?.onChooseDirectory(it) }
+                holder.selectableDir?.let { listener?.onChooseDirectory(it.pathFile) }
             }
         }
 
 
         // Set name and button visibility
         view.button.visibility = View.VISIBLE
-        view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20.0F)
-        view.textView?.setTextColor(this.defaultColor)
-//        TextViewCompat.setTextAppearance(view.textView, android.R.style.TextAppearance_DeviceDefault);
+        view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.0F)
+        view.textView?.setTypeface(null, Typeface.NORMAL)   // Reset text style
 
-        when (file) {
-            rootFile -> {
-                view.textView?.setTextColor(this.selectedColor)
-                view.textView?.text = file.name
-                view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24.0F)
-    //            TextViewCompat.setTextAppearance(view.textView,  android.R.style.TextAppearance_Large);
-            }
-            rootFile.parentFile -> {
-                view.textView?.text = ".."
-                view.button.visibility = View.INVISIBLE
-            }
-            else -> {
-                view.textView?.text = "   " + file.name
-            }
+//        view.textView?.setTextColor(this.defaultColor)
+        view.textView?.text = selectableDir.label
+        view.diskIcon.visibility = if (selectableDir.isVolume) View.VISIBLE else View.INVISIBLE
+        view.separatorView.visibility = if (selectableDir.label == "") View.VISIBLE else View.INVISIBLE
+
+        if (selectableDir.isVolume) {
+//            view.textView?.setTextColor(this.selectedColor)
+            view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22.0F)
+        }
+        if (selectableDir.isImportant) {
+            view.textView?.setTypeface(view.textView?.typeface, Typeface.BOLD)
+        }
+
+        if (selectableDir.isParent || selectableDir.isVolume || selectableDir.label == "") {
+            view.button.visibility = View.INVISIBLE
         }
 
         return view
     }
 
-    private fun updateDirListWithSelfAndParent() {
+    private fun updateDirListWithSelfAndParent(dirList: MutableList<File>) {
         val parentFile = rootFile.parentFile
+        var bShowRootFile = true
+        var bShowParentRootFile = true
 
-        dirList.add(0, rootFile)
-        if (parentFile!= null && isValidDir(parentFile)) {
-            dirList.add(0, parentFile)
+        val newSelectableDir: MutableList<SelectableDir> = mutableListOf<SelectableDir>()
+
+        // Add each volume list
+        for (volume in volumeList) {
+            var isImportant = false
+            if (rootFile.absolutePath.indexOf(volume.path) == 0) {
+                isImportant = true
+                if (rootFile.absolutePath.count() == volume.path.count()) {
+                    // Same path, so don't show rootFile
+                    bShowRootFile = false
+                    bShowParentRootFile = false
+                }
+            }
+
+            newSelectableDir.add(SelectableDir("["+volume.name+"]", File(volume.path), true, isImportant, false))
         }
+
+        // Add a separator
+        if (newSelectableDir.count()>0) {
+            // Add separator
+            newSelectableDir.add(SelectableDir("", File("plop"), false, false, false))
+        }
+
+        // Add the parent path ?
+        if (parentFile== null || !isValidDir(parentFile)) {
+            bShowParentRootFile = false
+        }
+        if (bShowParentRootFile) {
+            newSelectableDir.add(SelectableDir("..", parentFile!!, false, false, true))
+        }
+
+        // Add this path
+        if (bShowRootFile) {
+            newSelectableDir.add(SelectableDir(rootFile.name, rootFile, false, true, false))
+        }
+
+
+        // Add sub directories
+        for (dir in dirList) {
+            newSelectableDir.add(SelectableDir("  "+dir.name, dir, false, false, false))
+        }
+
+        this.selectableDirList = newSelectableDir
     }
 
     private fun refreshDirList(newRoot:File, dirList: MutableList<File>) {
         this.rootFile = newRoot
-        this.dirList = dirList
-        updateDirListWithSelfAndParent()
+        updateDirListWithSelfAndParent(dirList)
         this.notifyDataSetChanged()
     }
 

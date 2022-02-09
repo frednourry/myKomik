@@ -1,16 +1,18 @@
 package fr.nourry.mynewkomik.browser
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
-import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
 import android.view.*
 import android.widget.Toast
-import androidx.fragment.app.Fragment
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import fr.nourry.mynewkomik.utils.isDirExists
-import androidx.core.content.ContextCompat
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
@@ -20,31 +22,63 @@ import fr.nourry.mynewkomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.preference.SharedPref
 import fr.nourry.mynewkomik.utils.clearFilesInDir
-import fr.nourry.mynewkomik.utils.getComicsDirectory
+import fr.nourry.mynewkomik.utils.getDefaultDirectory
+import fr.nourry.mynewkomik.utils.isDirExists
 import kotlinx.android.synthetic.main.fragment_browser.*
 import timber.log.Timber
 import java.io.File
-import androidx.appcompat.app.AlertDialog
 
-
-private const val REQUEST_PERMISSION = 1
 
 private const val PARAM_ROOT_DIR    = "comics_dir"
+private const val PARAM_LAST_COMIC  = "comics_last_comic"
+
+private const val TAG_DIALOG_CHOOSE_ROOT = "SelectDirectoryDialog"
 
 class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
     companion object {
         fun newInstance() = BrowserFragment()
+
+        var PERMISSIONS = arrayOf(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+        )
     }
 
     private lateinit var viewModel: BrowserViewModel
     private lateinit var rootDirectory : File
-    private lateinit var currentDirectory : File
+    private var lastComic : File? = null
 
     private lateinit var comicAdapter: ComicAdapter
     private var comics = mutableListOf<Comic>()
 
+
+    val confirmationDialogListener = object:DialogChooseRootDirectory.ConfirmationDialogListener {
+        override fun onChooseDirectory(file:File) {
+            Timber.d("onChooseDirectory :: ${file.absolutePath}")
+//            dialog.dismiss()
+
+            // Save
+            SharedPref.set(PARAM_ROOT_DIR, file.absolutePath)
+
+            rootDirectory = file
+            viewModel.loadComics(rootDirectory)
+        }
+    }
+
+    private val permissionRequestLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions.entries.all {
+                it.value == true
+            }
+            if (granted) {
+                viewModel.init()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (savedInstanceState  == null) {
+            Timber.v("================================================== FIRST START ============================")
+        }
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
     }
@@ -58,6 +92,13 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
         ComicLoadingManager.getInstance().initialize(requireContext(), requireActivity().cacheDir.absolutePath)
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
+
+
+        // Re-associate the DialogChooseRootDirectory listener if necessary
+        val dialogChooseRootDirectory = parentFragmentManager.findFragmentByTag(TAG_DIALOG_CHOOSE_ROOT)
+        if (dialogChooseRootDirectory != null) {
+            (dialogChooseRootDirectory as DialogChooseRootDirectory).listener = confirmationDialogListener
+        }
 
         return inflater.inflate(R.layout.fragment_browser, container, false)
     }
@@ -84,44 +125,31 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         recyclerView.adapter = comicAdapter
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
-        viewModel.getState().observe(viewLifecycleOwner, {
+        viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
-        })
+        }
 
         askPermission()
     }
 
     private fun setCurrentDir(dir:File) {
-        currentDirectory = dir
         App.currentDir = dir
     }
 
     /**
      *  Demander les autorisation d'accès à la SD card
      */
+
+    private fun hasPermissions(context: Context, permissions: Array<String>): Boolean = permissions.all {
+        ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
     private fun askPermission() {
         Timber.d("askPermission")
-
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_PERMISSION)
-            return
-        }
-        viewModel.init()
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        when(requestCode) {
-            REQUEST_PERMISSION -> {
-                if (grantResults.size != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    viewModel.errorPermissionDenied()
-                    return
-                }
-                viewModel.init()
-            }
-            else -> {
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-            }
+        if (hasPermissions(activity as Context, PERMISSIONS)) {
+            viewModel.init()
+        } else {
+            permissionRequestLauncher.launch(PERMISSIONS)
         }
     }
 
@@ -166,7 +194,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         Timber.i("handleStateReady")
 
         setCurrentDir(state.currentDir!!)
-        (requireActivity() as AppCompatActivity).supportActionBar?.title = currentDirectory.canonicalPath
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = App.currentDir?.canonicalPath
 
         comics.clear()
         comics.addAll(state.comics)
@@ -175,25 +203,14 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
 
     // Show a dialog to ask where is the root comics directory
-    private fun showChooseDirectoryDialog(rootFile: File?) {
-        val root:File = rootFile ?: getComicsDirectory(requireContext())
+    private fun showChooseDirectoryDialog(rootFile: File?, isCancelable:Boolean) {
+        val root:File = rootFile ?: getDefaultDirectory(requireContext())
 
-        val dialog = DialogChooseRootDirectory(root)
-        dialog.isCancelable = false
+        val dialog = DialogChooseRootDirectory.newInstance(root)
+        dialog.isCancelable = isCancelable
+        dialog.listener = confirmationDialogListener
 
-        dialog.listener = object:DialogChooseRootDirectory.ConfirmationDialogListener {
-            override fun onChooseDirectory(file:File) {
-                Timber.d("onChooseDirectory :: ${file.absolutePath}")
-                dialog.dismiss()
-
-                // Save
-                SharedPref.set(PARAM_ROOT_DIR, file.absolutePath)
-
-                rootDirectory = file
-                viewModel.loadComics(rootDirectory)
-            }
-        }
-        dialog.show(childFragmentManager, "SelectDirectoryDialog")
+        dialog.show(parentFragmentManager, TAG_DIALOG_CHOOSE_ROOT)
     }
 
     private fun initBrowser() {
@@ -201,18 +218,48 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
         val directoryPath = SharedPref.get(PARAM_ROOT_DIR, "")
         if (directoryPath == "" || !isDirExists(directoryPath!!)) {
-            Snackbar.make(coordinatorLayout, "TODO Saisie du répertoire !!", Snackbar.LENGTH_LONG).show()
             var rootDir:File? = null
             if (isDirExists(directoryPath))
                 rootDir = File("/storage/emulated/O")
-            showChooseDirectoryDialog(rootDir)
+            showChooseDirectoryDialog(rootDir, false)
         } else {
             rootDirectory = File(directoryPath)
 
             if (App.currentDir == null) {
-                viewModel.loadComics(rootDirectory)
+                // It's the first time we come in this fragment, so use the rootDirectory
+
+
+                // Ask if we should use the last comic
+                val lastComicPath = SharedPref.get(PARAM_LAST_COMIC, "")
+                if (lastComicPath != "") {
+                    lastComic = File(lastComicPath)
+                    if (!lastComic!!.exists() || !lastComic!!.isFile) {
+                        lastComic = null
+                    }
+                }
+                if (lastComic != null && lastComic!!.isFile) {
+                            // Continue reading from where you last left off "....." ?
+                    val alert = AlertDialog.Builder(requireContext())
+                        .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic!!.name+")")
+                        .setPositiveButton(R.string.ok) { _,_ ->
+                            App.currentDir = File(lastComic!!.parent) // Set the last comic path as the current directory
+
+                            // Call the fragment to view the last comic
+                            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(Comic(lastComic!!))
+                            findNavController().navigate(action)
+                        }
+                        .setNegativeButton(android.R.string.cancel) { _,_ ->
+                            SharedPref.set(PARAM_LAST_COMIC, "")    // Forget the last comic...
+                            viewModel.loadComics(rootDirectory)
+                        }
+                        .create()
+                    alert.show()
+                } else {
+                    viewModel.loadComics(rootDirectory)
+                }
 
             } else {
+                //
                 viewModel.loadComics(App.currentDir!!)
             }
         }
@@ -225,6 +272,8 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
             viewModel.loadComics(comic.file)
         } else {
             Timber.i("File ${comic.file.name} !")
+            lastComic= comic.file
+            SharedPref.set(PARAM_LAST_COMIC, comic.file.absolutePath)
             val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(comic)
             findNavController().navigate(action)
         }
@@ -248,7 +297,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     private fun askToChangeRootDirectory() {
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(getString(R.string.ask_change_root_directory))
-            .setPositiveButton(R.string.ok) { _,_ -> showChooseDirectoryDialog(rootDirectory) }
+            .setPositiveButton(R.string.ok) { _,_ -> showChooseDirectoryDialog(rootDirectory, true) }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()
         alert.show()
@@ -273,11 +322,11 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     // The button back is pressed, so can we move to the parent directory?
     // Returns true if and only if we can
     private fun handleBackPressedToChangeDirectory():Boolean {
-        Timber.d("handleBackPressedToChangeDirectory - current=$currentDirectory (root=$rootDirectory)")
-        return if (currentDirectory.parentFile == null || currentDirectory.absolutePath == rootDirectory.absolutePath) {
+        Timber.d("handleBackPressedToChangeDirectory - current=${App.currentDir} (root=$rootDirectory)")
+        return if (App.currentDir?.parentFile == null || App.currentDir?.absolutePath == rootDirectory.absolutePath) {
             false
         } else {
-            viewModel.loadComics(currentDirectory.parentFile!!)
+            viewModel.loadComics(App.currentDir?.parentFile!!)
             true
         }
     }
