@@ -2,9 +2,12 @@ package fr.nourry.mynewkomik.dialog
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.Context
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.widget.ListView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.DialogFragment
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.utils.VolumeLabel
@@ -43,11 +46,11 @@ class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
             volumeList = initVolumeDetection(requireContext())!!
         }
 
-//        val builder = AlertDialog.Builder(requireContext(), R.style.Theme_MaterialComponents_DialogWhenLarge)    // Mini alertDialog on LG-H870 when give a theme...
-        val builder = AlertDialog.Builder(requireContext(), /*R.style.CustomAlertDialog*/)          // Mini alertDialog on LG-H870 when give a theme...
+        val builder = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
 
         // Get the layout inflater
-        val inflater = requireActivity().layoutInflater
+        var inflater = requireActivity().layoutInflater
+        inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
 
         listView = inflater.inflate(R.layout.dialog_choose_root_list, null) as ListView
 //        val dialogView = inflater.inflate(R.layout.dialog_choose_root, null) as View
@@ -86,6 +89,8 @@ class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
             .setAdapter(adapter) { _, _ ->  }    // Click event is catch in the adapter!
         val alertDialog = builder.create()
         alertDialog.window?.setLayout(300, 400)
+
+        this.setStyle(DialogFragment.STYLE_NO_TITLE, 0)   // Do nothing...
 
         return alertDialog
     }

@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
@@ -55,7 +56,6 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     val confirmationDialogListener = object:DialogChooseRootDirectory.ConfirmationDialogListener {
         override fun onChooseDirectory(file:File) {
             Timber.d("onChooseDirectory :: ${file.absolutePath}")
-//            dialog.dismiss()
 
             // Save
             SharedPref.set(PARAM_ROOT_DIR, file.absolutePath)
@@ -196,6 +196,8 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         setCurrentDir(state.currentDir!!)
         (requireActivity() as AppCompatActivity).supportActionBar?.title = App.currentDir?.canonicalPath
 
+        SharedPref.set(PARAM_LAST_COMIC, "")    // Forget the last comic...
+
         comics.clear()
         comics.addAll(state.comics)
         comicAdapter.notifyDataSetChanged()
@@ -238,7 +240,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
                     }
                 }
                 if (lastComic != null && lastComic!!.isFile) {
-                            // Continue reading from where you last left off "....." ?
+                    // Continue reading from where you last left off "....." ?
                     val alert = AlertDialog.Builder(requireContext())
                         .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic!!.name+")")
                         .setPositiveButton(R.string.ok) { _,_ ->

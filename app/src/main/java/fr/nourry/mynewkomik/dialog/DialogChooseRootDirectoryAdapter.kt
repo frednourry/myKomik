@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.google.android.material.resources.TextAppearance
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.utils.*
 import kotlinx.android.synthetic.main.dialog_choose_root_list_item.view.*
@@ -90,17 +91,15 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, pri
 
         // Set name and button visibility
         view.button.visibility = View.VISIBLE
-        view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.0F)
-        view.textView?.setTypeface(null, Typeface.NORMAL)   // Reset text style
+//        view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.0F)
+        view.textView?.setTextAppearance(android.R.style.TextAppearance_Small)
 
-//        view.textView?.setTextColor(this.defaultColor)
         view.textView?.text = selectableDir.label
         view.diskIcon.visibility = if (selectableDir.isVolume) View.VISIBLE else View.INVISIBLE
         view.separatorView.visibility = if (selectableDir.label == "") View.VISIBLE else View.INVISIBLE
 
         if (selectableDir.isVolume) {
-//            view.textView?.setTextColor(this.selectedColor)
-            view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22.0F)
+            view.textView?.setTextAppearance(android.R.style.TextAppearance_Medium)
         }
         if (selectableDir.isImportant) {
             view.textView?.setTypeface(view.textView?.typeface, Typeface.BOLD)
@@ -157,7 +156,7 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, pri
 
         // Add sub directories
         for (dir in dirList) {
-            newSelectableDir.add(SelectableDir("  "+dir.name, dir, false, false, false))
+            newSelectableDir.add(SelectableDir(dir.name, dir, false, false, false))
         }
 
         this.selectableDirList = newSelectableDir

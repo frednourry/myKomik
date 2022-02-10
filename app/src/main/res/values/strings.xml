@@ -5,4 +5,6 @@
     <string name="change_root_directory">Change root directory</string>
     <string name="ask_change_root_directory">Do you really want to change the root comics directory?</string>
     <string name="ask_clear_cache">Do you really want to change the root comics directory?</string>
+    <string name="ask_continue_with_same_comic">Continue from your last comic?</string>
+    <string name="dialog_choose_root_select">Select</string>
 </resources>
