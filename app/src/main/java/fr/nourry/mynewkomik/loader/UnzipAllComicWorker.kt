@@ -2,6 +2,7 @@ package fr.nourry.mynewkomik.loader
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -26,7 +27,7 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
         Timber.d("UnzipFirstImageWorker.doWork :: zipPath = $zipPath  destPath = $destPath")
 
         if (zipPath != null && destPath!= null) {
-            var zipFile = File(zipPath)
+            val zipFile = File(zipPath)
             unzipInDirectory(zipFile, destPath)
         }
 
@@ -48,6 +49,9 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
         ZipFile(zipFileName).use { zip ->
             try {
                 val sequence = zip.entries().asSequence()
+                val sequenceSize = zip.entries().toList().size
+                var cpt = 0
+
                 Timber.v("NB entry = " + zip.entries().toList().size)
                 var bitmap: Bitmap?
 
@@ -74,6 +78,8 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
                             BitmapUtil.saveBitmapInFile(bitmap, dirPath + name)
                         }
                     }
+                    setProgressAsync(Data.Builder().putInt("currentIndex", cpt).putInt("size", sequenceSize).build())
+                    cpt++
                 }
             }
             catch (t: Throwable) {

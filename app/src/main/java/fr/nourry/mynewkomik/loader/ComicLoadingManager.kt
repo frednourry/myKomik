@@ -8,13 +8,14 @@ import androidx.work.*
 import com.bumptech.glide.Glide
 import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.utils.FileSignature
+import fr.nourry.mynewkomik.utils.clearFilesInDir
 import timber.log.Timber
 import java.io.File
 import java.util.*
 import kotlin.collections.ArrayList
 
 enum class ComicLoadingResult {
-    OK,
+    SUCCESS,
     ERROR
 }
 
@@ -23,18 +24,28 @@ enum class ComicLoadingType {
     ALL_IN_DIR
 }
 
-class ComicLoading(val comic: Comic, val type: ComicLoadingType, val callback: (result: String?) -> Unit, val imageView: ImageView?=null) {
+interface ComicLoadingProgressListener {
+    fun onProgress(currentIndex:Int, size:Int)
+    fun onFinished(result: ComicLoadingResult, image:ImageView?, path:File?)
+}
+
+class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:ComicLoadingProgressListener?, val imageView: ImageView?=null) {
 }
 
 class ComicLoadingManager private constructor() {
+
+    private val PATH_COMIC_DIR = "current/"
+
     private var list: MutableList<ComicLoading> = ArrayList()
     private var isLoading: Boolean = false
     private var currentComicLoading: ComicLoading? = null
     private var currentWorkID: UUID? = null
+    private var lastComicPathUncompressed: File? = null
 
     private lateinit var workManager:WorkManager
     private lateinit var context: Context
     private lateinit var lifecycleOwner: LifecycleOwner
+    private lateinit var pathUncompressedComic: File
 
     private var cachePathDir:String = ""
 
@@ -59,6 +70,11 @@ class ComicLoadingManager private constructor() {
         workManager.cancelAllWork()
 
         cachePathDir = cachePath
+        pathUncompressedComic = File("$cachePathDir/$PATH_COMIC_DIR")
+    }
+
+    fun getPathUncompressedComic(): File {
+        return pathUncompressedComic
     }
 
     fun setLivecycleOwner(lo:LifecycleOwner) {
@@ -68,14 +84,14 @@ class ComicLoadingManager private constructor() {
     }
 
     // Find in the comic archive the first image and put it in the given ImageView
-    fun loadComicInImageView(comic:Comic, imageView:ImageView, callback: (result: String?) -> Unit) {
-        list.add(ComicLoading(comic, ComicLoadingType.FIRST_IMAGE, callback, imageView))
-        loadNext();
+    fun loadComicInImageView(comic:Comic, imageView:ImageView, listener:ComicLoadingProgressListener) {
+        list.add(ComicLoading(comic, ComicLoadingType.FIRST_IMAGE,  listener, imageView))
+        loadNext()
     }
 
     // Uncompress all the images of a comic in a directory
-    fun uncompressComic(comic:Comic, callback: (result: String?) -> Unit): File? {
-        val dir = File(cachePathDir+"/current/")
+    fun uncompressComic(comic:Comic, listener:ComicLoadingProgressListener): File? {
+        val dir = pathUncompressedComic
         Timber.d("uncompressComic:: in directory ${dir.absolutePath}")
         if (!dir.exists()) {
             Timber.d("uncompressComic:: directory doesn't exists, so create it (${dir.absolutePath})")
@@ -88,10 +104,16 @@ class ComicLoadingManager private constructor() {
             Timber.w("uncompressComic:: comic file doesn't exists !!")
             return null
         }
-        list.add(ComicLoading(comic, ComicLoadingType.ALL_IN_DIR, callback))
-        loadNext();
+        list.add(ComicLoading(comic, ComicLoadingType.ALL_IN_DIR, listener))
+        loadNext()
 
         return dir
+    }
+
+    // Delete all the files in the directory where a comic is uncompressed
+    fun clearComicDir() {
+        lastComicPathUncompressed?.let { clearFilesInDir(pathUncompressedComic) }
+        lastComicPathUncompressed = null
     }
 
     // Stop all loading and clear the waiting list
@@ -167,8 +189,8 @@ class ComicLoadingManager private constructor() {
                     callbackResponse = cacheFilePath
                     null
                 } else {
-                    val workData = workDataOf(UnzipFirstImageWorker.Companion.KEY_ZIP_PATH to comic.file.absolutePath,
-                                                UnzipFirstImageWorker.Companion.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
+                    val workData = workDataOf(UnzipFirstImageWorker.KEY_ZIP_PATH to comic.file.absolutePath,
+                                                UnzipFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
 
                     // Image not in cache, so un zip the comic
                     OneTimeWorkRequestBuilder<UnzipFirstImageWorker>()
@@ -177,11 +199,19 @@ class ComicLoadingManager private constructor() {
                 }
             }
             ComicLoadingType.ALL_IN_DIR -> {
-                val workData = workDataOf(UnzipAllComicWorker.Companion.KEY_ZIP_PATH to comic.file.absolutePath,
-                                                UnzipAllComicWorker.Companion.KEY_DESTINATION_DIRECTORY_PATH to getCacheFilePath(FileSignature("current/")))
-                OneTimeWorkRequestBuilder<UnzipAllComicWorker>()
-                    .setInputData(workData)
-                    .build()
+                if (lastComicPathUncompressed != comic.file) {
+                    lastComicPathUncompressed = comic.file
+                    val workData = workDataOf(UnzipAllComicWorker.KEY_ZIP_PATH to comic.file.absolutePath,
+                        UnzipAllComicWorker.KEY_DESTINATION_DIRECTORY_PATH to getCacheFilePath(FileSignature(PATH_COMIC_DIR)))
+                    OneTimeWorkRequestBuilder<UnzipAllComicWorker>()
+                        .setInputData(workData)
+                        .build()
+                } else {
+                    // No need to uncompress, the comic was already uncompressed
+                    Timber.i("startLoadingZip:: no need to uncompressed (already done)")
+                    callbackResponse = getCacheFilePath(FileSignature(PATH_COMIC_DIR))
+                    null
+                }
             }
         }
 
@@ -190,16 +220,26 @@ class ComicLoadingManager private constructor() {
             workManager.enqueue(work)
             Timber.d("   WORK ID = ${work.id}")
             workManager.getWorkInfoByIdLiveData(work.id)
-                .observe(lifecycleOwner, Observer { workInfo ->
-                    Timber.d("                                observe(${workInfo.id})")
+                .observe(lifecycleOwner) { workInfo ->
+                    Timber.d("    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
+
                     if (workInfo != null) {
-                        if (!workInfo.state.isFinished) {
-                            Timber.d("================== startLoadingZip :: not yet finished $workInfo.state")
+                        if (workInfo.state == WorkInfo.State.RUNNING) {
+                            val currentIndex = workInfo.progress.getInt("currentIndex", 0)
+                            val size = workInfo.progress.getInt("size", 0)
+                            if (size != 0) {
+                                Timber.i(" loading :: $currentIndex/$size")
+                                if (currentComicLoading!!.listener != null) {
+                                    currentComicLoading!!.listener?.onProgress(currentIndex, size)
+                                }
+//                                Toast.makeText(App.getContext(), "Load $currentIndex/$size", Toast.LENGTH_SHORT).show()
+                            }
                         } else if (workInfo.state.isFinished) {
-                            Timber.d("================== startLoadingZip :: finished")
+                            Timber.d(" loading :: completed")
 
                             val outputData = workInfo.outputData
-                            val imagePath = outputData.getString(UnzipFirstImageWorker.Companion.KEY_IMAGE_DESTINATION_PATH)
+                            val imagePath =
+                                outputData.getString(UnzipFirstImageWorker.KEY_IMAGE_DESTINATION_PATH)
                             if (imagePath != null) {
                                 comicLoading.imageView?.let {
                                     Glide.with(it.context)
@@ -208,20 +248,25 @@ class ComicLoadingManager private constructor() {
                                 }
                             }
 
-                            comicLoading.callback.invoke(imagePath)
+                            if (currentComicLoading!!.listener != null) {
+                                currentComicLoading!!.listener?.onFinished(
+                                    if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
+                                    currentComicLoading!!.imageView, File(imagePath!!)
+                                )
+                            }
                             isLoading = false
                             currentComicLoading = null
                             currentWorkID = null
                             loadNext()
                         }
                     }
-                })
+                }
         } else {
             // Nothing
+            currentComicLoading!!.listener?.onFinished(ComicLoadingResult.SUCCESS, currentComicLoading!!.imageView, File(callbackResponse))
             isLoading = false
             currentComicLoading = null
             currentWorkID = null
-            comicLoading.callback.invoke(callbackResponse)
             loadNext()
         }
     }
@@ -251,5 +296,4 @@ ZipFile(zipFileName).use { zip ->
         }
     }
 }
-
  */

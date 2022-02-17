@@ -11,16 +11,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mynewkomik.*
 import fr.nourry.mynewkomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
+import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
+import fr.nourry.mynewkomik.preference.PREF_ROOT_DIR
+import fr.nourry.mynewkomik.preference.PREF_LAST_COMIC
 import fr.nourry.mynewkomik.preference.SharedPref
 import fr.nourry.mynewkomik.utils.clearFilesInDir
 import fr.nourry.mynewkomik.utils.getDefaultDirectory
@@ -29,9 +32,6 @@ import kotlinx.android.synthetic.main.fragment_browser.*
 import timber.log.Timber
 import java.io.File
 
-
-private const val PARAM_ROOT_DIR    = "comics_dir"
-private const val PARAM_LAST_COMIC  = "comics_last_comic"
 
 private const val TAG_DIALOG_CHOOSE_ROOT = "SelectDirectoryDialog"
 
@@ -53,12 +53,12 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     private var comics = mutableListOf<Comic>()
 
 
-    val confirmationDialogListener = object:DialogChooseRootDirectory.ConfirmationDialogListener {
+    private val confirmationDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
         override fun onChooseDirectory(file:File) {
             Timber.d("onChooseDirectory :: ${file.absolutePath}")
 
             // Save
-            SharedPref.set(PARAM_ROOT_DIR, file.absolutePath)
+            SharedPref.set(PREF_ROOT_DIR, file.absolutePath)
 
             rootDirectory = file
             viewModel.loadComics(rootDirectory)
@@ -196,7 +196,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         setCurrentDir(state.currentDir!!)
         (requireActivity() as AppCompatActivity).supportActionBar?.title = App.currentDir?.canonicalPath
 
-        SharedPref.set(PARAM_LAST_COMIC, "")    // Forget the last comic...
+        SharedPref.set(PREF_LAST_COMIC, "")    // Forget the last comic...
 
         comics.clear()
         comics.addAll(state.comics)
@@ -218,7 +218,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     private fun initBrowser() {
         Timber.d("initBrowser")
 
-        val directoryPath = SharedPref.get(PARAM_ROOT_DIR, "")
+        val directoryPath = SharedPref.get(PREF_ROOT_DIR, "")
         if (directoryPath == "" || !isDirExists(directoryPath!!)) {
             var rootDir:File? = null
             if (isDirExists(directoryPath))
@@ -232,9 +232,9 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
 
                 // Ask if we should use the last comic
-                val lastComicPath = SharedPref.get(PARAM_LAST_COMIC, "")
+                val lastComicPath = SharedPref.get(PREF_LAST_COMIC, "")
                 if (lastComicPath != "") {
-                    lastComic = File(lastComicPath)
+                    lastComic = File(lastComicPath!!)
                     if (!lastComic!!.exists() || !lastComic!!.isFile) {
                         lastComic = null
                     }
@@ -244,14 +244,19 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
                     val alert = AlertDialog.Builder(requireContext())
                         .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic!!.name+")")
                         .setPositiveButton(R.string.ok) { _,_ ->
-                            App.currentDir = File(lastComic!!.parent) // Set the last comic path as the current directory
+                            App.currentDir = File(lastComic!!.parent!!) // Set the last comic path as the current directory
 
                             // Call the fragment to view the last comic
-                            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(Comic(lastComic!!))
+                            var currentPage = 0
+                            val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
+                            if (prefCurrentPage != null) {
+                                currentPage = prefCurrentPage.toInt()
+                            }
+                            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(Comic(lastComic!!), currentPage)
                             findNavController().navigate(action)
                         }
                         .setNegativeButton(android.R.string.cancel) { _,_ ->
-                            SharedPref.set(PARAM_LAST_COMIC, "")    // Forget the last comic...
+                            SharedPref.set(PREF_LAST_COMIC, "")    // Forget the last comic...
                             viewModel.loadComics(rootDirectory)
                         }
                         .create()
@@ -275,8 +280,8 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         } else {
             Timber.i("File ${comic.file.name} !")
             lastComic= comic.file
-            SharedPref.set(PARAM_LAST_COMIC, comic.file.absolutePath)
-            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(comic)
+            SharedPref.set(PREF_LAST_COMIC, comic.file.absolutePath)
+            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(comic, 0)
             findNavController().navigate(action)
         }
     }
@@ -313,7 +318,12 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
                 if (cacheDir.exists() && cacheDir.isDirectory) {
                     Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
                     clearFilesInDir(cacheDir)
-                }
+
+                    // Glide...
+                    Glide.get(requireContext()).clearMemory()
+                    Thread {
+                        Glide.get(requireContext()).clearDiskCache()
+                    }.start()                }
             }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()

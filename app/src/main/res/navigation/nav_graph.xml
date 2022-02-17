@@ -22,5 +22,8 @@
         <argument
             android:name="comic"
             app:argType="fr.nourry.mynewkomik.Comic" />
+        <argument
+            android:name="currentPage"
+            app:argType="integer" />
     </fragment>
 </navigation>

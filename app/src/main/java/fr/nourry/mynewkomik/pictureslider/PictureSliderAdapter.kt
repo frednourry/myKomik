@@ -2,7 +2,6 @@ package fr.nourry.mynewkomik.pictureslider
 
 import android.content.Context
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -10,7 +9,6 @@ import androidx.viewpager.widget.PagerAdapter
 import com.bumptech.glide.Glide
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
-import timber.log.Timber
 
 
 // To work with a androidx.viewpager.widget.ViewPager

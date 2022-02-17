@@ -1,13 +1,11 @@
 package fr.nourry.mynewkomik.dialog
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.google.android.material.resources.TextAppearance
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.utils.*
 import kotlinx.android.synthetic.main.dialog_choose_root_list_item.view.*

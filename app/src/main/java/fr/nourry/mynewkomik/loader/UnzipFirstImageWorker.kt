@@ -25,7 +25,7 @@ class UnzipFirstImageWorker(context: Context, workerParams: WorkerParameters): W
         val imageDestinationPath = inputData.getString(KEY_IMAGE_DESTINATION_PATH)
 
         if (zipPath != null && imageDestinationPath!= null) {
-            var zipFile = File(zipPath)
+            val zipFile = File(zipPath)
             unzipFirstImageInFileAndImageView(zipFile, imageDestinationPath/*, imageView*/)
         }
 
@@ -44,13 +44,10 @@ class UnzipFirstImageWorker(context: Context, workerParams: WorkerParameters): W
                 Timber.v(entry.name + " " + entry.size)
                 if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
                     val input = zip.getInputStream(entry)
-                    bitmap = BitmapUtil.createBitmap(
-                        input.readBytes(),
-                        0,0
-                    )
+                    bitmap = BitmapUtil.createBitmap(input.readBytes(), 300,300)
                     if (bitmap != null) {
                         // Reduce the bitmap if needed
-                        val bitmapToSave = Bitmap.createScaledBitmap(bitmap, 300, 300, false)
+                        val bitmapToSave = Bitmap.createScaledBitmap(bitmap, bitmap.width, bitmap.height, false)
 
                         // Save the bitmap in cache and return
                         return BitmapUtil.saveBitmapInFile(bitmapToSave, path)

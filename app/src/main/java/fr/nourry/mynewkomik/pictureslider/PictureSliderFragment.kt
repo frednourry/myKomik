@@ -4,27 +4,36 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
-import androidx.viewpager2.widget.ViewPager2
+import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
+import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
+import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
+import fr.nourry.mynewkomik.preference.SharedPref
 import kotlinx.android.synthetic.main.fragment_picture_slider.*
 import kotlinx.android.synthetic.main.fragment_picture_slider.coordinatorLayout
 import timber.log.Timber
 
-class PictureSliderFragment: Fragment() {
+private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
+
+class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
+
+    val STATE_CURRENT_PAGE = "state:current_page"
 
     private lateinit var pictureSliderAdapter: PictureSliderAdapter
 //    private lateinit var pictureSliderAdapter: PictureSliderAdapter2
     private var pictures = mutableListOf<ComicPicture>()
+    private var currentPage = 0
     private lateinit var viewModel: PictureSliderViewModel
+
+    private var dialogComicLoading:DialogComicLoading = DialogComicLoading.newInstance()
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -45,7 +54,6 @@ class PictureSliderFragment: Fragment() {
             }
         }
 
-
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
         // ViewPager2
@@ -56,17 +64,26 @@ class PictureSliderFragment: Fragment() {
         pictureSliderAdapter.notifyDataSetChanged()
 
         viewModel = ViewModelProvider(this)[PictureSliderViewModel::class.java]
-        viewModel.getState().observe(viewLifecycleOwner, {
+        viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
-        })
+        }
 
         val args = PictureSliderFragmentArgs.fromBundle(requireArguments())
         val comic = args.comic
-        viewModel.initialize(comic)
+        currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
+
+        viewModel.initialize(comic, currentPage, savedInstanceState == null)
+
+        viewPager.addOnPageChangeListener(this)
 
         // Replace the title
         (requireActivity() as AppCompatActivity).supportActionBar?.title = comic.file.name
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CURRENT_PAGE, currentPage)
     }
 
     // Update UI according to the model state events
@@ -88,14 +105,21 @@ class PictureSliderFragment: Fragment() {
 
     private fun handleStateLoading(state: PictureSliderViewModelState.Loading) {
         Timber.i("handleStateLoading")
-        Toast.makeText(requireContext(), "L O A D I N G . . .", Toast.LENGTH_SHORT).show()
+        dialogComicLoading.isCancelable = false
+        if (!dialogComicLoading.isAdded) {
+            dialogComicLoading.show(parentFragmentManager, TAG_DIALOG_COMIC_LOADING)
+        }
+        dialogComicLoading.setProgress(state.currentItem, state.nbItem)
     }
 
     private fun handleStateReady(state: PictureSliderViewModelState.Ready) {
-        Timber.i("handleStateReady")
+        Timber.i("handleStateReady currentPage=${state.currentPage}")
+
+        dialogComicLoading.dismiss()
         pictures.clear()
         pictures.addAll(state.pictures)
         pictureSliderAdapter.notifyDataSetChanged()
+        viewPager.currentItem = state.currentPage
     }
 
     private fun handleStateInit(state: PictureSliderViewModelState.Init) {
@@ -112,5 +136,18 @@ class PictureSliderFragment: Fragment() {
         return false
     }
 
+    override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+//        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
+    }
 
+    override fun onPageSelected(position: Int) {
+        Timber.i("onPageSelected currentPage = $position")
+        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, position.toString())
+        currentPage = position
+        viewModel.setCurrentPage(position)
+    }
+
+    override fun onPageScrollStateChanged(state: Int) {
+//        Timber.i("onPageScrollStateChanged state = $state")
+    }
 }

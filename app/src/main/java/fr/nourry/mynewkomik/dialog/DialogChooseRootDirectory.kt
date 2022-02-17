@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.ListView
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.DialogFragment
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.utils.VolumeLabel
@@ -15,7 +14,7 @@ import fr.nourry.mynewkomik.utils.initVolumeDetection
 import timber.log.Timber
 import java.io.File
 
-class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
+class DialogChooseRootDirectory(private val rootPath: File?=null) : DialogFragment() {
     interface ConfirmationDialogListener {
         fun onChooseDirectory(file:File)
     }
@@ -25,7 +24,7 @@ class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
     private var volumeList:ArrayList<VolumeLabel> = ArrayList()
 
     companion object {
-        private var adapter:DialogChooseRootDirectoryAdapter? = null;
+        private var adapter:DialogChooseRootDirectoryAdapter? = null
 
         // IMPORTANT FUNCTION : without it, when the phone is rotate this will crash the application (the -parent- fragment recreation will search a constructor...)
         @SuppressLint("StaticFieldLeak")
@@ -64,9 +63,9 @@ class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
             // Do nothing (this dialog is recreated)
             Timber.v("onCreateDialog: rootPath = null")
         } else {
-            val origin:File? = rootPath
+            val origin:File = rootPath
             //if (volumeList.count()>0) File(volumeList[0].path) else rootPath
-            adapter!!.setRootPath(origin!!)
+            adapter!!.setRootPath(origin)
         }
 
         val thisObject = this
@@ -90,7 +89,7 @@ class DialogChooseRootDirectory(val rootPath: File?=null) : DialogFragment() {
         val alertDialog = builder.create()
         alertDialog.window?.setLayout(300, 400)
 
-        this.setStyle(DialogFragment.STYLE_NO_TITLE, 0)   // Do nothing...
+        this.setStyle(STYLE_NO_TITLE, 0)
 
         return alertDialog
     }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="thumbnailWrapper" type="id" />
+    <item name="readWrapper" type="id" />
+    <item name="readIcon" type="id" />
+</resources>
