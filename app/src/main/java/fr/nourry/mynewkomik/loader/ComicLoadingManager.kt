@@ -3,12 +3,11 @@ package fr.nourry.mynewkomik.loader
 import android.content.Context
 import android.widget.ImageView
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.Observer
 import androidx.work.*
-import com.bumptech.glide.Glide
 import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.utils.FileSignature
 import fr.nourry.mynewkomik.utils.clearFilesInDir
+import fr.nourry.mynewkomik.utils.getComicsFromDir
 import timber.log.Timber
 import java.io.File
 import java.util.*
@@ -21,6 +20,7 @@ enum class ComicLoadingResult {
 
 enum class ComicLoadingType {
     FIRST_IMAGE,
+    IMAGE_DIR,
     ALL_IN_DIR
 }
 
@@ -29,7 +29,7 @@ interface ComicLoadingProgressListener {
     fun onFinished(result: ComicLoadingResult, image:ImageView?, path:File?)
 }
 
-class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:ComicLoadingProgressListener?, val imageView: ImageView?=null) {
+class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:ComicLoadingProgressListener?, val imageView: ImageView?=null, val fileList:List<File>?=null) {
 }
 
 class ComicLoadingManager private constructor() {
@@ -89,6 +89,41 @@ class ComicLoadingManager private constructor() {
         loadNext()
     }
 
+
+    fun loadComicDirectoryInImageView(dirComic:Comic, imageView:ImageView, listener:ComicLoadingProgressListener) {
+        Timber.w("loadComicDirectoryInImageView(${dirComic.file.absoluteFile})")
+        if (dirComic.file.isDirectory) {
+            val signature = getFileSignature(dirComic.file.absolutePath)
+            val cacheFilePath = getCacheFilePath(signature)
+            val cacheFile = File(cacheFilePath)
+
+            // Check if an image is in cache
+            if (cacheFile.exists()) {
+                // Use cache
+                list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, imageView, null))
+                loadNext()
+            } else {
+                // Add some comics in the cache
+                val nb_comics_in_thumbnail = ImageDirWorker.MAX_COVER_IN_THUMBNAIL  // Get some comics to build the thumbnail
+                val fileList = getComicsFromDir(dirComic.file).subList(0, nb_comics_in_thumbnail)
+                for (i in fileList.indices) {
+                    val f = fileList[i]
+                    if (f.isFile) {
+                        list.add(ComicLoading(Comic(f), ComicLoadingType.FIRST_IMAGE, null, null))
+                    }
+                }
+                Timber.w("loadComicDirectoryInImageView :: $fileList")
+
+                if (fileList.isNotEmpty()) {
+                    // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
+                    list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, imageView, fileList))
+                    loadNext()
+                }
+            }
+        }
+    }
+
+
     // Uncompress all the images of a comic in a directory
     fun uncompressComic(comic:Comic, listener:ComicLoadingProgressListener): File? {
         val dir = pathUncompressedComic
@@ -146,15 +181,23 @@ class ComicLoadingManager private constructor() {
     }
 
     private fun loadNext() {
+        Timber.w("loadNext() isLoading=$isLoading list.size=${list.size}")
         if (!isLoading) {
             if (list.size > 0) {
                 isLoading = true
                 val comicLoading = list.removeAt(0)
-                val ext = comicLoading.comic.file.extension.lowercase()
-                if (ext == "cbz" || ext == "zip") {
-                    startLoadingZip(comicLoading)
+                Timber.w("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
+                if (comicLoading.comic.file.isFile) {
+                    val ext = comicLoading.comic.file.extension.lowercase()
+                    if (ext == "cbz" || ext == "zip") {
+                        startLoadingZip(comicLoading)
+                    } else {
+                        isLoading = false
+                        loadNext()  // Next entry...
+                    }
                 } else {
-                    loadNext()  // Next entry...
+                    // Directory...
+                    startLoadingZip(comicLoading)
                 }
             } else {
                 isLoading = false
@@ -169,6 +212,8 @@ class ComicLoadingManager private constructor() {
         currentComicLoading = comicLoading
         var callbackResponse = ""
 
+        Timber.d("startLoadingZip(${comicLoading.comic.file.absoluteFile})")
+
         val work: WorkRequest? = when (comicLoading.type) {
             ComicLoadingType.FIRST_IMAGE -> {
                 val signature = getFileSignature(comic.file.absolutePath)
@@ -177,23 +222,17 @@ class ComicLoadingManager private constructor() {
 
                 // Check if an image is in cache
                 if (cacheFile.exists()) {
-                    // Extract nothing, just use this image with Glide
-                    Timber.d("Image in cache ! (signature = $signature)")
-                    comicLoading.imageView?.let {
-                        Glide.with(comicLoading.imageView.context)
-                            .load(cacheFile)
-                            .into(it)
-                    }
-
+                    // Extract nothing, just return the file path
                     // Don't initialize the workrequest
+                    Timber.d("Image in cache ! (signature = $signature)")
                     callbackResponse = cacheFilePath
                     null
                 } else {
-                    val workData = workDataOf(UnzipFirstImageWorker.KEY_ZIP_PATH to comic.file.absolutePath,
-                                                UnzipFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
+                    val workData = workDataOf(UncompressFirstImageWorker.KEY_ARCHIVE_PATH to comic.file.absolutePath,
+                                                UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
 
-                    // Image not in cache, so un zip the comic
-                    OneTimeWorkRequestBuilder<UnzipFirstImageWorker>()
+                    // Image not in cache, so unzip the comic
+                    OneTimeWorkRequestBuilder<UncompressFirstImageWorker>()
                         .setInputData(workData)
                         .build()
                 }
@@ -201,9 +240,9 @@ class ComicLoadingManager private constructor() {
             ComicLoadingType.ALL_IN_DIR -> {
                 if (lastComicPathUncompressed != comic.file) {
                     lastComicPathUncompressed = comic.file
-                    val workData = workDataOf(UnzipAllComicWorker.KEY_ZIP_PATH to comic.file.absolutePath,
-                        UnzipAllComicWorker.KEY_DESTINATION_DIRECTORY_PATH to getCacheFilePath(FileSignature(PATH_COMIC_DIR)))
-                    OneTimeWorkRequestBuilder<UnzipAllComicWorker>()
+                    val workData = workDataOf(UncompressAllComicWorker.KEY_ARCHIVE_PATH to comic.file.absolutePath,
+                        UncompressAllComicWorker.KEY_DESTINATION_DIRECTORY_PATH to getCacheDirPath(FileSignature(PATH_COMIC_DIR)))
+                    OneTimeWorkRequestBuilder<UncompressAllComicWorker>()
                         .setInputData(workData)
                         .build()
                 } else {
@@ -211,6 +250,77 @@ class ComicLoadingManager private constructor() {
                     Timber.i("startLoadingZip:: no need to uncompressed (already done)")
                     callbackResponse = getCacheFilePath(FileSignature(PATH_COMIC_DIR))
                     null
+                }
+            }
+            ComicLoadingType.IMAGE_DIR -> {
+                val signature = getFileSignature(comic.file.absolutePath)
+                val cacheFilePath = getCacheFilePath(signature)
+                val cacheFile = File(cacheFilePath)
+
+                // Check if an image is in cache
+                if (cacheFile.exists()) {
+                    // Extract nothing, just use this image with Glide
+                    // Don't initialize the workrequest
+                    Timber.d("Dir image in cache ! (signature = $signature)")
+                    callbackResponse = cacheFilePath
+                    null
+                } else {
+                    if (comicLoading.fileList != null) {
+                        val pathList = mutableListOf("","","","","")
+                        // For each file in the list
+                        var cpt = 0
+                        for (f in comicLoading.fileList) {
+                            val tempSign = getFileSignature(f.absolutePath)
+                            val tempCachePath = if (f.isFile) getCacheFilePath(tempSign) else getCacheDirPath(tempSign)
+                            val tempCacheFile = File(tempCachePath)
+                            // Check if this image exists
+                            if (tempCacheFile.exists()) {
+                                pathList[cpt] = tempCachePath
+                                cpt++
+                            }
+                        }
+
+                        // TODO rewrite this when i will know how to add a work data...
+                        val workData = workDataOf(ImageDirWorker.KEY_DESTINATION_DIRECTORY_PATH to cacheFilePath,
+                            ImageDirWorker.KEY_COMIC_PATH_0 to pathList[0],
+                            ImageDirWorker.KEY_COMIC_PATH_1 to pathList[1],
+                            ImageDirWorker.KEY_COMIC_PATH_2 to pathList[2],
+                            ImageDirWorker.KEY_COMIC_PATH_3 to pathList[3],
+                            ImageDirWorker.KEY_COMIC_PATH_4 to pathList[4])
+                        OneTimeWorkRequestBuilder<ImageDirWorker>()
+                            .setInputData(workData)
+                            .build()
+
+                    } else {
+                        // Don't initialize the workrequest
+                        callbackResponse = cacheFilePath
+                        null
+                    }
+
+/*
+                    if (comicLoading.fileList != null) {
+                        val bitmapList = mutableListOf<Bitmap>()
+                        for (f in comicLoading.fileList) {
+                            val tempSign = getFileSignature(f.absolutePath)
+                            val tempCachePath = if (f.isFile) getCacheFilePath(tempSign) else getCacheDirPath(tempSign)
+                            val tempCacheFile = File(tempCachePath)
+                            // Check if this image is in cache
+                            if (tempCacheFile.exists()) {
+                                // Get the bitmap
+                                bitmapList.add(BitmapFactory.decodeFile(tempCachePath))
+                            }
+                        }
+
+                        // Generate the thumbnail
+                        if (bitmapList.size>0) {
+                            val bitmap = BitmapUtil.createDirectoryThumbnailBitmap(bitmapList)
+                            BitmapUtil.saveBitmapInFile(bitmap, cacheFilePath)
+                        }
+                    }
+
+                    // Don't initialize the workrequest
+                    callbackResponse = cacheFilePath
+                    null*/
                 }
             }
         }
@@ -232,22 +342,13 @@ class ComicLoadingManager private constructor() {
                                 if (currentComicLoading!!.listener != null) {
                                     currentComicLoading!!.listener?.onProgress(currentIndex, size)
                                 }
-//                                Toast.makeText(App.getContext(), "Load $currentIndex/$size", Toast.LENGTH_SHORT).show()
                             }
                         } else if (workInfo.state.isFinished) {
                             Timber.d(" loading :: completed")
 
                             val outputData = workInfo.outputData
-                            val imagePath =
-                                outputData.getString(UnzipFirstImageWorker.KEY_IMAGE_DESTINATION_PATH)
-                            if (imagePath != null) {
-                                comicLoading.imageView?.let {
-                                    Glide.with(it.context)
-                                        .load(imagePath)
-                                        .into(comicLoading.imageView)
-                                }
-                            }
-
+                            val nbPages = outputData.getInt(UncompressFirstImageWorker.KEY_NB_PAGES, 0)
+                            val imagePath = outputData.getString(UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH)
                             if (currentComicLoading!!.listener != null) {
                                 currentComicLoading!!.listener?.onFinished(
                                     if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
@@ -262,7 +363,7 @@ class ComicLoadingManager private constructor() {
                     }
                 }
         } else {
-            // Nothing
+            // Nothing to do, just return the file path
             currentComicLoading!!.listener?.onFinished(ComicLoadingResult.SUCCESS, currentComicLoading!!.imageView, File(callbackResponse))
             isLoading = false
             currentComicLoading = null
@@ -278,6 +379,10 @@ class ComicLoadingManager private constructor() {
     }
 
     private fun getCacheFilePath(signature:FileSignature): String {
+        return cachePathDir + "/" + signature.hashCode + ".png"
+    }
+
+    private fun getCacheDirPath(signature:FileSignature): String {
         return cachePathDir + "/" + signature.hashCode
     }
 }

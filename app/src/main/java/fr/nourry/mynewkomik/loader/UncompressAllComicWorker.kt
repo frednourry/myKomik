@@ -13,31 +13,40 @@ import timber.log.Timber
 import java.io.File
 import java.util.zip.ZipFile
 
-class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
+class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
-        const val KEY_ZIP_PATH                      = "zipPath"
+        const val KEY_ARCHIVE_PATH                  = "archivePath"
         const val KEY_DESTINATION_DIRECTORY_PATH    = "destinationDirectoryPath"
+        const val KEY_IMAGE_DESTINATION_PATH        = "imageDestinationPath"
+        const val KEY_NB_PAGES                      = "nbPages"
     }
+    private var nbPages = 0
 
     override fun doWork(): Result {
-        Timber.d("UnzipFirstImageWorker.doWork")
+        Timber.d("UncompressAllComicWorker.doWork")
 
-        val zipPath = inputData.getString(KEY_ZIP_PATH)
+        val archivePath = inputData.getString(KEY_ARCHIVE_PATH)
         val destPath = inputData.getString(KEY_DESTINATION_DIRECTORY_PATH)
-        Timber.d("UnzipFirstImageWorker.doWork :: zipPath = $zipPath  destPath = $destPath")
+        Timber.d("UncompressAllComicWorker.doWork :: archivePath = $archivePath  destPath = $destPath")
 
-        if (zipPath != null && destPath!= null) {
-            val zipFile = File(zipPath)
-            unzipInDirectory(zipFile, destPath)
+        if (archivePath != null && destPath!= null) {
+            val archiveFile = File(archivePath)
+            val ext = archiveFile.extension.lowercase()
+
+            if (ext == "cbz" || ext == "zip") {
+                unzipInDirectory(archiveFile, destPath)
+            } else {
+                return Result.failure()
+            }
         }
 
-        val outputData = workDataOf(UnzipFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to destPath)
+        val outputData = workDataOf(KEY_IMAGE_DESTINATION_PATH to destPath,
+                                            KEY_NB_PAGES to nbPages)
 
         return Result.success(outputData)
     }
 
     private fun unzipInDirectory(comicFile: File, dirPath:String):Boolean {
-
         Timber.v("BEGIN unzipInDirectory ${comicFile.name}")
 
         // Clear the directory
@@ -51,6 +60,7 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
                 val sequence = zip.entries().asSequence()
                 val sequenceSize = zip.entries().toList().size
                 var cpt = 0
+                nbPages = 0
 
                 Timber.v("NB entry = " + zip.entries().toList().size)
                 var bitmap: Bitmap?
@@ -75,8 +85,14 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
                             if (isStopped) {    // Check if the work was cancelled
                                 break
                             }
-                            BitmapUtil.saveBitmapInFile(bitmap, dirPath + name)
+
+                            BitmapUtil.saveBitmapInFile(bitmap, dirPath + name) // Do this in an other thread?
+/*                            Thread {
+                                BitmapUtil.saveBitmapInFile(bitmap, dirPath + name)
+                            }.start()
+*/
                         }
+                        nbPages++
                     }
                     setProgressAsync(Data.Builder().putInt("currentIndex", cpt).putInt("size", sequenceSize).build())
                     cpt++
@@ -91,12 +107,5 @@ class UnzipAllComicWorker (context: Context, workerParams: WorkerParameters): Wo
         }
         Timber.v("END unzipInDirectory ${comicFile.name}")
         return true
-    }
-
-
-    override fun onStopped() {
-        super.onStopped()
-        val zipPath = inputData.getString(KEY_ZIP_PATH)
-        Timber.d("onStopped for $zipPath")
     }
 }

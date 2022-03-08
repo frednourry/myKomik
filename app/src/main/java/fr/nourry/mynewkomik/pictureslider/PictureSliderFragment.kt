@@ -37,6 +37,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        activity?.actionBar?.hide()
         return inflater.inflate(R.layout.fragment_picture_slider, container, false)
     }
 
@@ -81,6 +82,11 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         (requireActivity() as AppCompatActivity).supportActionBar?.title = comic.file.name
     }
 
+    override fun onDestroyView() {
+        (requireActivity() as AppCompatActivity).supportActionBar?.show()
+        super.onDestroyView()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(STATE_CURRENT_PAGE, currentPage)
@@ -114,6 +120,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     private fun handleStateReady(state: PictureSliderViewModelState.Ready) {
         Timber.i("handleStateReady currentPage=${state.currentPage}")
+        (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
         dialogComicLoading.dismiss()
         pictures.clear()

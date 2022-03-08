@@ -2,6 +2,7 @@ package fr.nourry.mynewkomik
 
 import android.app.Application
 import android.content.Context
+import fr.nourry.mynewkomik.utils.PhysicalConstants
 import timber.log.Timber
 import fr.nourry.mynewkomik.utils.getDefaultDirectory
 import java.io.File
@@ -9,7 +10,8 @@ import java.io.File
 class App: Application() {
 
     companion object {
-        private lateinit var appContext: Context
+        lateinit var appContext: Context
+        lateinit var physicalConstants: PhysicalConstants
 
         var currentDir: File? = null
     }
@@ -18,5 +20,6 @@ class App: Application() {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
         App.appContext = this
+        physicalConstants = PhysicalConstants.newInstance(appContext)
     }
 }

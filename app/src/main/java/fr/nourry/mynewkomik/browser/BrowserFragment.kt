@@ -35,7 +35,7 @@ import java.io.File
 
 private const val TAG_DIALOG_CHOOSE_ROOT = "SelectDirectoryDialog"
 
-class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
+class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     companion object {
         fun newInstance() = BrowserFragment()
@@ -49,7 +49,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
     private lateinit var rootDirectory : File
     private var lastComic : File? = null
 
-    private lateinit var comicAdapter: ComicAdapter
+    private lateinit var browserAdapter: BrowserAdapter
     private var comics = mutableListOf<Comic>()
 
 
@@ -76,9 +76,6 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (savedInstanceState  == null) {
-            Timber.v("================================================== FIRST START ============================")
-        }
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
     }
@@ -113,16 +110,16 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
             Timber.d("BACK PRESSED !!!!!!!")
 
             if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
-                Timber.d("    PAS DE RETOUR EN STACK !!")
+                Timber.v("    NO STACK !!")
                 activity?.finish()
             }
         }
 
         activity?.let { SharedPref.init(it) }
 
-        comicAdapter = ComicAdapter(comics, this)
-        recyclerView.layoutManager =GridLayoutManager(context, 3)
-        recyclerView.adapter = comicAdapter
+        browserAdapter = BrowserAdapter(comics, this)
+        recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))
+        recyclerView.adapter = browserAdapter
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
@@ -131,6 +128,11 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         }
 
         askPermission()
+    }
+
+    private fun getNbColumns(columnWidth: Int): Int {
+        val displayMetrics = App.physicalConstants.metrics
+        return ((displayMetrics.widthPixels / displayMetrics.density) / columnWidth).toInt()
     }
 
     private fun setCurrentDir(dir:File) {
@@ -200,7 +202,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
 
         comics.clear()
         comics.addAll(state.comics)
-        comicAdapter.notifyDataSetChanged()
+        browserAdapter.notifyDataSetChanged()
     }
 
 
@@ -314,7 +316,7 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(getString(R.string.ask_clear_cache))
             .setPositiveButton(R.string.ok) { _,_ ->
-                val cacheDir = File(requireActivity().cacheDir.absolutePath)
+                val cacheDir = App.physicalConstants.cacheDir
                 if (cacheDir.exists() && cacheDir.isDirectory) {
                     Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
                     clearFilesInDir(cacheDir)
@@ -323,7 +325,8 @@ class BrowserFragment : Fragment(), ComicAdapter.OnComicAdapterListener {
                     Glide.get(requireContext()).clearMemory()
                     Thread {
                         Glide.get(requireContext()).clearDiskCache()
-                    }.start()                }
+                    }.start()
+                }
             }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()

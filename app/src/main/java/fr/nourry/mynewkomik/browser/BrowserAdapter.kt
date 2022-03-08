@@ -17,7 +17,7 @@ import timber.log.Timber
 import java.io.File
 
 
-class ComicAdapter(private val comics:List<Comic>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<ComicAdapter.ViewHolder>(), View.OnClickListener, ComicLoadingProgressListener {
+class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, ComicLoadingProgressListener {
     interface OnComicAdapterListener {
         fun onComicClicked(comic: Comic)
     }
@@ -39,16 +39,19 @@ class ComicAdapter(private val comics:List<Comic>, private val listener:OnComicA
         val comicAdapter = this
         with (holder) {
             cardView.tag = comic
-            cardView.setOnClickListener(this@ComicAdapter)
+            cardView.setOnClickListener(this@BrowserAdapter)
             textView.text = comic.file.name
 
-            Glide.with(imageView.context)
-                .load(R.drawable.ic_launcher_foreground)
-//                .load(comic.file)
-                .into(imageView)
-
             if (comic.file.isFile) {
+                Glide.with(imageView.context)
+                    .load(R.drawable.ic_launcher_foreground)
+                    .into(imageView)
                 ComicLoadingManager.getInstance().loadComicInImageView(comic, imageView, comicAdapter)
+            } else {
+                Glide.with(imageView.context)
+                    .load(R.drawable.ic_library_temp)
+                    .into(imageView)
+                ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, imageView, comicAdapter)
 
             }
         }
@@ -64,7 +67,10 @@ class ComicAdapter(private val comics:List<Comic>, private val listener:OnComicA
     }
 
     override fun onFinished(result: ComicLoadingResult, image: ImageView?, path: File?) {
-        if (result == ComicLoadingResult.SUCCESS && image!= null && path != null && path.absolutePath != "") {
+        Timber.d("onFinished $path" )
+        if (result == ComicLoadingResult.SUCCESS && image!= null && path != null && path.absolutePath != "" && path.exists()) {
+            // TODO Be sure this image view is still waiting this result...
+
             Glide.with(image.context)
                 .load(path)
                 .into(image)
