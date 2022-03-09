@@ -1,6 +1,5 @@
 package fr.nourry.mynewkomik.pictureslider
 
-import android.widget.ImageView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -101,8 +100,8 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         state.value = PictureSliderViewModelState.Loading( currentIndex, size)
     }
 
-    override fun onFinished(result: ComicLoadingResult, image: ImageView?, path: File?) {
-        Timber.d("onFinished result=$result image=$image dir=$path")
+    override fun onFinished(result: ComicLoadingResult, target:Any?, comic:Comic, path: File?) {
+        Timber.d("onFinished result=$result comic=${comic.file.lastModified()} dir=$path")
         if (result == ComicLoadingResult.SUCCESS && path!=null && path.path!="") {
             loadPictures(path)
         } else {

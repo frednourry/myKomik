@@ -46,12 +46,12 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
                 Glide.with(imageView.context)
                     .load(R.drawable.ic_launcher_foreground)
                     .into(imageView)
-                ComicLoadingManager.getInstance().loadComicInImageView(comic, imageView, comicAdapter)
+                ComicLoadingManager.getInstance().loadComicInImageView(comic, holder, comicAdapter)
             } else {
                 Glide.with(imageView.context)
                     .load(R.drawable.ic_library_temp)
                     .into(imageView)
-                ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, imageView, comicAdapter)
+                ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, holder, comicAdapter)
 
             }
         }
@@ -66,16 +66,25 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
     override fun onProgress(currentIndex: Int, size: Int) {
     }
 
-    override fun onFinished(result: ComicLoadingResult, image: ImageView?, path: File?) {
-        Timber.d("onFinished $path" )
-        if (result == ComicLoadingResult.SUCCESS && image!= null && path != null && path.absolutePath != "" && path.exists()) {
-            // TODO Be sure this image view is still waiting this result...
+    override fun onFinished(result: ComicLoadingResult, target:Any?, comic:Comic, path: File?) {
+        Timber.d("onFinished ${comic.file} $path" )
+        if (result == ComicLoadingResult.SUCCESS && target!= null && path != null && path.absolutePath != "" && path.exists()) {
+            // Check if the target is still waiting this image
+            val holder = target as ViewHolder
+            val cardView = holder.cardView
+            val holderComic = cardView.tag as Comic
 
-            Glide.with(image.context)
-                .load(path)
-                .into(image)
+            if (holderComic.file.absolutePath == comic.file.absolutePath) {
+                val image = holder.imageView
+                Glide.with(image.context)
+                    .load(path)
+                    .into(image)
+
+            } else {
+                Timber.w("onFinished:: To late. This view no longer requires this image...")
+            }
         } else {
-            Timber.w("onFinished:: $result imageView=$image path=$path")
+            Timber.w("onFinished:: $result")
         }
     }
 

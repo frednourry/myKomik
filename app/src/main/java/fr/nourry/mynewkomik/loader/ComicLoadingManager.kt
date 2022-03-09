@@ -1,7 +1,6 @@
 package fr.nourry.mynewkomik.loader
 
 import android.content.Context
-import android.widget.ImageView
 import androidx.lifecycle.LifecycleOwner
 import androidx.work.*
 import fr.nourry.mynewkomik.Comic
@@ -26,10 +25,10 @@ enum class ComicLoadingType {
 
 interface ComicLoadingProgressListener {
     fun onProgress(currentIndex:Int, size:Int)
-    fun onFinished(result: ComicLoadingResult, image:ImageView?, path:File?)
+    fun onFinished(result: ComicLoadingResult, target:Any?, comic:Comic, path:File?)
 }
 
-class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:ComicLoadingProgressListener?, val imageView: ImageView?=null, val fileList:List<File>?=null) {
+class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:ComicLoadingProgressListener?, val target: Any?=null, val fileList:List<File>?=null) {
 }
 
 class ComicLoadingManager private constructor() {
@@ -84,13 +83,13 @@ class ComicLoadingManager private constructor() {
     }
 
     // Find in the comic archive the first image and put it in the given ImageView
-    fun loadComicInImageView(comic:Comic, imageView:ImageView, listener:ComicLoadingProgressListener) {
-        list.add(ComicLoading(comic, ComicLoadingType.FIRST_IMAGE,  listener, imageView))
+    fun loadComicInImageView(comic:Comic, target:Any, listener:ComicLoadingProgressListener) {
+        list.add(ComicLoading(comic, ComicLoadingType.FIRST_IMAGE,  listener, target))
         loadNext()
     }
 
 
-    fun loadComicDirectoryInImageView(dirComic:Comic, imageView:ImageView, listener:ComicLoadingProgressListener) {
+    fun loadComicDirectoryInImageView(dirComic:Comic, target:Any, listener:ComicLoadingProgressListener) {
         Timber.w("loadComicDirectoryInImageView(${dirComic.file.absoluteFile})")
         if (dirComic.file.isDirectory) {
             val signature = getFileSignature(dirComic.file.absolutePath)
@@ -100,7 +99,7 @@ class ComicLoadingManager private constructor() {
             // Check if an image is in cache
             if (cacheFile.exists()) {
                 // Use cache
-                list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, imageView, null))
+                list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, target, null))
                 loadNext()
             } else {
                 // Add some comics in the cache
@@ -116,7 +115,7 @@ class ComicLoadingManager private constructor() {
 
                 if (fileList.isNotEmpty()) {
                     // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
-                    list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, imageView, fileList))
+                    list.add(ComicLoading(dirComic, ComicLoadingType.IMAGE_DIR,  listener, target, fileList))
                     loadNext()
                 }
             }
@@ -181,12 +180,12 @@ class ComicLoadingManager private constructor() {
     }
 
     private fun loadNext() {
-        Timber.w("loadNext() isLoading=$isLoading list.size=${list.size}")
+        Timber.d("loadNext() isLoading=$isLoading list.size=${list.size}")
         if (!isLoading) {
             if (list.size > 0) {
                 isLoading = true
                 val comicLoading = list.removeAt(0)
-                Timber.w("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
+                Timber.d("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
                 if (comicLoading.comic.file.isFile) {
                     val ext = comicLoading.comic.file.extension.lowercase()
                     if (ext == "cbz" || ext == "zip") {
@@ -352,7 +351,7 @@ class ComicLoadingManager private constructor() {
                             if (currentComicLoading!!.listener != null) {
                                 currentComicLoading!!.listener?.onFinished(
                                     if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
-                                    currentComicLoading!!.imageView, File(imagePath!!)
+                                    currentComicLoading!!.target, currentComicLoading!!.comic, File(imagePath!!)
                                 )
                             }
                             isLoading = false
@@ -364,7 +363,7 @@ class ComicLoadingManager private constructor() {
                 }
         } else {
             // Nothing to do, just return the file path
-            currentComicLoading!!.listener?.onFinished(ComicLoadingResult.SUCCESS, currentComicLoading!!.imageView, File(callbackResponse))
+            currentComicLoading!!.listener?.onFinished(ComicLoadingResult.SUCCESS, currentComicLoading!!.target, currentComicLoading!!.comic, File(callbackResponse))
             isLoading = false
             currentComicLoading = null
             currentWorkID = null

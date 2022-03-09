@@ -40,7 +40,7 @@ class BitmapUtil {
 
         // Resize an image and add a little frame around
         fun createFramedBitmap(byteArray:ByteArray, maxWidth:Int=0, maxHeight:Int=0, borderSize:Int=5) : Bitmap?{
-            var bitmap: Bitmap? = null
+            var bitmap: Bitmap
             var bitmapToReturn:Bitmap? = null
 
             try {
