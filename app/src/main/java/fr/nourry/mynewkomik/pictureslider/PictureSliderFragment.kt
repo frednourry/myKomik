@@ -5,21 +5,28 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.addCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
+import fr.nourry.mynewkomik.App
+import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
+import fr.nourry.mynewkomik.browser.BrowserFragmentDirections
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
+import fr.nourry.mynewkomik.preference.PREF_LAST_COMIC
 import fr.nourry.mynewkomik.preference.SharedPref
 import kotlinx.android.synthetic.main.fragment_picture_slider.*
 import kotlinx.android.synthetic.main.fragment_picture_slider.coordinatorLayout
 import timber.log.Timber
+import java.io.File
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
@@ -135,7 +142,14 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     private fun handleStateError(state: PictureSliderViewModelState.Error) {
         Timber.i("handleStateError")
-        Snackbar.make(coordinatorLayout, "ERROR: ${state.errorMessage}", Snackbar.LENGTH_LONG).show()
+        dialogComicLoading.dismiss()
+        val alert = AlertDialog.Builder(requireContext())
+            .setMessage("This file is not valid !")
+            .setPositiveButton(R.string.ok) { _,_ ->
+                findNavController().popBackStack()
+            }
+            .create()
+        alert.show()
     }
 
     private fun handleBackPressedToChangeDirectory(): Boolean {

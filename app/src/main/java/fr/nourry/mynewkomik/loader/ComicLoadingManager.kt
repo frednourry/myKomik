@@ -187,16 +187,10 @@ class ComicLoadingManager private constructor() {
                 val comicLoading = list.removeAt(0)
                 Timber.d("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
                 if (comicLoading.comic.file.isFile) {
-                    val ext = comicLoading.comic.file.extension.lowercase()
-                    if (ext == "cbz" || ext == "zip") {
-                        startLoadingZip(comicLoading)
-                    } else {
-                        isLoading = false
-                        loadNext()  // Next entry...
-                    }
+                    startLoadingArchive(comicLoading)
                 } else {
                     // Directory...
-                    startLoadingZip(comicLoading)
+                    startLoadingArchive(comicLoading)
                 }
             } else {
                 isLoading = false
@@ -204,14 +198,14 @@ class ComicLoadingManager private constructor() {
         }
     }
 
-    private fun startLoadingZip(comicLoading: ComicLoading) {
+    private fun startLoadingArchive(comicLoading: ComicLoading) {
         isLoading = true
 
         val comic = comicLoading.comic
         currentComicLoading = comicLoading
         var callbackResponse = ""
 
-        Timber.d("startLoadingZip(${comicLoading.comic.file.absoluteFile})")
+        Timber.d("startLoadingArchive(${comicLoading.comic.file.absoluteFile})")
 
         val work: WorkRequest? = when (comicLoading.type) {
             ComicLoadingType.FIRST_IMAGE -> {
@@ -230,7 +224,7 @@ class ComicLoadingManager private constructor() {
                     val workData = workDataOf(UncompressFirstImageWorker.KEY_ARCHIVE_PATH to comic.file.absolutePath,
                                                 UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
 
-                    // Image not in cache, so unzip the comic
+                    // Image not in cache, so uncompress the comic
                     OneTimeWorkRequestBuilder<UncompressFirstImageWorker>()
                         .setInputData(workData)
                         .build()
@@ -246,7 +240,7 @@ class ComicLoadingManager private constructor() {
                         .build()
                 } else {
                     // No need to uncompress, the comic was already uncompressed
-                    Timber.i("startLoadingZip:: no need to uncompressed (already done)")
+                    Timber.i("startLoadingArchive:: no need to uncompressed (already done)")
                     callbackResponse = getCacheFilePath(FileSignature(PATH_COMIC_DIR))
                     null
                 }
@@ -295,31 +289,6 @@ class ComicLoadingManager private constructor() {
                         callbackResponse = cacheFilePath
                         null
                     }
-
-/*
-                    if (comicLoading.fileList != null) {
-                        val bitmapList = mutableListOf<Bitmap>()
-                        for (f in comicLoading.fileList) {
-                            val tempSign = getFileSignature(f.absolutePath)
-                            val tempCachePath = if (f.isFile) getCacheFilePath(tempSign) else getCacheDirPath(tempSign)
-                            val tempCacheFile = File(tempCachePath)
-                            // Check if this image is in cache
-                            if (tempCacheFile.exists()) {
-                                // Get the bitmap
-                                bitmapList.add(BitmapFactory.decodeFile(tempCachePath))
-                            }
-                        }
-
-                        // Generate the thumbnail
-                        if (bitmapList.size>0) {
-                            val bitmap = BitmapUtil.createDirectoryThumbnailBitmap(bitmapList)
-                            BitmapUtil.saveBitmapInFile(bitmap, cacheFilePath)
-                        }
-                    }
-
-                    // Don't initialize the workrequest
-                    callbackResponse = cacheFilePath
-                    null*/
                 }
             }
         }
@@ -343,17 +312,19 @@ class ComicLoadingManager private constructor() {
                                 }
                             }
                         } else if (workInfo.state.isFinished) {
-                            Timber.d(" loading :: completed")
-
+                            Timber.d(" loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
                             val nbPages = outputData.getInt(UncompressFirstImageWorker.KEY_NB_PAGES, 0)
-                            val imagePath = outputData.getString(UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH)
-                            if (currentComicLoading!!.listener != null) {
-                                currentComicLoading!!.listener?.onFinished(
+                            val imagePath = outputData.getString(UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH)?:""
+                            if (currentComicLoading?.listener != null) {
+                                currentComicLoading?.listener?.onFinished(
                                     if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
-                                    currentComicLoading!!.target, currentComicLoading!!.comic, File(imagePath!!)
+                                    currentComicLoading?.target,
+                                    currentComicLoading!!.comic,
+                                    File(imagePath)
                                 )
                             }
+
                             isLoading = false
                             currentComicLoading = null
                             currentWorkID = null

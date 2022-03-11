@@ -36,13 +36,14 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
             if (ext == "cbz" || ext == "zip") {
                 unzipInDirectory(archiveFile, destPath)
             } else {
-                return Result.failure()
+                val outputData = workDataOf(KEY_IMAGE_DESTINATION_PATH to destPath,
+                    KEY_NB_PAGES to 0)
+                return Result.failure(outputData)
             }
         }
 
         val outputData = workDataOf(KEY_IMAGE_DESTINATION_PATH to destPath,
                                             KEY_NB_PAGES to nbPages)
-
         return Result.success(outputData)
     }
 

@@ -42,7 +42,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
     fun getState(): LiveData<PictureSliderViewModelState> = state
 
     fun initialize(comic: Comic, page: Int, shouldUncompress:Boolean) {
-        Timber.d("initialize(${comic.file.name}) page=$page")
+        Timber.d("initialize(${comic.file.name}) page=$page shouldUncompress=$shouldUncompress")
 
         currentComic = comic
         currentPage = page
