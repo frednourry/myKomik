@@ -1,7 +1,7 @@
 myNewKomic
 ==========
 
-Présentation
+Présentation (Français)
 ------------
 
 myNewKomic est un petit projet que j'ai créé pour me permettre de mettre en application plusieures formations que j'ai suivi (principalement sur [Udemy.com][1]).
@@ -14,7 +14,7 @@ Frédéric Nourry - [@frednourry][2] sur GitHub
 
 -----------------------------------
 
-Presentation
+Presentation (English)
 ------------
 
 myNewKomic is a little project that I created to allow me to apply several training courses that I have followed (mainly on [Udemy.com][1]). It is mainly inspired by an old android application called Komik that allowed you to read comicbooks, ie image archives compressed in ZIP or RAR format (respectively with the CBZ or CBR extension). The goal of this project is to make an application in Kotlin, reproducing the same functionalities as Komik. 
