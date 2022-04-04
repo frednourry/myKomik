@@ -73,6 +73,8 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
 
                     Timber.v(entry.name + " " + entry.size)
 
+                    // Todo Reorder files...
+
                     if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
                         val input = zip.getInputStream(entry)
                         bitmap = BitmapUtil.createBitmap(input.readBytes())
@@ -87,7 +89,9 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
                                 break
                             }
 
-                            BitmapUtil.saveBitmapInFile(bitmap, dirPath + name) // Do this in an other thread?
+                            val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
+                            BitmapUtil.saveBitmapInFile(bitmap, dirPath + /*name*/ pageName, true) // Do this in an other thread?
+                            bitmap.recycle()
 /*                            Thread {
                                 BitmapUtil.saveBitmapInFile(bitmap, dirPath + name)
                             }.start()

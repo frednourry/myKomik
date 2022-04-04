@@ -203,6 +203,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         comics.clear()
         comics.addAll(state.comics)
         browserAdapter.notifyDataSetChanged()
+        recyclerView.scrollToPosition(0)
     }
 
 

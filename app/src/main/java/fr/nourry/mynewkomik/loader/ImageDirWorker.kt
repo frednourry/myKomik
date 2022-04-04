@@ -15,8 +15,10 @@ import java.io.File
  */
 class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
-        const val MAX_COVER_IN_THUMBNAIL             = 3
+        const val MAX_COVER_IN_THUMBNAIL            = 3
 
+        const val KEY_THUMBNAIL_WIDTH               = "thumbnailWidth"
+        const val KEY_THUMBNAIL_HEIGHT              = "thumbnailHeight"
         const val KEY_COMIC_PATH_0                  = "comicPath0"
         const val KEY_COMIC_PATH_1                  = "comicPath1"
         const val KEY_COMIC_PATH_2                  = "comicPath2"
@@ -27,6 +29,9 @@ class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(
 
     override fun doWork(): Result {
         Timber.d("ImageDirWorker.doWork")
+        val thumbnailWidth = inputData.getInt(KEY_THUMBNAIL_WIDTH, 200)
+        val thumbnailHeight = inputData.getInt(KEY_THUMBNAIL_HEIGHT, 220)
+
         val comicPath0 = inputData.getString(KEY_COMIC_PATH_0)
         val comicPath1 = inputData.getString(KEY_COMIC_PATH_1)
         val comicPath2 = inputData.getString(KEY_COMIC_PATH_2)
@@ -54,7 +59,7 @@ class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(
 
         // Generate the thumbnail
         if (bitmapList.size>0) {
-            val bitmap = BitmapUtil.createDirectoryThumbnailBitmap(bitmapList)
+            val bitmap = BitmapUtil.createDirectoryThumbnailBitmap(bitmapList, thumbnailWidth, thumbnailHeight)
             if (destPath != null) {
                 BitmapUtil.saveBitmapInFile(bitmap, destPath)
             }

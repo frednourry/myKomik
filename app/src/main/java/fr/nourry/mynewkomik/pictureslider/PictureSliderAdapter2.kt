@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
 
@@ -24,6 +25,7 @@ class PictureSliderAdapter2(context: Context, private val pictures: List<ComicPi
         val imageView = holder.itemPicture.findViewById<ImageView>(R.id.imageView)
         Glide.with(imageView)
             .load(picture.file)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .into(imageView)
 
 /*        imageView.parent.requestDisallowInterceptTouchEvent(true)

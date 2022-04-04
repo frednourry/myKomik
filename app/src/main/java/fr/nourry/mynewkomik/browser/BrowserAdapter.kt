@@ -1,5 +1,6 @@
 package fr.nourry.mynewkomik.browser
 
+import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,15 +23,16 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
         fun onComicClicked(comic: Comic)
     }
 
-    class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
+    class ViewHolder(var itemView: View): RecyclerView.ViewHolder(itemView) {
         val cardView = itemView.findViewById<CardView>(R.id.cardView)!!
-        val imageView = itemView.findViewById<ImageView>(R.id.imageView)!!
+        var imageView = itemView.findViewById<ImageView>(R.id.imageView)!!
         val textView = itemView.findViewById<TextView>(R.id.textView)!!
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_comic, parent, false)
+//            .inflate(R.layout.file_browser_entry, parent, false)
         return ViewHolder(view)
     }
 
@@ -49,7 +51,11 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
                 ComicLoadingManager.getInstance().loadComicInImageView(comic, holder, comicAdapter)
             } else {
                 Glide.with(imageView.context)
-                    .load(R.drawable.ic_library_temp)
+//                    .load(ColorDrawable(Color.RED))
+//                    .load("/data/user/0/fr.nourry.mynewkomik/cache/3a180874576fe0cbbc9f02697049d60c.png")
+//                    .placeholder(ColorDrawable(Color.RED))
+                    .load(R.drawable.ic_launcher_foreground)
+//                    .load(R.drawable.ic_library_temp)
                     .into(imageView)
                 ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, holder, comicAdapter)
 
@@ -76,10 +82,12 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
 
             if (holderComic.file.absolutePath == comic.file.absolutePath) {
                 val image = holder.imageView
+/*                val d = Drawable.createFromPath(path.absolutePath)
+                image.setImageDrawable(d)*/
                 Glide.with(image.context)
                     .load(path)
+//                    .apply( RequestOptions().override(50, 50)
                     .into(image)
-
             } else {
                 Timber.w("onFinished:: To late. This view no longer requires this image...")
             }

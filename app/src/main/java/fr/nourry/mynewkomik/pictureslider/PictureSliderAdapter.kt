@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.viewpager.widget.PagerAdapter
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
 
@@ -22,6 +23,8 @@ class PictureSliderAdapter(context: Context, private val pictures: List<ComicPic
         val imageView = view.findViewById<com.github.chrisbanes.photoview.PhotoView>(R.id.imageView)
         Glide.with(imageView)
             .load(picture.file)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .skipMemoryCache(true)
             .into(imageView)
 /*
         imageView.setOnTouchListener(View.OnTouchListener() { view: View, motionEvent: MotionEvent ->

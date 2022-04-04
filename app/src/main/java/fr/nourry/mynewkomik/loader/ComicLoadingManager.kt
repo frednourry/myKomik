@@ -32,7 +32,6 @@ class ComicLoading(val comic: Comic, val type: ComicLoadingType, val listener:Co
 }
 
 class ComicLoadingManager private constructor() {
-
     private val PATH_COMIC_DIR = "current/"
 
     private var list: MutableList<ComicLoading> = ArrayList()
@@ -60,6 +59,12 @@ class ComicLoadingManager private constructor() {
                 val newInstance = mInstance ?: ComicLoadingManager().also { mInstance = it }
                 newInstance
             }
+
+        private const val THUMBNAIL_WIDTH                   = 199
+        private const val THUMBNAIL_HEIGHT                  = 218
+        private const val THUMBNAIL_INNER_IMAGE_WIDTH       = 100
+        private const val THUMBNAIL_INNER_IMAGE_HEIGHT      = 155
+        private const val THUMBNAIL_FRAME_SIZE              = 5
     }
 
     fun initialize(appContext: Context, cachePath: String) {
@@ -222,7 +227,12 @@ class ComicLoadingManager private constructor() {
                     null
                 } else {
                     val workData = workDataOf(UncompressFirstImageWorker.KEY_ARCHIVE_PATH to comic.file.absolutePath,
-                                                UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath)
+                                                UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to cacheFilePath,
+                                                UncompressFirstImageWorker.KEY_THUMBNAIL_WIDTH to THUMBNAIL_WIDTH,
+                                                UncompressFirstImageWorker.KEY_THUMBNAIL_HEIGHT to THUMBNAIL_HEIGHT,
+                                                UncompressFirstImageWorker.KEY_THUMBNAIL_INNER_IMAGE_WIDTH to THUMBNAIL_INNER_IMAGE_WIDTH,
+                                                UncompressFirstImageWorker.KEY_THUMBNAIL_INNER_IMAGE_HEIGHT to THUMBNAIL_INNER_IMAGE_HEIGHT,
+                                                UncompressFirstImageWorker.KEY_THUMBNAIL_FRAME_SIZE to THUMBNAIL_FRAME_SIZE)
 
                     // Image not in cache, so uncompress the comic
                     OneTimeWorkRequestBuilder<UncompressFirstImageWorker>()
@@ -275,6 +285,8 @@ class ComicLoadingManager private constructor() {
 
                         // TODO rewrite this when i will know how to add a work data...
                         val workData = workDataOf(ImageDirWorker.KEY_DESTINATION_DIRECTORY_PATH to cacheFilePath,
+                            ImageDirWorker.KEY_THUMBNAIL_WIDTH to THUMBNAIL_WIDTH,
+                            ImageDirWorker.KEY_THUMBNAIL_HEIGHT to THUMBNAIL_HEIGHT,
                             ImageDirWorker.KEY_COMIC_PATH_0 to pathList[0],
                             ImageDirWorker.KEY_COMIC_PATH_1 to pathList[1],
                             ImageDirWorker.KEY_COMIC_PATH_2 to pathList[2],
