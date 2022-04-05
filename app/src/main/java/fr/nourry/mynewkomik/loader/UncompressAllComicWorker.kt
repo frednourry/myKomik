@@ -7,11 +7,13 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.github.junrar.Archive
+import com.github.junrar.exception.RarException
 import fr.nourry.mynewkomik.utils.BitmapUtil
 import fr.nourry.mynewkomik.utils.clearFilesInDir
 import fr.nourry.mynewkomik.utils.isFilePathAnImage
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 import java.util.zip.ZipFile
 
 
@@ -127,41 +129,49 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
         clearFilesInDir(dir)
 
         // Unrar
-        val rarArchive = Archive(comicFile)
-        val nbHeaders = rarArchive.fileHeaders.size
+        try {
+            val rarArchive = Archive(comicFile)
+            val nbHeaders = rarArchive.fileHeaders.size
 
-        // TODO Check if not a 5.x RAR ...
+            // TODO Check if not a 5.x RAR ...
 
-        while (true) {
-            val fileHeader = rarArchive.nextFileHeader() ?: break
+            while (true) {
+                val fileHeader = rarArchive.nextFileHeader() ?: break
 
-            Timber.v("unrarInDirectory: ${fileHeader.fileName} ${fileHeader.fullUnpackSize}")
-            // Check the file
-            if (fileHeader.fullUnpackSize > 0) {
-                val fileName = fileHeader.fileName.lowercase()
-                if (isFilePathAnImage(fileName)) {
-                    // Extract this file
-                    val input = rarArchive.getInputStream(fileHeader)
-                    bitmap = BitmapUtil.createBitmap(input.readBytes())
-                    if (bitmap != null) {
-                        // Save the bitmap in cache
-                        if (isStopped) {    // Check if the work was cancelled
-                            break
+                Timber.v("unrarInDirectory: ${fileHeader.fileName} ${fileHeader.fullUnpackSize}")
+                // Check the file
+                if (fileHeader.fullUnpackSize > 0) {
+                    val fileName = fileHeader.fileName.lowercase()
+                    if (isFilePathAnImage(fileName)) {
+                        // Extract this file
+                        val input = rarArchive.getInputStream(fileHeader)
+                        bitmap = BitmapUtil.createBitmap(input.readBytes())
+                        if (bitmap != null) {
+                            // Save the bitmap in cache
+                            if (isStopped) {    // Check if the work was cancelled
+                                break
+                            }
+
+                            val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
+                            BitmapUtil.saveBitmapInFile(
+                                bitmap,
+                                dirPath + /*name*/ pageName,
+                                true
+                            ) // Do this in an other thread?
+                            bitmap.recycle()
                         }
-
-                        val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
-                        BitmapUtil.saveBitmapInFile(
-                            bitmap,
-                            dirPath + /*name*/ pageName,
-                            true
-                        ) // Do this in an other thread?
-                        bitmap.recycle()
+                        nbPages++
                     }
-                    nbPages++
+                    setProgressAsync(Data.Builder().putInt("currentIndex", cpt).putInt("size", nbHeaders).build())
+                    cpt++
                 }
-                setProgressAsync(Data.Builder().putInt("currentIndex", cpt).putInt("size", nbHeaders).build())
-                cpt++
             }
+        } catch (e: RarException) {
+            Timber.v("unrarInDirectory :: RarException $e")
+            return false
+        } catch (e: IOException) {
+            Timber.v("unrarInDirectory :: IOException $e")
+            return false
         }
 
         Timber.v("END unrarInDirectory ${comicFile.name}")
