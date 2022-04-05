@@ -149,7 +149,7 @@ fun getComicsFromDir(dir: File): List<File> {
 
 fun isFilePathAnImage(filename:String) : Boolean {
     val name = filename.lowercase()
-    return name.endsWith("jpg")||name.endsWith("gif")||name.endsWith("png")
+    return name.endsWith("jpg")||name.endsWith("jpeg")||name.endsWith("gif")||name.endsWith("png")
 }
 
 fun getImageFilesFromDir(dir: File): List<File> {

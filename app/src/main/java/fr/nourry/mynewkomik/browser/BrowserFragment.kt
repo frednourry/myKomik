@@ -118,7 +118,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         activity?.let { SharedPref.init(it) }
 
         browserAdapter = BrowserAdapter(comics, this)
-        recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))
+        recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))  // Should be higher, but cool result...
         recyclerView.adapter = browserAdapter
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]

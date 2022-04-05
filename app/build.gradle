@@ -87,6 +87,10 @@ dependencies {
     // PhotoView (to zoom on page)
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
+    // Junrar
+    def junrar_version = "7.5.0"
+    implementation "com.github.junrar:junrar:$junrar_version"
+
     // Safeargs (pour la navigation entre fragments)  !! Ne nas oublier de modifier aussi le build.gradle du projet ET de faire un 'make project' A CHAQUE AJOUT DE TRANSITION/ACTION
 //    implementation "androidx.navigation:navigation-safe-args-gradle-plugin:2.3.5"
 

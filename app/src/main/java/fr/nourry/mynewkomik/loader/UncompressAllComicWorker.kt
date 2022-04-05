@@ -6,12 +6,14 @@ import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.github.junrar.Archive
 import fr.nourry.mynewkomik.utils.BitmapUtil
 import fr.nourry.mynewkomik.utils.clearFilesInDir
 import fr.nourry.mynewkomik.utils.isFilePathAnImage
 import timber.log.Timber
 import java.io.File
 import java.util.zip.ZipFile
+
 
 class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
@@ -32,10 +34,15 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
         if (archivePath != null && destPath!= null) {
             val archiveFile = File(archivePath)
             val ext = archiveFile.extension.lowercase()
+            var boolResult = false
 
             if (ext == "cbz" || ext == "zip") {
-                unzipInDirectory(archiveFile, destPath)
-            } else {
+                boolResult = unzipInDirectory(archiveFile, destPath)
+            } else if (ext == "cbr" || ext == "rar") {
+                boolResult = unrarInDirectory(archiveFile, destPath)
+            }
+
+            if (!boolResult) {
                 val outputData = workDataOf(KEY_IMAGE_DESTINATION_PATH to destPath,
                     KEY_NB_PAGES to 0)
                 return Result.failure(outputData)
@@ -79,10 +86,6 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
                         val input = zip.getInputStream(entry)
                         bitmap = BitmapUtil.createBitmap(input.readBytes())
                         if (bitmap != null) {
-                            var name = entry.name
-                            val lastSlash = name.lastIndexOf('/')
-                            if (lastSlash > 0)
-                                name = name.substring(lastSlash + 1)
 
                             // Save the bitmap in cache
                             if (isStopped) {    // Check if the work was cancelled
@@ -111,6 +114,57 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
             }
         }
         Timber.v("END unzipInDirectory ${comicFile.name}")
+        return true
+    }
+
+    private fun unrarInDirectory(comicFile: File, dirPath:String):Boolean {
+        Timber.v("BEGIN unrarInDirectory ${comicFile.name}")
+        var bitmap: Bitmap?
+        var cpt = 0
+
+        // Clear the directory
+        val dir = File(dirPath)
+        clearFilesInDir(dir)
+
+        // Unrar
+        val rarArchive = Archive(comicFile)
+        val nbHeaders = rarArchive.fileHeaders.size
+
+        // TODO Check if not a 5.x RAR ...
+
+        while (true) {
+            val fileHeader = rarArchive.nextFileHeader() ?: break
+
+            Timber.v("unrarInDirectory: ${fileHeader.fileName} ${fileHeader.fullUnpackSize}")
+            // Check the file
+            if (fileHeader.fullUnpackSize > 0) {
+                val fileName = fileHeader.fileName.lowercase()
+                if (isFilePathAnImage(fileName)) {
+                    // Extract this file
+                    val input = rarArchive.getInputStream(fileHeader)
+                    bitmap = BitmapUtil.createBitmap(input.readBytes())
+                    if (bitmap != null) {
+                        // Save the bitmap in cache
+                        if (isStopped) {    // Check if the work was cancelled
+                            break
+                        }
+
+                        val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
+                        BitmapUtil.saveBitmapInFile(
+                            bitmap,
+                            dirPath + /*name*/ pageName,
+                            true
+                        ) // Do this in an other thread?
+                        bitmap.recycle()
+                    }
+                    nbPages++
+                }
+                setProgressAsync(Data.Builder().putInt("currentIndex", cpt).putInt("size", nbHeaders).build())
+                cpt++
+            }
+        }
+
+        Timber.v("END unrarInDirectory ${comicFile.name}")
         return true
     }
 }

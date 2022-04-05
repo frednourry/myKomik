@@ -5,11 +5,13 @@ import android.graphics.Bitmap
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.github.junrar.Archive
 import fr.nourry.mynewkomik.utils.BitmapUtil
 import fr.nourry.mynewkomik.utils.isFilePathAnImage
 import timber.log.Timber
 import java.io.File
 import java.util.zip.ZipFile
+
 
 class UncompressFirstImageWorker(context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
@@ -39,12 +41,16 @@ class UncompressFirstImageWorker(context: Context, workerParams: WorkerParameter
         if (archivePath != null && imageDestinationPath!= null) {
             val archiveFile = File(archivePath)
             val ext = archiveFile.extension.lowercase()
+            var boolResult = false
 
             if (ext == "cbz" || ext == "zip") {
-                unzipFirstImageInFileAndImageView(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-            } else {
-                return Result.failure()
+                boolResult = unzipFirstImageInFileAndImageView(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+            } else if (ext == "cbr" || ext == "rar") {
+                boolResult = unrarFirstImageInFileAndImageView(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
             }
+
+            if (!boolResult)
+                return Result.failure()
         }
 
         val outputData = workDataOf(KEY_IMAGE_DESTINATION_PATH to imageDestinationPath,
@@ -55,7 +61,7 @@ class UncompressFirstImageWorker(context: Context, workerParams: WorkerParameter
 
     private fun unzipFirstImageInFileAndImageView(
         comicFile: File,
-        path: String,
+        imagePath: String,
         thumbnailWidth: Int,
         thumbnailHeight: Int,
         thumbnailInnerImageWidth: Int,
@@ -79,15 +85,10 @@ class UncompressFirstImageWorker(context: Context, workerParams: WorkerParameter
                         bitmap = BitmapUtil.createFramedBitmap(input.readBytes(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
                         if (bitmap != null) {
                             // Reduce the bitmap if needed
-                            val bitmapToSave = Bitmap.createScaledBitmap(
-                                bitmap,
-                                bitmap.width,
-                                bitmap.height,
-                                false
-                            )
+                            val bitmapToSave = Bitmap.createScaledBitmap(bitmap, bitmap.width, bitmap.height,false)
 
                             // Save the bitmap in cache and return
-                            bitmapSaved = BitmapUtil.saveBitmapInFile(bitmapToSave, path)
+                            bitmapSaved = BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
                         }
                     }
                     // Count nb images
@@ -96,6 +97,47 @@ class UncompressFirstImageWorker(context: Context, workerParams: WorkerParameter
             }
             return bitmapSaved
         }
+    }
+
+    private fun unrarFirstImageInFileAndImageView(
+        comicFile: File,
+        imagePath: String,
+        thumbnailWidth: Int,
+        thumbnailHeight: Int,
+        thumbnailInnerImageWidth: Int,
+        thumbnailInnerImageHeight: Int,
+        thumbnailFrameSize: Int
+    ): Boolean {
+        var bitmap: Bitmap?
+        var bitmapSaved = false
+
+        val rarArchive = Archive(comicFile)
+
+        // TODO Check if not a 5.x RAR ...
+
+        while (!bitmapSaved) {
+            val fileHeader = rarArchive.nextFileHeader() ?: break
+
+            Timber.d("unrarFirstImageInFileAndImageView: ${fileHeader.fileName} ${fileHeader.fullUnpackSize}")
+            // Check the file
+            if (fileHeader.fullUnpackSize > 0) {
+                val fileName = fileHeader.fileName.lowercase()
+                if (isFilePathAnImage(fileName)) {
+                    // Extract this file
+                    val input = rarArchive.getInputStream(fileHeader)
+                    bitmap = BitmapUtil.createFramedBitmap(input.readBytes(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                    if (bitmap != null) {
+                        // Reduce the bitmap if needed
+                        val bitmapToSave = Bitmap.createScaledBitmap(bitmap, bitmap.width, bitmap.height,false)
+
+                        // Save the bitmap in cache and return
+                        bitmapSaved = BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
+                    }
+                }
+            }
+        }
+
+        return bitmapSaved
     }
 
 }
