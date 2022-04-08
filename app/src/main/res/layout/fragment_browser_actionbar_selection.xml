@@ -13,15 +13,17 @@
         android:background="@android:color/transparent"
         android:text="@string/actionbar_button_done"
         android:textColor="@color/white"
-        android:textSize="14sp" />
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
     <TextView
-        android:textSize="14sp"
-        android:layout_gravity="center_vertical"
         android:id="@id/actionbar_selection_count_textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0"
-        android:singleLine="true"/>
+        android:layout_gravity="center_vertical"
+        android:singleLine="true"
+        android:text="1"
+        android:textSize="14sp" />
     <TextView
         android:textSize="14sp"
         android:layout_gravity="center_vertical"
