@@ -4,12 +4,10 @@
 
     <item
         android:id="@+id/action_choose"
-        android:icon="@drawable/ic_choose_root_dir"
         android:title="@string/change_root_directory"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_empty_cache"
-        android:icon="@drawable/ic_clear_cache"
+        android:id="@+id/action_clear_cache"
         android:title="@string/empty_cache"
         app:showAsAction="never" />
 </menu>

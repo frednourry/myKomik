@@ -5,9 +5,13 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.*
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -22,8 +26,8 @@ import fr.nourry.mynewkomik.*
 import fr.nourry.mynewkomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
-import fr.nourry.mynewkomik.preference.PREF_ROOT_DIR
 import fr.nourry.mynewkomik.preference.PREF_LAST_COMIC
+import fr.nourry.mynewkomik.preference.PREF_ROOT_DIR
 import fr.nourry.mynewkomik.preference.SharedPref
 import fr.nourry.mynewkomik.utils.clearFilesInDir
 import fr.nourry.mynewkomik.utils.getDefaultDirectory
@@ -42,6 +46,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
         var PERMISSIONS = arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
         )
     }
 
@@ -50,7 +55,11 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     private var lastComic : File? = null
 
     private lateinit var browserAdapter: BrowserAdapter
+    private lateinit var supportActionBar:ActionBar
     private var comics = mutableListOf<Comic>()
+
+    private var isFilteredMode = false          // Special mode too select items (to erase or somthing else...)
+    private var selectedComicIndexes:ArrayList<Int> = ArrayList(0)
 
 
     private val confirmationDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
@@ -80,6 +89,17 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         setHasOptionsMenu(true)
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        menu.clear()
+        if (isFilteredMode) {
+            requireActivity().menuInflater.inflate(R.menu.menu_browser_selection_fragment, menu)
+        } else {
+            requireActivity().menuInflater.inflate(R.menu.menu_browser_fragment, menu)
+
+        }
+        super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_browser_fragment, menu)
     }
@@ -89,7 +109,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
         ComicLoadingManager.getInstance().initialize(requireContext(), requireActivity().cacheDir.absolutePath)
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
-
 
         // Re-associate the DialogChooseRootDirectory listener if necessary
         val dialogChooseRootDirectory = parentFragmentManager.findFragmentByTag(TAG_DIALOG_CHOOSE_ROOT)
@@ -126,6 +145,8 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
+
+        supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
 
         askPermission()
     }
@@ -196,9 +217,11 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         Timber.i("handleStateReady")
 
         setCurrentDir(state.currentDir!!)
-        (requireActivity() as AppCompatActivity).supportActionBar?.title = App.currentDir?.canonicalPath
+        supportActionBar.title = App.currentDir?.canonicalPath
 
         SharedPref.set(PREF_LAST_COMIC, "")    // Forget the last comic...
+
+        disableMultiSelect()
 
         comics.clear()
         comics.addAll(state.comics)
@@ -275,8 +298,8 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
     }
 
-    override fun onComicClicked(comic: Comic) {
-        Timber.d("onComicClicked "+comic.file.name)
+    override fun onComicClicked(comic: Comic, position:Int) {
+        Timber.v("onComicClicked "+comic.file.name)
         if (comic.file.isDirectory) {
             Timber.i("Directory !")
             viewModel.loadComics(comic.file)
@@ -289,16 +312,86 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
     }
 
+    override fun onComicLongClicked(comic: Comic, position:Int) {
+        Timber.v("onComicLongClicked "+comic.file.name)
+
+        // Faire apparaitre les checks box et le menu spécifique
+        setFilterMode(true, arrayListOf<Int>(position))
+    }
+
+    override fun onComicSelected(list:ArrayList<Int>) {
+        selectedComicIndexes = list
+        updateNbItemsSelected(list.size)
+    }
+
+    private fun updateNbItemsSelected(nb:Int) {
+        val customView = supportActionBar.customView
+        if (customView != null) {
+            val textView = customView.findViewById<TextView>(R.id.actionbar_selection_count_textView)
+            if (textView != null)
+                textView.text = "$nb"
+        }
+    }
+
+    private fun setFilterMode(bFilter:Boolean, selectedList:ArrayList<Int>? = null) {
+        Timber.v("setFilterMode($bFilter) isFilteredMode=$isFilteredMode")
+        if (isFilteredMode == bFilter) return
+
+        if (!isFilteredMode) {
+            isFilteredMode = true
+            browserAdapter.setFilterMode(isFilteredMode, selectedList)
+            supportActionBar.setDisplayShowTitleEnabled(false)
+            supportActionBar.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
+            supportActionBar.setHomeButtonEnabled(false)
+            val multiSelect = requireActivity().layoutInflater.inflate(R.layout.fragment_browser_actionbar_selection, null) as LinearLayout
+            (multiSelect.findViewById<View>(R.id.actionbar_selection_done) as Button).setOnClickListener { this@BrowserFragment.disableMultiSelect() }
+            supportActionBar.customView = multiSelect
+            requireActivity().invalidateOptionsMenu()
+        } else {
+            isFilteredMode = false
+            supportActionBar.displayOptions = ActionBar.DISPLAY_SHOW_HOME
+            browserAdapter.setFilterMode(isFilteredMode, selectedList)
+            supportActionBar.setDisplayShowTitleEnabled(true)
+            supportActionBar.setHomeButtonEnabled(true)
+            requireActivity().invalidateOptionsMenu()
+        }
+    }
+
+    private fun disableMultiSelect() {
+        setFilterMode(false)
+    }
+
+    private fun selectAll() {
+        browserAdapter.selectAll()
+        updateNbItemsSelected(comics.size)
+    }
+
+    private fun selectNone() {
+        browserAdapter.selectNone()
+        updateNbItemsSelected(0)
+    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_choose -> {
                 askToChangeRootDirectory()
-                return true
+                true
             }
-            R.id.action_empty_cache -> {
+            R.id.action_clear_cache -> {
                 askToClearCache()
-                return true
+                true
+            }
+            R.id.action_delete_selection -> {
+                askToDeleteSelection()
+               true
+            }
+            R.id.action_select_all -> {
+                selectAll()
+                true
+            }
+            R.id.action_select_none -> {
+                selectNone()
+                true
             }
             else -> return super.onOptionsItemSelected(item)
         }
@@ -334,12 +427,50 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         alert.show()
     }
 
+    private fun askToDeleteSelection() {
+        val alert: AlertDialog
+        if (selectedComicIndexes.size == 0) {
+            alert = AlertDialog.Builder(requireContext())
+                .setMessage(getString(R.string.no_file_selected))
+                .setPositiveButton(R.string.ok) { _,_ -> }
+                .create()
+        } else {
+            // Build a list of files to delete and add it to the message to display
+            var message = if (selectedComicIndexes.size == 1)
+                getString(R.string.ask_delete_this_file)
+            else
+                getString(R.string.ask_delete_files, selectedComicIndexes.size)
+
+            val deleteList: MutableList<File> = arrayListOf<File>()
+            for (cpt in selectedComicIndexes) {
+                deleteList.add(comics[cpt].file)
+                message += "\n - "+comics[cpt].file.name
+            }
+
+            alert = AlertDialog.Builder(requireContext())
+                .setMessage(message)
+                .setPositiveButton(R.string.ok) { _,_ ->
+                    Timber.e("selectedComicIndexes = $selectedComicIndexes")
+
+                    // Ask the viewModel to delete those files
+                    viewModel.deleteFiles(deleteList)
+                }
+                .setNegativeButton(android.R.string.cancel) { _,_ -> }
+                .create()
+        }
+
+        alert.show()
+    }
+
 
     // The button back is pressed, so can we move to the parent directory?
     // Returns true if and only if we can
     private fun handleBackPressedToChangeDirectory():Boolean {
         Timber.d("handleBackPressedToChangeDirectory - current=${App.currentDir} (root=$rootDirectory)")
-        return if (App.currentDir?.parentFile == null || App.currentDir?.absolutePath == rootDirectory.absolutePath) {
+        return if (isFilteredMode) {
+            setFilterMode(false)
+            true
+        } else if (App.currentDir?.parentFile == null || App.currentDir?.absolutePath == rootDirectory.absolutePath) {
             false
         } else {
             viewModel.loadComics(App.currentDir?.parentFile!!)

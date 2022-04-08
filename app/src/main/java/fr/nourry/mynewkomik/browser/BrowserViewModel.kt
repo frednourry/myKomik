@@ -3,6 +3,7 @@ package fr.nourry.mynewkomik
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import fr.nourry.mynewkomik.utils.deleteFile
 import fr.nourry.mynewkomik.utils.getComicsFromDir
 import timber.log.Timber
 import java.io.File
@@ -36,12 +37,15 @@ class BrowserViewModel : ViewModel() {
     private var comics = mutableListOf<Comic>()
 
     private val state = MutableLiveData<BrowserViewModelState>()
-    fun getState() : LiveData<BrowserViewModelState> = state
-    fun isInitialize(): Boolean = if (state.value!= null) state.value!!.isInit else false
+    fun getState(): LiveData<BrowserViewModelState> = state
+    fun isInitialize(): Boolean = if (state.value != null) state.value!!.isInit else false
 
     fun errorPermissionDenied() {
         Timber.d("errorPermissionDenied")
-        state.value = BrowserViewModelState.Error("Permission denied: cannot read directory!", isInit = isInitialize())
+        state.value = BrowserViewModelState.Error(
+            "Permission denied: cannot read directory!",
+            isInit = isInitialize()
+        )
     }
 
     fun init() {
@@ -49,8 +53,8 @@ class BrowserViewModel : ViewModel() {
         state.value = BrowserViewModelState.Init()
     }
 
-    fun loadComics(dir:File) {
-        Timber.d("----- loadComics("+dir.absolutePath+") -----")
+    fun loadComics(dir: File) {
+        Timber.d("----- loadComics(" + dir.absolutePath + ") -----")
         state.value = BrowserViewModelState.ComicLoading(dir)
 
         val files = getComicsFromDir(dir)
@@ -60,5 +64,16 @@ class BrowserViewModel : ViewModel() {
         }
 
         state.value = BrowserViewModelState.ComicReady(dir, comics)
+    }
+
+    fun deleteFiles(deleteList: List<File>) {
+        for (file in deleteList) {
+            // TODO delete all traces (thumbnails, datebase entry, etc...)
+
+            deleteFile(file)
+        }
+
+        // Refresh view
+        loadComics(App.currentDir!!)
     }
 }

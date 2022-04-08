@@ -4,7 +4,15 @@
     <string name="empty_cache">Empty cache</string>
     <string name="change_root_directory">Change root directory</string>
     <string name="ask_change_root_directory">Do you really want to change the root comics directory?</string>
-    <string name="ask_clear_cache">Do you really want to change the root comics directory?</string>
+    <string name="ask_clear_cache">Do you really want to clear the cache?</string>
+    <string name="ask_delete_this_file">Do you really want to delete this file?</string>
+    <string name="ask_delete_files">Do you really want to delete the following %1$d files?</string>
+    <string name="no_file_selected">No file selected !</string>
     <string name="ask_continue_with_same_comic">Continue from your last comic?</string>
     <string name="dialog_choose_root_select">Select</string>
+    <string name="action_delete_files">Delete(s) file</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_select_none">Select none</string>
+    <string name="actionbar_text_items_selected">Item(s) selected</string>
+    <string name="actionbar_button_done">X Done</string>
 </resources>

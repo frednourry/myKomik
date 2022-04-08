@@ -3,4 +3,8 @@
     <item name="thumbnailWrapper" type="id" />
     <item name="readWrapper" type="id" />
     <item name="readIcon" type="id" />
+    <item name="ab_multi_select" type="id" />
+    <item name="actionbar_selection_info_textView" type="id" />
+    <item name="actionbar_selection_count_textView" type="id" />
+    <item name="actionbar_selection_done" type="id" />
 </resources>
