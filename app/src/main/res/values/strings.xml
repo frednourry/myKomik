@@ -15,4 +15,7 @@
     <string name="action_select_none">Select none</string>
     <string name="actionbar_text_items_selected">Item(s) selected</string>
     <string name="actionbar_button_done">X Done</string>
+    <string name="message_files_deleted">File(s) deleted</string>
+    <string name="message_undo">Undo</string>
+
 </resources>

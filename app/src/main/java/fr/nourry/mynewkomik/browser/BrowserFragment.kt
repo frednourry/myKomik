@@ -453,13 +453,28 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                     Timber.e("selectedComicIndexes = $selectedComicIndexes")
 
                     // Ask the viewModel to delete those files
-                    viewModel.deleteFiles(deleteList)
+                    viewModel.prepareDeleteFiles(deleteList)
+
+                    // Give some time of reflection...
+                    showSnackbarUndoDeletion(deleteList)
                 }
                 .setNegativeButton(android.R.string.cancel) { _,_ -> }
                 .create()
         }
 
         alert.show()
+    }
+
+    private fun showSnackbarUndoDeletion(deleteList:MutableList<File>) {
+        Snackbar
+            .make(coordinatorLayout, getString(R.string.message_files_deleted), Snackbar.LENGTH_LONG)
+            .setDuration(viewModel.TIME_BEFORE_DELETION)
+            .setAction(getString(R.string.message_undo), View.OnClickListener {
+                    if (viewModel.undoDeleteFiles()) {
+                        viewModel.loadComics(App.currentDir!!)
+                    }
+            })
+            .show()
     }
 
 
