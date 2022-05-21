@@ -3,8 +3,11 @@ package fr.nourry.mynewkomik
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import fr.nourry.mynewkomik.database.FileEntry
+import fr.nourry.mynewkomik.preference.*
 import fr.nourry.mynewkomik.utils.deleteFile
 import fr.nourry.mynewkomik.utils.getComicsFromDir
+import fr.nourry.mynewkomik.utils.getFileEntriesFromDir
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.io.File
@@ -14,7 +17,7 @@ sealed class BrowserViewModelState(
     val currentDir: File? = null
 
 ) {
-    class Init : BrowserViewModelState (
+    class Init(val directoryPath: String, val lastComicPath: String, val prefCurrentPage: String) : BrowserViewModelState (
         isInit = false
     )
 
@@ -34,10 +37,12 @@ sealed class BrowserViewModelState(
 }
 
 
-class BrowserViewModel : ViewModel() {
+class BrowserViewModel() : ViewModel() {
     private var comics = mutableListOf<Comic>()         // List of comics in the current directory
     private var filesToDelete = mutableListOf<File>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
     private var deletionJob: Any? = null                // Job to delete all the files in 'filesToDelete'
+
+//    lateinit var fileEntries:LiveData<List<FileEntry>>// = App.database.comicEntryDao().getComicEntriesByParentPath("")
 
     private val state = MutableLiveData<BrowserViewModelState>()
     fun getState(): LiveData<BrowserViewModelState> = state
@@ -55,7 +60,10 @@ class BrowserViewModel : ViewModel() {
 
     fun init() {
         Timber.d("init")
-        state.value = BrowserViewModelState.Init()
+        val directoryPath = SharedPref.get(PREF_ROOT_DIR, "")
+        val lastComicPath = SharedPref.get(PREF_LAST_COMIC_PATH, "")
+        val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
+        state.value = BrowserViewModelState.Init(directoryPath!!, lastComicPath!!, prefCurrentPage!!)
     }
 
     fun loadComics(dir: File) {
@@ -63,6 +71,12 @@ class BrowserViewModel : ViewModel() {
         Timber.v("  filesToDelete = $filesToDelete")
         state.value = BrowserViewModelState.ComicLoading(dir)
 
+        // Get a list from the database
+//        fileEntries = App.database.comicEntryDao().getFileEntriesByParentPath(dir.absolutePath)
+//        val fileEntries = getFileEntriesFromDir(dir)
+//        Timber.w("FileEntries = $fileEntries")
+
+        // Get a list from the drive
         val files = getComicsFromDir(dir)
         comics.clear()
         for (file in files) {
@@ -75,6 +89,7 @@ class BrowserViewModel : ViewModel() {
             }
         }
 
+        setAppCurrentDir(dir)
         state.value = BrowserViewModelState.ComicReady(dir, comics)
     }
 
@@ -87,7 +102,7 @@ class BrowserViewModel : ViewModel() {
             filesToDelete.clear()
         }
 
-        // Retreive the list
+        // Retrieve the list
         for (file in deleteList) {
             filesToDelete.add(file)
         }
@@ -100,7 +115,6 @@ class BrowserViewModel : ViewModel() {
 
         // Refresh view
         loadComics(App.currentDir!!)
-
     }
 
     // Stop the timer that should delete the files in 'filesToDelete'
@@ -123,10 +137,29 @@ class BrowserViewModel : ViewModel() {
     private fun deleteFiles() {
         Timber.d("deleteFiles :: filesToDelete= $filesToDelete)")
         for (file in filesToDelete) {
-            // TODO delete all traces (thumbnails, datebase entry, etc...)
+            // TODO delete all traces (thumbnails, database entry, etc...)
 
             deleteFile(file)
         }
         filesToDelete.clear()
     }
+
+    fun setAppCurrentDir(dir:File) {
+        App.currentDir = dir
+    }
+
+    fun setPrefLastComicPath(path: String) {
+        SharedPref.set(PREF_LAST_COMIC_PATH, path)
+    }
+    fun setPrefRootDir(absolutePath: String) {
+        SharedPref.set(PREF_ROOT_DIR, absolutePath)
+    }
+
+    fun synchronizedDatabase(comicentries: List<FileEntry>) {
+        Timber.d("synchronizedDatabase")
+        Timber.d("    comics=$comics")
+//        Timber.d("    comicEntries=${fileEntries.value}")
+    }
+
+
 }

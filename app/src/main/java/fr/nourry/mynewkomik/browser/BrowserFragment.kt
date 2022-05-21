@@ -1,8 +1,5 @@
 package fr.nourry.mynewkomik.browser
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.*
 import android.widget.Button
@@ -10,11 +7,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
@@ -23,16 +18,14 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mynewkomik.*
+import fr.nourry.mynewkomik.databinding.FragmentBrowserBinding
 import fr.nourry.mynewkomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
-import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
-import fr.nourry.mynewkomik.preference.PREF_LAST_COMIC
-import fr.nourry.mynewkomik.preference.PREF_ROOT_DIR
 import fr.nourry.mynewkomik.preference.SharedPref
 import fr.nourry.mynewkomik.utils.clearFilesInDir
 import fr.nourry.mynewkomik.utils.getDefaultDirectory
 import fr.nourry.mynewkomik.utils.isDirExists
-import kotlinx.android.synthetic.main.fragment_browser.*
+import kotlinx.coroutines.flow.count
 import timber.log.Timber
 import java.io.File
 
@@ -44,10 +37,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     companion object {
         fun newInstance() = BrowserFragment()
 
-        var PERMISSIONS = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        )
     }
 
     private lateinit var viewModel: BrowserViewModel
@@ -61,28 +50,23 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     private var isFilteredMode = false          // Special mode too select items (to erase or somthing else...)
     private var selectedComicIndexes:ArrayList<Int> = ArrayList(0)
 
+    // Test for View Binding (replace 'kotlin-android-extensions')
+    private var _binding: FragmentBrowserBinding? = null
+    // This property is only valid between onCreateView and onDestroyView.
+    private val binding get() = _binding!!
 
-    private val confirmationDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
+
+    private val confirmationChooseRootDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
         override fun onChooseDirectory(file:File) {
             Timber.d("onChooseDirectory :: ${file.absolutePath}")
 
             // Save
-            SharedPref.set(PREF_ROOT_DIR, file.absolutePath)
+            viewModel.setPrefRootDir(file.absolutePath)
 
             rootDirectory = file
             viewModel.loadComics(rootDirectory)
         }
     }
-
-    private val permissionRequestLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            val granted = permissions.entries.all {
-                it.value == true
-            }
-            if (granted) {
-                viewModel.init()
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,7 +88,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         inflater.inflate(R.menu.menu_browser_fragment, menu)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         Timber.i("onCreateView")
 
         ComicLoadingManager.getInstance().initialize(requireContext(), requireActivity().cacheDir.absolutePath)
@@ -113,10 +97,19 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         // Re-associate the DialogChooseRootDirectory listener if necessary
         val dialogChooseRootDirectory = parentFragmentManager.findFragmentByTag(TAG_DIALOG_CHOOSE_ROOT)
         if (dialogChooseRootDirectory != null) {
-            (dialogChooseRootDirectory as DialogChooseRootDirectory).listener = confirmationDialogListener
+            (dialogChooseRootDirectory as DialogChooseRootDirectory).listener = confirmationChooseRootDialogListener
         }
 
-        return inflater.inflate(R.layout.fragment_browser, container, false)
+        _binding = FragmentBrowserBinding.inflate(inflater, container, false)
+        val view = binding.root
+        return view
+
+//        return inflater.inflate(R.layout.fragment_browser, container, false)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -128,7 +121,8 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             // Handle the back button event
             Timber.d("BACK PRESSED !!!!!!!")
 
-            if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
+            // Check if we can bo back in the tree file AND if the previous fragment was this one (to prevent to go back to PermissionFragment...)
+            if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false)) {
                 Timber.v("    NO STACK !!")
                 activity?.finish()
             }
@@ -137,18 +131,22 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         activity?.let { SharedPref.init(it) }
 
         browserAdapter = BrowserAdapter(comics, this)
-        recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))  // Should be higher, but cool result...
-        recyclerView.adapter = browserAdapter
+        binding.recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))  // Should be higher, but cool result so keep it...
+        binding.recyclerView.adapter = browserAdapter
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
+/*        viewModel.comicEntries.observe(viewLifecycleOwner, Observer{comicEntries->
+            Timber.w("UPDATED::comicEntries=$comicEntries")
+            viewModel.synchronizedDatabase(comicEntries)
+        })*/
 
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
 
-        askPermission()
+        viewModel.init()
     }
 
     private fun getNbColumns(columnWidth: Int): Int {
@@ -156,32 +154,12 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         return ((displayMetrics.widthPixels / displayMetrics.density) / columnWidth).toInt()
     }
 
-    private fun setCurrentDir(dir:File) {
-        App.currentDir = dir
-    }
-
-    /**
-     *  Demander les autorisation d'accès à la SD card
-     */
-
-    private fun hasPermissions(context: Context, permissions: Array<String>): Boolean = permissions.all {
-        ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-    }
-    private fun askPermission() {
-        Timber.d("askPermission")
-        if (hasPermissions(activity as Context, PERMISSIONS)) {
-            viewModel.init()
-        } else {
-            permissionRequestLauncher.launch(PERMISSIONS)
-        }
-    }
-
     // Update UI according to the model state events
     private fun updateUI(state: BrowserViewModelState) {
         Timber.i("Calling updateUI, switch state=${state::class}")
         return when(state) {
             is BrowserViewModelState.Error -> handleStateError(state)
-            is BrowserViewModelState.Init -> handleStateInit()
+            is BrowserViewModelState.Init -> handleStateInit(state)
             is BrowserViewModelState.ComicLoading -> handleStateLoading(state.currentDir)
             is BrowserViewModelState.ComicReady -> handleStateReady(state)
             else -> {}
@@ -191,22 +169,22 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     // An error occurs
     private fun handleStateError(state: BrowserViewModelState.Error) {
         Timber.i("handleStateError")
-        Snackbar.make(coordinatorLayout, "ERROR: ${state.errorMessage}", Snackbar.LENGTH_LONG).show()
+        Snackbar.make(binding.coordinatorLayout, "ERROR: ${state.errorMessage}", Snackbar.LENGTH_LONG).show()
 
         // Exit app ?
 
     }
 
-    private fun handleStateInit() {
+    private fun handleStateInit(state:BrowserViewModelState.Init) {
         Timber.i("handleStateInit")
-        initBrowser()
+        initBrowser(state.directoryPath, state.lastComicPath, state.prefCurrentPage)
     }
 
     private fun handleStateLoading(dir: File?) {
         Timber.i("handleStateLoading")
         if (dir != null) {
             Timber.i("handleStateLoading "+dir.name)
-            setCurrentDir(dir)
+            viewModel.setAppCurrentDir(dir)
 
             // Stop all loading...
             ComicLoadingManager.getInstance().clean()
@@ -216,51 +194,45 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     private fun handleStateReady(state: BrowserViewModelState.ComicReady) {
         Timber.i("handleStateReady")
 
-        setCurrentDir(state.currentDir!!)
         supportActionBar.title = App.currentDir?.canonicalPath
 
-        SharedPref.set(PREF_LAST_COMIC, "")    // Forget the last comic...
+        viewModel.setPrefLastComicPath("")      // Forget the last comic...
 
         disableMultiSelect()
 
         comics.clear()
         comics.addAll(state.comics)
         browserAdapter.notifyDataSetChanged()
-        recyclerView.scrollToPosition(0)
+        binding.recyclerView.scrollToPosition(0)
     }
 
 
     // Show a dialog to ask where is the root comics directory
     private fun showChooseDirectoryDialog(rootFile: File?, isCancelable:Boolean) {
+        Timber.w("showChooseDirectoryDialog:: rootFile = $rootFile")
         val root:File = rootFile ?: getDefaultDirectory(requireContext())
 
         val dialog = DialogChooseRootDirectory.newInstance(root)
         dialog.isCancelable = isCancelable
-        dialog.listener = confirmationDialogListener
+        dialog.listener = confirmationChooseRootDialogListener
 
         dialog.show(parentFragmentManager, TAG_DIALOG_CHOOSE_ROOT)
     }
 
-    private fun initBrowser() {
-        Timber.d("initBrowser")
+    private fun initBrowser(directoryPath:String, lastComicPath:String, prefCurrentPage:String) {
+        Timber.d("initBrowser directoryPath=$directoryPath lastComicPath=$lastComicPath prefCurrentPage=$prefCurrentPage")
 
-        val directoryPath = SharedPref.get(PREF_ROOT_DIR, "")
-        if (directoryPath == "" || !isDirExists(directoryPath!!)) {
-            var rootDir:File? = null
-            if (isDirExists(directoryPath))
-                rootDir = File("/storage/emulated/O")
-            showChooseDirectoryDialog(rootDir, false)
+        if (directoryPath == "" || !isDirExists(directoryPath)) {
+            showChooseDirectoryDialog(null, false)
         } else {
             rootDirectory = File(directoryPath)
 
             if (App.currentDir == null) {
-                // It's the first time we come in this fragment, so use the rootDirectory
-
+                // It's the first time we come in this fragment
 
                 // Ask if we should use the last comic
-                val lastComicPath = SharedPref.get(PREF_LAST_COMIC, "")
                 if (lastComicPath != "") {
-                    lastComic = File(lastComicPath!!)
+                    lastComic = File(lastComicPath)
                     if (!lastComic!!.exists() || !lastComic!!.isFile) {
                         lastComic = null
                     }
@@ -274,15 +246,14 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
                             // Call the fragment to view the last comic
                             var currentPage = 0
-                            val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
-                            if (prefCurrentPage != null) {
+                            if (prefCurrentPage != "") {
                                 currentPage = prefCurrentPage.toInt()
                             }
                             val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(Comic(lastComic!!), currentPage)
                             findNavController().navigate(action)
                         }
                         .setNegativeButton(android.R.string.cancel) { _,_ ->
-                            SharedPref.set(PREF_LAST_COMIC, "")    // Forget the last comic...
+                            viewModel.setPrefLastComicPath("")      // Forget the last comic...
                             viewModel.loadComics(rootDirectory)
                         }
                         .create()
@@ -306,7 +277,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         } else {
             Timber.i("File ${comic.file.name} !")
             lastComic= comic.file
-            SharedPref.set(PREF_LAST_COMIC, comic.file.absolutePath)
+            viewModel.setPrefLastComicPath(comic.file.absolutePath)
             val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(comic, 0)
             findNavController().navigate(action)
         }
@@ -456,7 +427,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                     viewModel.prepareDeleteFiles(deleteList)
 
                     // Give some time of reflection...
-                    showSnackbarUndoDeletion(deleteList)
+                    showSnackBarUndoDeletion()
                 }
                 .setNegativeButton(android.R.string.cancel) { _,_ -> }
                 .create()
@@ -465,15 +436,15 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         alert.show()
     }
 
-    private fun showSnackbarUndoDeletion(deleteList:MutableList<File>) {
+    private fun showSnackBarUndoDeletion() {
         Snackbar
-            .make(coordinatorLayout, getString(R.string.message_files_deleted), Snackbar.LENGTH_LONG)
+            .make(binding.coordinatorLayout, getString(R.string.message_files_deleted), Snackbar.LENGTH_LONG)
             .setDuration(viewModel.TIME_BEFORE_DELETION)
-            .setAction(getString(R.string.message_undo), View.OnClickListener {
-                    if (viewModel.undoDeleteFiles()) {
-                        viewModel.loadComics(App.currentDir!!)
-                    }
-            })
+            .setAction(getString(R.string.message_undo)) {
+                if (viewModel.undoDeleteFiles()) {
+                    viewModel.loadComics(App.currentDir!!)
+                }
+            }
             .show()
     }
 

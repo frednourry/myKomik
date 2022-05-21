@@ -10,6 +10,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
+import timber.log.Timber
 
 
 // To work with a androidx.viewpager.widget.ViewPager

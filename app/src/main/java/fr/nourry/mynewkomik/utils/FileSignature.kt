@@ -24,14 +24,14 @@ private fun String.hashWithAlgorithm(algorithm: String): String {
     return bytes.fold("") { str, it -> str + "%02x".format(it) }
 }
 
+fun stringToHash(str:String):String {
+    return str.md5()
+}
 
 class FileSignature (var hashCode:String) {
     companion object {
         fun createFileSignature(path: String): FileSignature {
-            return FileSignature(path.md5())
-//            return FileSignature(path.sha512())
-//            return FileSignature(path.sha256())
-//            return FileSignature(path.sha1())
+            return FileSignature(stringToHash(path))
         }
     }
 

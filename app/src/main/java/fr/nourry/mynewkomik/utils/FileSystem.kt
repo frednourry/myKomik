@@ -8,6 +8,7 @@ import android.os.storage.StorageVolume
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.os.EnvironmentCompat
+import fr.nourry.mynewkomik.database.FileEntry
 import timber.log.Timber
 import java.io.File
 
@@ -124,7 +125,7 @@ fun isValidDir(file:File):Boolean {
 }
 
 fun getDirectoriesList(dir: File): List<File> {
-    Timber.d("getDirList:: ${dir.absolutePath}")
+    Timber.d("getDirectoriesList:: ${dir.absolutePath}")
     val l = dir.listFiles()
 
     if (l != null) {
@@ -138,6 +139,7 @@ fun getDirectoriesList(dir: File): List<File> {
 fun getComicsFromDir(dir: File): List<File> {
     Timber.d("getComicFilesFromDir:: ${dir.absolutePath}")
     val l = dir.listFiles()
+    Timber.v("getComicFilesFromDir:: l.size=${l.size}")
     if (l != null) {
         val list = l.sortedWith(compareBy{it.name})
         val directory = list.filter { f-> (f.isDirectory) }
@@ -146,6 +148,25 @@ fun getComicsFromDir(dir: File): List<File> {
     }
     return emptyList()
 }
+
+fun getFileEntriesFromDir(dir: File): List<FileEntry> {
+    Timber.d("getComicFilesFromDir:: ${dir.absolutePath}  SOMETHING TO UNCOMMENT HERE !!!!")
+    val l = dir.listFiles()
+    var resultList:List<FileEntry> = emptyList()
+    if (l != null) {
+        val list = l.sortedWith(compareBy{it.name})
+        val directory = list.filter { f-> (f.isDirectory) }
+        val comics = list.filter { f-> ((f.extension=="cbz" || f.extension=="cbr") && f.isFile) } //.sorted()
+
+
+        for (f in directory.plus(comics)) {
+//            resultList.plus(FileEntry(f))
+        }
+
+    }
+    return resultList
+}
+
 
 // Return true if and only if the extension is 'jpg', 'gif', 'png' or 'jpeg'
 fun isImageExtension(extension:String) : Boolean {

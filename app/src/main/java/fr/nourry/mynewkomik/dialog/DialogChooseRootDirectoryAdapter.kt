@@ -1,29 +1,38 @@
 package fr.nourry.mynewkomik.dialog
 
 import android.graphics.Typeface
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import fr.nourry.mynewkomik.R
+import androidx.recyclerview.widget.RecyclerView
+import fr.nourry.mynewkomik.databinding.DialogChooseRootListItemBinding
 import fr.nourry.mynewkomik.utils.*
-import kotlinx.android.synthetic.main.dialog_choose_root_list_item.view.*
 import timber.log.Timber
 import java.io.File
 
 data class SelectableDir (val label: String, val pathFile:File, val isVolume:Boolean, val isImportant:Boolean, val isParent:Boolean)
 
-class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, private val volumeList: ArrayList<VolumeLabel>) : BaseAdapter(), ListAdapter {
+class DialogChooseRootDirectoryAdapter(private val volumeList: ArrayList<VolumeLabel>) : BaseAdapter(), ListAdapter {
     interface ConfirmationDialogListener {
         fun onChooseDirectory(file:File)
     }
     var listener: ConfirmationDialogListener? = null
 
+    inner class ViewHolder(binding: DialogChooseRootListItemBinding) : RecyclerView.ViewHolder(binding.root) {
+        var diskIcon = binding.diskIcon
+        var textView = binding.textView
+        var button = binding.button
+        var separatorView = binding.separatorView
+        var selectableDir:SelectableDir? = null
+        var adapter: DialogChooseRootDirectoryAdapter? = null
+    }
+
     private lateinit var rootFile: File
     private lateinit var selectableDirList: MutableList<SelectableDir>
 
     fun setRootPath(root:File) {
+        Timber.d("setRootPath($root)")
         val dirList = getDirectoriesList(root) as MutableList<File>
         rootFile = root
 
@@ -46,65 +55,59 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, pri
         val view: View
         val selectableDir = selectableDirList[index]
 
-        val viewHolder: DialogChooseRootDirectoryHolder
+        val viewHolder: ViewHolder //DialogChooseRootDirectoryHolder
         if (convertView == null) {
-            view = inflater.inflate(R.layout.dialog_choose_root_list_item, parent, false)
-            viewHolder = DialogChooseRootDirectoryHolder()
+            val binding = DialogChooseRootListItemBinding.inflate(LayoutInflater.from(parent!!.context), parent,false)
+            view = binding.root
+            viewHolder = ViewHolder(binding)
 
+            viewHolder.adapter = this
+            view.tag = viewHolder
         } else {
             view = convertView
-            viewHolder = view.tag as DialogChooseRootDirectoryHolder
+            viewHolder = view.tag as ViewHolder
         }
-
-        viewHolder.textView = view.textView
-        viewHolder.button = view.button
-        viewHolder.adapter = this
-        viewHolder.diskIcon = view.diskIcon
         viewHolder.selectableDir = selectableDir
-        viewHolder.separator = view.separatorView
-        view.tag = viewHolder
 
         view.setOnClickListener { v ->
-            val tag = v.tag as DialogChooseRootDirectoryHolder
+            val tag = v.tag as ViewHolder
             val adapter = tag.adapter
             val textView = tag.textView
-            val text = textView?.text
-            val selectableDir = tag.selectableDir
-            Timber.i("OnClickListener " + text + " " + selectableDir?.pathFile?.name)
-            if (selectableDir != null) {
-                if (selectableDir.pathFile.exists() && selectableDir.pathFile.isDirectory && selectableDir.label != "") {
-                    val newList = getDirectoriesList(selectableDir.pathFile) as MutableList<File>
-                    adapter?.refreshDirList(selectableDir.pathFile, newList)
-                }
+            val text = textView.text
+            val selectableDir2 = tag.selectableDir as SelectableDir
+            Timber.d("OnClickListener " + text + " " + selectableDir2.pathFile.name)
+            if (selectableDir2.pathFile.exists() && selectableDir2.pathFile.isDirectory && (selectableDir2.label != "")) {
+                val newList = getDirectoriesList(selectableDir2.pathFile) as MutableList<File>
+                adapter?.refreshDirList(selectableDir2.pathFile, newList)
             }
         }
-        viewHolder.button?.setOnClickListener { b ->
+        viewHolder.button.setOnClickListener { b ->
             if (b.parent != null) {
-                val view = b.parent as View
-                val holder = view.tag as DialogChooseRootDirectoryHolder
+                val v = b.parent as View
+                val holder = v.tag as ViewHolder
                 holder.selectableDir?.let { listener?.onChooseDirectory(it.pathFile) }
             }
         }
 
 
         // Set name and button visibility
-        view.button.visibility = View.VISIBLE
+        viewHolder.button.visibility = View.VISIBLE
 //        view.textView?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18.0F)
-        view.textView?.setTextAppearance(android.R.style.TextAppearance_Small)
+        viewHolder.textView.setTextAppearance(android.R.style.TextAppearance_Small)
 
-        view.textView?.text = selectableDir.label
-        view.diskIcon.visibility = if (selectableDir.isVolume) View.VISIBLE else View.INVISIBLE
-        view.separatorView.visibility = if (selectableDir.label == "") View.VISIBLE else View.INVISIBLE
+        viewHolder.textView.text = selectableDir.label
+        viewHolder.diskIcon.visibility = if (selectableDir.isVolume) View.VISIBLE else View.INVISIBLE
+        viewHolder.separatorView.visibility = if (selectableDir.label == "") View.VISIBLE else View.INVISIBLE
 
         if (selectableDir.isVolume) {
-            view.textView?.setTextAppearance(android.R.style.TextAppearance_Medium)
+            viewHolder.textView.setTextAppearance(android.R.style.TextAppearance_Medium)
         }
         if (selectableDir.isImportant) {
-            view.textView?.setTypeface(view.textView?.typeface, Typeface.BOLD)
+            viewHolder.textView.setTypeface(viewHolder.textView.typeface, Typeface.BOLD)
         }
 
         if (selectableDir.isParent || selectableDir.isVolume || selectableDir.label == "") {
-            view.button.visibility = View.INVISIBLE
+            viewHolder.button.visibility = View.INVISIBLE
         }
 
         return view
@@ -133,7 +136,7 @@ class DialogChooseRootDirectoryAdapter(private val inflater: LayoutInflater, pri
         }
 
         // Add a separator
-        if (newSelectableDir.count()>0) {
+        if (newSelectableDir.isNotEmpty()) {
             // Add separator
             newSelectableDir.add(SelectableDir("", File("plop"), false, false, false))
         }

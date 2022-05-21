@@ -41,27 +41,24 @@ class DialogChooseRootDirectory(private val rootPath: File?=null) : DialogFragme
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         Timber.d("onCreateDialog")
 
-        if (volumeList.count()==0) {
+        if (volumeList.isEmpty()) {
             volumeList = initVolumeDetection(requireContext())!!
         }
 
         val builder = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
 
         // Get the layout inflater
-        var inflater = requireActivity().layoutInflater
-        inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
 
         listView = inflater.inflate(R.layout.dialog_choose_root_list, null) as ListView
-//        val dialogView = inflater.inflate(R.layout.dialog_choose_root, null) as View
-//        listView = dialogView.findViewById(R.id.listView) as ListView
-
 
         if (adapter == null)
-            adapter = DialogChooseRootDirectoryAdapter(inflater, volumeList)
+            adapter = DialogChooseRootDirectoryAdapter(volumeList)
 
         if (rootPath == null) {
             // Do nothing (this dialog is recreated)
             Timber.v("onCreateDialog: rootPath = null")
+            if (volumeList.count()>0) File(volumeList[0].path) else rootPath
         } else {
             val origin:File = rootPath
             //if (volumeList.count()>0) File(volumeList[0].path) else rootPath

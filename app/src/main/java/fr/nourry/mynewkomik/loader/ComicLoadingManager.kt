@@ -109,7 +109,8 @@ class ComicLoadingManager private constructor() {
             } else {
                 // Add some comics in the cache
                 val nb_comics_in_thumbnail = ImageDirWorker.MAX_COVER_IN_THUMBNAIL  // Get some comics to build the thumbnail
-                val fileList = getComicsFromDir(dirComic.file).subList(0, nb_comics_in_thumbnail)
+                val comicsList = getComicsFromDir(dirComic.file)
+                val fileList = comicsList.subList(0, Math.min(comicsList.size, nb_comics_in_thumbnail))
                 for (i in fileList.indices) {
                     val f = fileList[i]
                     if (f.isFile) {

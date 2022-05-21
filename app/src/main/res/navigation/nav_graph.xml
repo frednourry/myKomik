@@ -3,13 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/browserFragment">
+    app:startDestination="@id/permissionFragment">
 
+    <fragment
+        android:id="@+id/permissionFragment"
+        android:name="fr.nourry.mynewkomik.permission.PermissionFragment"
+        android:label="PermissionFragment">
+        <action
+            android:id="@+id/action_permissionFragment_to_browserFragment"
+            app:destination="@id/browserFragment" />
+    </fragment>
     <fragment
         android:id="@+id/browserFragment"
         android:name="fr.nourry.mynewkomik.browser.BrowserFragment"
         android:label="@string/app_name"
-        tools:layout="@layout/fragment_browser" >
+        tools:layout="@layout/fragment_browser">
         <action
             android:id="@+id/action_browserFragment_to_pictureSliderFragment"
             app:destination="@id/pictureSliderFragment" />

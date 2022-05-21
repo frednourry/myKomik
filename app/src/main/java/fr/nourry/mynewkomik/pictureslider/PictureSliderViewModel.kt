@@ -8,6 +8,8 @@ import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import fr.nourry.mynewkomik.loader.ComicLoadingResult
+import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
+import fr.nourry.mynewkomik.preference.SharedPref
 import fr.nourry.mynewkomik.utils.getImageFilesFromDir
 import timber.log.Timber
 import java.io.File
@@ -61,6 +63,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
 
     fun setCurrentPage(n:Int) {
         currentPage = n
+        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
     }
 
     private fun loadPictures(dir: File) {

@@ -51,7 +51,6 @@ class DialogComicLoading() : DialogFragment() {
 
         val width = (resources.displayMetrics.widthPixels * 0.90).toInt()
         this.dialog?.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-//        this.dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     fun setProgress(index:Int, size:Int) {

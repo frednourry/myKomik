@@ -4,17 +4,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.R
+import fr.nourry.mynewkomik.databinding.ItemComicBinding
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import fr.nourry.mynewkomik.loader.ComicLoadingResult
-import kotlinx.android.synthetic.main.item_comic.view.*
 import timber.log.Timber
 import java.io.File
 
@@ -47,17 +44,24 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
         }
     }
 
-    class ViewHolder(var itemView: View): RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(val binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root) {
+        val cardView = binding.cardView
+        val imageView = binding.imageView
+        val textView = binding.textView
+        val checkBox = binding.checkBox
+    }
+/*    class ViewHolder(var itemView: View): RecyclerView.ViewHolder(itemView) {
         val cardView = itemView.findViewById<CardView>(R.id.cardView)!!
         var imageView = itemView.findViewById<ImageView>(R.id.imageView)!!
         val textView = itemView.findViewById<TextView>(R.id.textView)!!
         val checkBox = itemView.findViewById<CheckBox>(R.id.checkBox)!!
     }
-
+*/
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
+/*        val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_comic, parent, false)
-        return ViewHolder(view)
+        return ViewHolder(view)*/
+        return ViewHolder(ItemComicBinding.inflate(LayoutInflater.from(parent.context), parent,false))
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -86,7 +90,6 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
                     .load(R.drawable.ic_launcher_foreground)
                     .into(imageView)
                 ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, holder, comicAdapter)
-
             }
         }
     }
@@ -98,8 +101,10 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
 
         val innerComic = v.tag as InnerComic
         if (showFilterMode) {
-            v.checkBox.isChecked = !v.checkBox.isChecked
-            if (v.checkBox.isChecked)
+            val checkBox = v.findViewById<CheckBox>(R.id.checkBox)!!
+
+            checkBox.isChecked = !checkBox.isChecked
+            if (checkBox.isChecked)
                 arrCheckedItems.add(innerComic.position)
             else
                 arrCheckedItems.remove(innerComic.position)

@@ -12,21 +12,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager.widget.ViewPager
-import com.google.android.material.snackbar.Snackbar
-import fr.nourry.mynewkomik.App
-import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
-import fr.nourry.mynewkomik.browser.BrowserFragmentDirections
+import fr.nourry.mynewkomik.databinding.FragmentPictureSliderBinding
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
-import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
-import fr.nourry.mynewkomik.preference.PREF_LAST_COMIC
-import fr.nourry.mynewkomik.preference.SharedPref
-import kotlinx.android.synthetic.main.fragment_picture_slider.*
-import kotlinx.android.synthetic.main.fragment_picture_slider.coordinatorLayout
 import timber.log.Timber
-import java.io.File
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
@@ -42,10 +33,19 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     private var dialogComicLoading:DialogComicLoading = DialogComicLoading.newInstance()
 
+    // Test for View Binding (replace 'kotlin-android-extensions')
+    private var _binding: FragmentPictureSliderBinding? = null
+    // This property is only valid between onCreateView and onDestroyView.
+    private val binding get() = _binding!!
+
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity?.actionBar?.hide()
-        return inflater.inflate(R.layout.fragment_picture_slider, container, false)
+
+        _binding = FragmentPictureSliderBinding.inflate(inflater, container, false)
+        val view = binding.root
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -68,7 +68,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 //        pictureSliderAdapter = PictureSliderAdapter2(requireContext(), pictures)
         // ViewPager1
         pictureSliderAdapter = PictureSliderAdapter(requireContext(), pictures)
-        viewPager.adapter = pictureSliderAdapter
+        binding.viewPager.adapter = pictureSliderAdapter
         pictureSliderAdapter.notifyDataSetChanged()
 
         viewModel = ViewModelProvider(this)[PictureSliderViewModel::class.java]
@@ -83,7 +83,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         viewModel.initialize(comic, currentPage, savedInstanceState == null)
 
-        viewPager.addOnPageChangeListener(this)
+        binding.viewPager.addOnPageChangeListener(this)
 
         // Replace the title
         (requireActivity() as AppCompatActivity).supportActionBar?.title = comic.file.name
@@ -91,6 +91,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     override fun onDestroyView() {
         (requireActivity() as AppCompatActivity).supportActionBar?.show()
+        _binding = null
         super.onDestroyView()
     }
 
@@ -133,7 +134,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         pictures.clear()
         pictures.addAll(state.pictures)
         pictureSliderAdapter.notifyDataSetChanged()
-        viewPager.currentItem = state.currentPage
+        binding.viewPager.currentItem = state.currentPage
     }
 
     private fun handleStateInit(state: PictureSliderViewModelState.Init) {
@@ -163,7 +164,6 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     override fun onPageSelected(position: Int) {
         Timber.i("onPageSelected currentPage = $position")
-        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, position.toString())
         currentPage = position
         viewModel.setCurrentPage(position)
     }

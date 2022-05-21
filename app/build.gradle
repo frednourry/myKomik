@@ -1,8 +1,9 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
-    id 'kotlin-android-extensions'
+    id 'kotlin-parcelize'
     id 'androidx.navigation.safeargs'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -10,12 +11,19 @@ android {
 
     defaultConfig {
         applicationId "fr.nourry.mynewkomik"
-        minSdk 23
+        minSdk 24
         targetSdk 31
         versionCode 1
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation":"$projectDir/schemas".toString()]
+            }
+        }
+
     }
 
     buildTypes {
@@ -33,15 +41,15 @@ android {
     }
 
 ////// REMPLACE le plugins 'kotlin-android-extensions'
-//    buildFeatures {
-//        viewBinding = true
-//    }
+    buildFeatures {
+        viewBinding = true
+    }
 
 }
 
-androidExtensions {
-    experimental = true     // Pour activer le Parcelable dans ComicPicture() et Comic()
-}
+//androidExtensions {
+//    experimental = true     // Pour activer le Parcelable dans ComicPicture() et Comic()
+//}
 
 
 dependencies {
@@ -60,7 +68,7 @@ dependencies {
 
     // Architecture components
 
-    def nav_version = "2.3.5"
+    def nav_version = "2.4.2"
     implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
     implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
     implementation "androidx.navigation:navigation-dynamic-features-fragment:$nav_version"
@@ -71,6 +79,7 @@ dependencies {
 
     // Glide
     implementation 'com.github.bumptech.glide:glide:4.12.0'
+    kapt 'com.github.bumptech.glide:compiler:4.12.0'
     //annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
 
     // Coroutine
@@ -92,7 +101,12 @@ dependencies {
     implementation "com.github.junrar:junrar:$junrar_version"
 
     // Safeargs (pour la navigation entre fragments)  !! Ne nas oublier de modifier aussi le build.gradle du projet ET de faire un 'make project' A CHAQUE AJOUT DE TRANSITION/ACTION
-//    implementation "androidx.navigation:navigation-safe-args-gradle-plugin:2.3.5"
+//    implementation "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
 
+    // Room (database)
+    def room_version = "2.4.2"
+    kapt "androidx.room:room-compiler:$room_version"
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
 
 }

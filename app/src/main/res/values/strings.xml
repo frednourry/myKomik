@@ -1,4 +1,5 @@
 <resources>
+    <string name="no_permission">Please, permit this application to browse your folders.</string>
     <string name="app_name">MyNewKomik</string>
     <string name="choose_root_text">Choose your comics root directory</string>
     <string name="empty_cache">Empty cache</string>
@@ -17,5 +18,4 @@
     <string name="actionbar_button_done">X Done</string>
     <string name="message_files_deleted">File(s) deleted</string>
     <string name="message_undo">Undo</string>
-
 </resources>
