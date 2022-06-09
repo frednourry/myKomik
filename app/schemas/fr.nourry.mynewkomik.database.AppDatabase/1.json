@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "2312aa00499f596ca8de7284298a50a7",
+    "identityHash": "7a2b79009079910d95bddf38890c3012",
     "entities": [
       {
-        "tableName": "file_entry",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `parent_id` INTEGER NOT NULL, `path` TEXT NOT NULL, `name` TEXT NOT NULL, `is_directory` INTEGER NOT NULL, `hashkey` TEXT NOT NULL, `nb_pages` INTEGER NOT NULL, `current_page` INTEGER NOT NULL)",
+        "tableName": "comic_entry",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `dir_path` TEXT NOT NULL, `name` TEXT NOT NULL, `is_directory` INTEGER NOT NULL, `hashkey` TEXT NOT NULL, `nb_pages` INTEGER NOT NULL, `current_page` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -15,14 +15,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "parent_id",
-            "columnName": "parent_id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "path",
-            "columnName": "path",
+            "fieldPath": "dirPath",
+            "columnName": "dir_path",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -65,13 +59,13 @@
         },
         "indices": [
           {
-            "name": "index_file_entry_path",
-            "unique": true,
+            "name": "index_comic_entry_dir_path",
+            "unique": false,
             "columnNames": [
-              "path"
+              "dir_path"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_file_entry_path` ON `${TABLE_NAME}` (`path`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comic_entry_dir_path` ON `${TABLE_NAME}` (`dir_path`)"
           }
         ],
         "foreignKeys": []
@@ -80,7 +74,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2312aa00499f596ca8de7284298a50a7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7a2b79009079910d95bddf38890c3012')"
     ]
   }
 }

@@ -29,7 +29,7 @@
         tools:layout="@layout/fragment_picture_slider">
         <argument
             android:name="comic"
-            app:argType="fr.nourry.mynewkomik.Comic" />
+            app:argType="fr.nourry.mynewkomik.database.ComicEntry" />
         <argument
             android:name="currentPage"
             app:argType="integer" />

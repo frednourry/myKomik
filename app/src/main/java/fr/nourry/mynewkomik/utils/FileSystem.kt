@@ -8,7 +8,7 @@ import android.os.storage.StorageVolume
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.os.EnvironmentCompat
-import fr.nourry.mynewkomik.database.FileEntry
+import fr.nourry.mynewkomik.database.ComicEntry
 import timber.log.Timber
 import java.io.File
 
@@ -108,6 +108,9 @@ fun getVolumePath(storageVolume: StorageVolume): String? {
 }
 /////////////////////////////////////////////////////////////////
 
+fun concatPath(path1:String, path2:String):String {
+    return path1+File.separator+path2
+}
 
 
 fun getDefaultDirectory(appContext: Context): File {
@@ -139,7 +142,6 @@ fun getDirectoriesList(dir: File): List<File> {
 fun getComicsFromDir(dir: File): List<File> {
     Timber.d("getComicFilesFromDir:: ${dir.absolutePath}")
     val l = dir.listFiles()
-    Timber.v("getComicFilesFromDir:: l.size=${l.size}")
     if (l != null) {
         val list = l.sortedWith(compareBy{it.name})
         val directory = list.filter { f-> (f.isDirectory) }
@@ -149,20 +151,13 @@ fun getComicsFromDir(dir: File): List<File> {
     return emptyList()
 }
 
-fun getFileEntriesFromDir(dir: File): List<FileEntry> {
-    Timber.d("getComicFilesFromDir:: ${dir.absolutePath}  SOMETHING TO UNCOMMENT HERE !!!!")
-    val l = dir.listFiles()
-    var resultList:List<FileEntry> = emptyList()
-    if (l != null) {
-        val list = l.sortedWith(compareBy{it.name})
-        val directory = list.filter { f-> (f.isDirectory) }
-        val comics = list.filter { f-> ((f.extension=="cbz" || f.extension=="cbr") && f.isFile) } //.sorted()
+fun getComicEntriesFromDir(dir: File): List<ComicEntry> {
+    Timber.d("getComicEntriesFromDir:: ${dir.absolutePath}")
+    val listFiles = getComicsFromDir(dir)
+    var resultList:List<ComicEntry> = emptyList()
 
-
-        for (f in directory.plus(comics)) {
-//            resultList.plus(FileEntry(f))
-        }
-
+    for (file in listFiles) {
+        resultList = resultList.plusElement(ComicEntry(file))
     }
     return resultList
 }

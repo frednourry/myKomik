@@ -6,8 +6,8 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import fr.nourry.mynewkomik.Comic
 import fr.nourry.mynewkomik.R
+import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.databinding.ItemComicBinding
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
@@ -16,17 +16,17 @@ import timber.log.Timber
 import java.io.File
 
 
-class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, View.OnLongClickListener, ComicLoadingProgressListener {
+class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, View.OnLongClickListener, ComicLoadingProgressListener {
     interface OnComicAdapterListener {
-        fun onComicClicked(comic: Comic, position:Int)
-        fun onComicLongClicked(comic: Comic, position:Int)
-        fun onComicSelected(list:ArrayList<Int>)
+        fun onComicEntryClicked(comic: ComicEntry, position:Int)
+        fun onComicEntryLongClicked(comic: ComicEntry, position:Int)
+        fun onComicEntrySelected(list:ArrayList<Int>)
     }
 
     private var showFilterMode = false
     private var arrCheckedItems:MutableList<Int> = ArrayList(0)
 
-    data class InnerComic(val comic:Comic, val position:Int, var checked:Boolean)
+    data class InnerComic(val comic:ComicEntry, val position:Int, var checked:Boolean)
 
     fun setFilterMode(bFilter:Boolean, selectedPosition:ArrayList<Int>?) {
         if (bFilter != showFilterMode) {
@@ -37,30 +37,21 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
                 arrCheckedItems.clear()
                 if (selectedPosition != null)
                     arrCheckedItems.addAll(selectedPosition)
-                listener?.onComicSelected(arrCheckedItems as ArrayList<Int>)
+                listener?.onComicEntrySelected(arrCheckedItems as ArrayList<Int>)
             }
 
             this.notifyDataSetChanged()
         }
     }
 
-    inner class ViewHolder(val binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class ViewHolder(binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root) {
         val cardView = binding.cardView
         val imageView = binding.imageView
         val textView = binding.textView
         val checkBox = binding.checkBox
+        val percentView = binding.percentView
     }
-/*    class ViewHolder(var itemView: View): RecyclerView.ViewHolder(itemView) {
-        val cardView = itemView.findViewById<CardView>(R.id.cardView)!!
-        var imageView = itemView.findViewById<ImageView>(R.id.imageView)!!
-        val textView = itemView.findViewById<TextView>(R.id.textView)!!
-        val checkBox = itemView.findViewById<CheckBox>(R.id.checkBox)!!
-    }
-*/
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-/*        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_comic, parent, false)
-        return ViewHolder(view)*/
         return ViewHolder(ItemComicBinding.inflate(LayoutInflater.from(parent.context), parent,false))
     }
 
@@ -80,7 +71,18 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
             } else
                 checkBox.visibility = View.INVISIBLE
 
-            if (comic.file.isFile) {
+            if (!comic.isDirectory) {
+                if (comic.nbPages>0) {
+                    percentView.visibility = View.VISIBLE
+                    percentView.text = ((comic.currentPage+1)*100/comic.nbPages).toString()+"%"
+                } else {
+                    percentView.visibility = View.INVISIBLE
+                }
+            } else {
+                percentView.visibility = View.INVISIBLE
+            }
+
+            if (!comic.isDirectory) {
                 Glide.with(imageView.context)
                     .load(R.drawable.ic_launcher_foreground)
                     .into(imageView)
@@ -108,32 +110,32 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
                 arrCheckedItems.add(innerComic.position)
             else
                 arrCheckedItems.remove(innerComic.position)
-            listener?.onComicSelected(arrCheckedItems as ArrayList<Int>)
+            listener?.onComicEntrySelected(arrCheckedItems as ArrayList<Int>)
 
             Timber.v("  arrCheckedItems = $arrCheckedItems")
         } else {
-            listener?.onComicClicked(innerComic.comic, innerComic.position)
+            listener?.onComicEntryClicked(innerComic.comic, innerComic.position)
         }
     }
 
     fun selectAll() {
         arrCheckedItems.clear()
-        for (cpt in 0..comics.size-1) {
+        for (cpt in comics.indices) {
             arrCheckedItems.add(cpt)
         }
         notifyDataSetChanged()
-        listener?.onComicSelected(arrCheckedItems as ArrayList<Int>)
+        listener?.onComicEntrySelected(arrCheckedItems as ArrayList<Int>)
     }
 
     fun selectNone() {
         arrCheckedItems.clear()
         notifyDataSetChanged()
-        listener?.onComicSelected(arrCheckedItems as ArrayList<Int>)
+        listener?.onComicEntrySelected(arrCheckedItems as ArrayList<Int>)
     }
 
     override fun onLongClick(v: View): Boolean {
         val innerComic = v.tag as InnerComic
-        listener?.onComicLongClicked(innerComic.comic, innerComic.position)
+        listener?.onComicEntryLongClicked(innerComic.comic, innerComic.position)
         return true
     }
 
@@ -141,7 +143,7 @@ class BrowserAdapter(private val comics:List<Comic>, private val listener:OnComi
     override fun onProgress(currentIndex: Int, size: Int) {
     }
 
-    override fun onFinished(result: ComicLoadingResult, target:Any?, comic:Comic, path: File?) {
+    override fun onFinished(result: ComicLoadingResult, target:Any?, comic:ComicEntry, path: File?) {
         Timber.d("onFinished ${comic.file} $path" )
         if (result == ComicLoadingResult.SUCCESS && target!= null && path != null && path.absolutePath != "" && path.exists()) {
             // Check if the target is still waiting this image

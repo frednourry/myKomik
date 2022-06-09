@@ -34,6 +34,7 @@ object SharedPref {
         }
 
         with (sharedPref!!.edit()) {
+            Timber.i("SharedPref.set($param_name, $value) ")
             putString(param_name, value)
             apply()
         }

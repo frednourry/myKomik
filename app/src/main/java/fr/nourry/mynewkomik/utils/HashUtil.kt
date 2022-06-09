@@ -27,19 +27,3 @@ private fun String.hashWithAlgorithm(algorithm: String): String {
 fun stringToHash(str:String):String {
     return str.md5()
 }
-
-class FileSignature (var hashCode:String) {
-    companion object {
-        fun createFileSignature(path: String): FileSignature {
-            return FileSignature(stringToHash(path))
-        }
-    }
-
-    fun isEquals(key: FileSignature): Boolean {
-        return hashCode == key.hashCode
-    }
-
-    override fun toString():String {
-        return hashCode
-    }
-}

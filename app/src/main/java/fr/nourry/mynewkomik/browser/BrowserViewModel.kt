@@ -1,22 +1,17 @@
 package fr.nourry.mynewkomik
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import fr.nourry.mynewkomik.database.FileEntry
+import androidx.lifecycle.*
+import fr.nourry.mynewkomik.database.ComicEntry
+import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.preference.*
 import fr.nourry.mynewkomik.utils.deleteFile
-import fr.nourry.mynewkomik.utils.getComicsFromDir
-import fr.nourry.mynewkomik.utils.getFileEntriesFromDir
+import fr.nourry.mynewkomik.utils.getComicEntriesFromDir
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.Executors
 
-sealed class BrowserViewModelState(
-    val isInit: Boolean = false,
-    val currentDir: File? = null
-
-) {
+sealed class BrowserViewModelState(val isInit: Boolean = false, val currentDir: File? = null) {
     class Init(val directoryPath: String, val lastComicPath: String, val prefCurrentPage: String) : BrowserViewModelState (
         isInit = false
     )
@@ -26,7 +21,7 @@ sealed class BrowserViewModelState(
         currentDir = dir
     )
 
-    data class ComicReady(val dir:File, val comics: List<Comic>) : BrowserViewModelState(
+    data class ComicReady(val dir:File, val comics: List<ComicEntry>) : BrowserViewModelState(
         isInit = true,
         currentDir = dir
     )
@@ -38,23 +33,32 @@ sealed class BrowserViewModelState(
 
 
 class BrowserViewModel() : ViewModel() {
-    private var comics = mutableListOf<Comic>()         // List of comics in the current directory
-    private var filesToDelete = mutableListOf<File>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
-    private var deletionJob: Any? = null                // Job to delete all the files in 'filesToDelete'
+    private var currentDir:File? = null
+    private var comicEntriesToShow: MutableList<ComicEntry> = mutableListOf()
+    private var comicEntriesToDelete = mutableListOf<ComicEntry>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
+    private var deletionJob: Any? = null                // Job to delete all the files in 'comicEntriesToDelete'
 
-//    lateinit var fileEntries:LiveData<List<FileEntry>>// = App.database.comicEntryDao().getComicEntriesByParentPath("")
 
     private val state = MutableLiveData<BrowserViewModelState>()
     fun getState(): LiveData<BrowserViewModelState> = state
-    fun isInitialize(): Boolean = if (state.value != null) state.value!!.isInit else false
+    private fun isInitialized(): Boolean = if (state.value != null) state.value!!.isInit else false
+
+    private var currentDirFile = MutableLiveData<File>()
+
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = Transformations.switchMap(currentDirFile) { file ->
+        Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
+        App.db.comicEntryDao().getComicEntriesByDirPath(file.absolutePath)
+    }/*.distinctUntilChanged() */   // Important or else the livedata will send a changed signal even if nothing change...
+
 
     val TIME_BEFORE_DELETION = 4000 // in milliseconds
+
 
     fun errorPermissionDenied() {
         Timber.d("errorPermissionDenied")
         state.value = BrowserViewModelState.Error(
             "Permission denied: cannot read directory!",
-            isInit = isInitialize()
+            isInit = isInitialized()
         )
     }
 
@@ -66,82 +70,75 @@ class BrowserViewModel() : ViewModel() {
         state.value = BrowserViewModelState.Init(directoryPath!!, lastComicPath!!, prefCurrentPage!!)
     }
 
+    // Load informations about a directory (comics and directories list)
     fun loadComics(dir: File) {
         Timber.d("----- loadComics(" + dir.absolutePath + ") -----")
-        Timber.v("  filesToDelete = $filesToDelete")
-        state.value = BrowserViewModelState.ComicLoading(dir)
+        Timber.v("  comicEntriesToDelete = $comicEntriesToDelete")
 
-        // Get a list from the database
-//        fileEntries = App.database.comicEntryDao().getFileEntriesByParentPath(dir.absolutePath)
-//        val fileEntries = getFileEntriesFromDir(dir)
-//        Timber.w("FileEntries = $fileEntries")
+        currentDirFile.value = dir
 
-        // Get a list from the drive
-        val files = getComicsFromDir(dir)
-        comics.clear()
-        for (file in files) {
-            // Add this file if it's not in the 'filesToDelete' (the files should be deleted...)
-            if (filesToDelete.indexOf(file)>= 0) {
-                Timber.v("   => ${file.name} SKIPPED")
-            } else {
-                Timber.v("   => ${file.name} ADDED")
-                comics.add(Comic(file))
-            }
-        }
-
+        currentDir = dir
         setAppCurrentDir(dir)
-        state.value = BrowserViewModelState.ComicReady(dir, comics)
+
+        state.value = BrowserViewModelState.ComicLoading(dir)
     }
 
     // Prepare to delete files (or directory) and start a timer that will really delete those files
-    fun prepareDeleteFiles(deleteList: List<File>) {
-        Timber.d("prepareDeleteFiles($deleteList)")
+    fun prepareDeleteComicEntries(deleteList: List<ComicEntry>) {
+        Timber.d("prepareDeleteComicEntries($deleteList)")
         // Clear the old 'deleteList' if not still empty
-        if (filesToDelete.size > 0) {
-            deleteFiles()
-            filesToDelete.clear()
+        if (comicEntriesToDelete.size > 0) {
+            deleteComicEntries()
+            comicEntriesToDelete.clear()
         }
 
         // Retrieve the list
-        for (file in deleteList) {
-            filesToDelete.add(file)
+        for (ComicEntry in deleteList) {
+            comicEntriesToDelete.add(ComicEntry)
         }
 
         // Start a timer to effectively delete those files
         deletionJob = GlobalScope.launch(Dispatchers.Default) {
             delay(TIME_BEFORE_DELETION.toLong())
-            deleteFiles()
+            deleteComicEntries()
         }
 
         // Refresh view
         loadComics(App.currentDir!!)
     }
 
-    // Stop the timer that should delete the files in 'filesToDelete'
-    fun undoDeleteFiles():Boolean {
-        Timber.d("undoDeleteFiles !!")
+    // Stop the timer that should delete the files in 'comicEntriesToDelete'
+    fun undoDeleteComicEntries():Boolean {
+        Timber.d("undoDeleteComicEntries !!")
         if(deletionJob != null) {
             (deletionJob as Job).cancel()
             deletionJob = null
 
-            if (filesToDelete.size>0) {
-                Timber.d("undoDeleteFiles :: filesToDelete.size>0")
-                filesToDelete.clear()
+            if (comicEntriesToDelete.size>0) {
+                Timber.d("undoDeleteComicEntries :: comicEntriesToDelete.size>0")
+                comicEntriesToDelete.clear()
                 return true
             }
         }
         return false
     }
 
-    // Delete the files in 'filesToDelete' (should be called by the timer 'deletionJob' or in 'prepareDeleteFiles()')
-    private fun deleteFiles() {
-        Timber.d("deleteFiles :: filesToDelete= $filesToDelete)")
-        for (file in filesToDelete) {
-            // TODO delete all traces (thumbnails, database entry, etc...)
+    // Delete the files in 'comicEntriesToDelete' (should be called by the timer 'deletionJob' or in 'prepareDeleteComicEntries()')
+    private fun deleteComicEntries() {
+        Timber.d("deleteComicEntries :: comicEntriesToDelete= $comicEntriesToDelete)")
+        for (comicEntry in comicEntriesToDelete) {
+            if (comicEntry.fromDAO) {
+                Executors.newSingleThreadExecutor().execute {
+                    Timber.d("  DELETE IN DATABASE...")
+                    App.db.comicEntryDao().deleteComicEntry(comicEntry)
+                    Timber.d("  END DELETE IN DATABASE...")
+                }
+            }
 
-            deleteFile(file)
+            deleteFile(comicEntry.file)
+            ComicLoadingManager.deleteComicEntryInCache(comicEntry)
         }
-        filesToDelete.clear()
+        comicEntriesToDelete.clear()
     }
 
     fun setAppCurrentDir(dir:File) {
@@ -155,11 +152,81 @@ class BrowserViewModel() : ViewModel() {
         SharedPref.set(PREF_ROOT_DIR, absolutePath)
     }
 
-    fun synchronizedDatabase(comicentries: List<FileEntry>) {
-        Timber.d("synchronizedDatabase")
-        Timber.d("    comics=$comics")
-//        Timber.d("    comicEntries=${fileEntries.value}")
+    fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
+        Timber.d("updateComicEntriesFromDAO")
+        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+
+        val comicEntriesFromDisk = getComicEntriesFromDir(currentDir!!)
+        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
+
+        // Built a correct comicEntries list...
+        comicEntriesToShow.clear()
+        comicEntriesToShow = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
+
+        state.value = BrowserViewModelState.ComicReady(currentDir!!, comicEntriesToShow)
     }
 
+    private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
+        Timber.d("synchronizeDBWithDisk")
+        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
+        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+        val hashkeyToIgnore: MutableList<String> = mutableListOf()
+        val result: MutableList<ComicEntry> = mutableListOf()
+        var found = false
+        for (fe in comicEntriesFromDisk) {
+//            Timber.v(" Looking for ${fe.dirPath}")
+            found = false
+            // Search in comicEntriesToDelete
+            for (feToDelete in comicEntriesToDelete) {
+                if (fe.hashkey == feToDelete.hashkey) {
+//                    Timber.v("  -- IGNORED !")
+                    hashkeyToIgnore.add(fe.hashkey)
+                    found = true
+                    break
+                }
+            }
+            if (!found) {
+                // Search in comicEntriesFromDAO
+                for (feDAO in comicEntriesFromDAO) {
+                    Timber.v("  -- ${fe.dirPath}")
+                    if (fe.hashkey == feDAO.hashkey) {
+                        Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+                        feDAO.file = fe.file
+                        feDAO.fromDAO = true
+                        result.add(feDAO)
+                        found = true
+//                        Timber.v("  -- FOUND IN DAO !")
+                        break
+                    }
+                }
+            }
+            if (!found) {
+                fe.fromDAO = false
+                result.add(fe)
+//                Timber.v("  -- ADDING FROM DISK ${result.size}")
+            }
+        }
 
+        // Search in comicEntriesFromDAO if all files where found in the disk
+        //   else, delete them in database and cache
+        val comicEntriesToDelete: MutableList<ComicEntry> = mutableListOf()
+        for (feDAO in comicEntriesFromDAO) {
+            if (!feDAO.fromDAO && hashkeyToIgnore.indexOf(feDAO.hashkey)==-1) {
+                // Not in the disk anymore, so delete it
+                Timber.d("  Should be delete : ${feDAO.file.absolutePath}")
+                comicEntriesToDelete.add(feDAO)
+                ComicLoadingManager.deleteComicEntryInCache(feDAO)
+            }
+        }
+        if (comicEntriesToDelete.isNotEmpty()) {
+            Executors.newSingleThreadExecutor().execute {
+                Timber.d("  DELETE ENTRIES IN DATABASE...")
+                App.db.comicEntryDao().deleteComicEntries(*comicEntriesToDelete.map{it}.toTypedArray())
+                Timber.d("  END DELETE ENTRIES IN DATABASE...")
+            }
+        }
+
+        Timber.d(" returns => $result")
+        return result
+    }
 }

@@ -10,6 +10,7 @@ import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
 import fr.nourry.mynewkomik.utils.BitmapUtil
 import fr.nourry.mynewkomik.utils.clearFilesInDir
+import fr.nourry.mynewkomik.utils.concatPath
 import fr.nourry.mynewkomik.utils.isFilePathAnImage
 import timber.log.Timber
 import java.io.File
@@ -88,19 +89,14 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
                         val input = zip.getInputStream(entry)
                         bitmap = BitmapUtil.createBitmap(input.readBytes())
                         if (bitmap != null) {
-
-                            // Save the bitmap in cache
+                           // Save the bitmap in cache
                             if (isStopped) {    // Check if the work was cancelled
                                 break
                             }
 
                             val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
-                            BitmapUtil.saveBitmapInFile(bitmap, dirPath + /*name*/ pageName, true) // Do this in an other thread?
+                            BitmapUtil.saveBitmapInFile(bitmap, concatPath(dirPath, pageName), true) // Do this in an other thread?
                             bitmap.recycle()
-/*                            Thread {
-                                BitmapUtil.saveBitmapInFile(bitmap, dirPath + name)
-                            }.start()
-*/
                         }
                         nbPages++
                     }
@@ -155,7 +151,7 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
                             val pageName = "page%03d.png".format(cpt)   // pageName = "pagexxx.png"
                             BitmapUtil.saveBitmapInFile(
                                 bitmap,
-                                dirPath + /*name*/ pageName,
+                                concatPath(dirPath, pageName),
                                 true
                             ) // Do this in an other thread?
                             bitmap.recycle()
