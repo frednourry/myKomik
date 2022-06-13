@@ -45,6 +45,18 @@
                 android:contentDescription="Comic image"
                 android:scaleType="fitCenter" />
 
+            <ImageView
+                android:id="@+id/imageIconView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_alignBottom="@+id/imageView"
+                android:layout_alignParentEnd="true"
+                android:layout_marginEnd="10dp"
+                android:layout_marginBottom="65dp"
+                android:gravity="center_horizontal"
+                app:srcCompat="@drawable/ic_baseline_book_open_24" />
+
             <TextView
                 android:id="@+id/percentView"
                 android:layout_width="wrap_content"

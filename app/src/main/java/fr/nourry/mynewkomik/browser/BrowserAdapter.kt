@@ -48,6 +48,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
         val cardView = binding.cardView
         val imageView = binding.imageView
         val textView = binding.textView
+        val imageIconView = binding.imageIconView
         val checkBox = binding.checkBox
         val percentView = binding.percentView
     }
@@ -73,13 +74,18 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
 
             if (!comic.isDirectory) {
                 if (comic.nbPages>0) {
+                    val percent = (comic.currentPage+1)*100/comic.nbPages
                     percentView.visibility = View.VISIBLE
-                    percentView.text = ((comic.currentPage+1)*100/comic.nbPages).toString()+"%"
+                    imageIconView.visibility = View.VISIBLE
+                    percentView.text = "$percent%"
+                    imageIconView.setImageResource(if (percent == 100) R.drawable.ic_baseline_book_closed_24 else R.drawable.ic_baseline_book_open_24)
                 } else {
                     percentView.visibility = View.INVISIBLE
+                    imageIconView.visibility = View.INVISIBLE
                 }
             } else {
                 percentView.visibility = View.INVISIBLE
+                imageIconView.visibility = View.INVISIBLE
             }
 
             if (!comic.isDirectory) {
