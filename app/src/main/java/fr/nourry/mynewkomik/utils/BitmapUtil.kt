@@ -6,6 +6,7 @@ import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.*
 
 
 class BitmapUtil {
@@ -189,7 +190,13 @@ class BitmapUtil {
                 try {
                     val fOut = File(dstPath)
                     val os = FileOutputStream(fOut)
-                    bitmapResized.compress(Bitmap.CompressFormat.PNG, 100, os)
+                    val ext = fOut.extension.lowercase(Locale.getDefault())
+                    val format = when (ext) {
+                        "jpg" -> Bitmap.CompressFormat.JPEG
+                        "png" -> Bitmap.CompressFormat.PNG
+                        else -> Bitmap.CompressFormat.JPEG
+                    }
+                    bitmapResized.compress(format, 95, os)
                     os.flush()
                     os.close()
                     bitmapResized.recycle()

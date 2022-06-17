@@ -88,17 +88,10 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 imageIconView.visibility = View.INVISIBLE
             }
 
-            if (!comic.isDirectory) {
-                Glide.with(imageView.context)
-                    .load(R.drawable.ic_launcher_foreground)
-                    .into(imageView)
-                ComicLoadingManager.getInstance().loadComicInImageView(comic, holder, comicAdapter)
-            } else {
-                Glide.with(imageView.context)
-                    .load(R.drawable.ic_launcher_foreground)
-                    .into(imageView)
-                ComicLoadingManager.getInstance().loadComicDirectoryInImageView(comic, holder, comicAdapter)
-            }
+            Glide.with(imageView.context)
+                .load(R.drawable.ic_launcher_foreground)
+                .into(imageView)
+            ComicLoadingManager.getInstance().loadComicEntryCoverInImageView(comic, comicAdapter, holder)
         }
     }
 
@@ -146,10 +139,10 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
     }
 
 
-    override fun onProgress(currentIndex: Int, size: Int) {
+    override fun onProgress(currentIndex: Int, size: Int, path:String, target:Any?) {
     }
 
-    override fun onFinished(result: ComicLoadingResult, target:Any?, comic:ComicEntry, path: File?) {
+    override fun onFinished(result: ComicLoadingResult, comic:ComicEntry, path: File?, target:Any?) {
         Timber.d("onFinished ${comic.file} $path" )
         if (result == ComicLoadingResult.SUCCESS && target!= null && path != null && path.absolutePath != "" && path.exists()) {
             // Check if the target is still waiting this image

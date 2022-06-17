@@ -98,7 +98,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
     // PhotoView (to zoom on page)
-    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+//    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
     // Junrar
     def junrar_version = "7.5.0"

@@ -12,7 +12,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager.widget.ViewPager
-import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.databinding.FragmentPictureSliderBinding
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
@@ -27,7 +26,6 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     private lateinit var pictureSliderAdapter: PictureSliderAdapter
 //    private lateinit var pictureSliderAdapter: PictureSliderAdapter2
-    private var pictures = mutableListOf<ComicPicture>()
     private var currentPage = 0
     private lateinit var viewModel: PictureSliderViewModel
 
@@ -64,24 +62,24 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
+        val args = PictureSliderFragmentArgs.fromBundle(requireArguments())
+        val comic = args.comic
+        currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
+
+
         // ViewPager2
 //        pictureSliderAdapter = PictureSliderAdapter2(requireContext(), pictures)
         // ViewPager1
-        pictureSliderAdapter = PictureSliderAdapter(requireContext(), pictures)
+/*        pictureSliderAdapter = PictureSliderAdapter(requireContext(), comic)
         binding.viewPager.adapter = pictureSliderAdapter
-        pictureSliderAdapter.notifyDataSetChanged()
-
+            pictureSliderAdapter.notifyDataSetChanged()
+*/
         viewModel = ViewModelProvider(this)[PictureSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
-
-        val args = PictureSliderFragmentArgs.fromBundle(requireArguments())
-        val comic = args.comic
-        currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
-
-        viewModel.initialize(comic, currentPage, savedInstanceState == null)
+        viewModel.initialize(comic, currentPage/*, savedInstanceState == null*/)
 
         binding.viewPager.addOnPageChangeListener(this)
 
@@ -130,11 +128,23 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         Timber.i("handleStateReady currentPage=${state.currentPage}")
         (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
-        dialogComicLoading.dismiss()
-        pictures.clear()
-        pictures.addAll(state.pictures)
-        pictureSliderAdapter.notifyDataSetChanged()
+        if (dialogComicLoading.isAdded) {
+            dialogComicLoading.dismiss()
+        }
+
+        if (!::pictureSliderAdapter.isInitialized) {
+            Timber.i("   1")
+            pictureSliderAdapter = PictureSliderAdapter(requireContext(), state.comic)
+            Timber.i("   2")
+            binding.viewPager.currentItem = state.currentPage
+            Timber.i("   3 ${binding.viewPager}")
+            binding.viewPager.adapter = pictureSliderAdapter
+            Timber.i("   4 ${binding.viewPager.adapter}")
+//            pictureSliderAdapter.notifyDataSetChanged()
+        }
+
         binding.viewPager.currentItem = state.currentPage
+        pictureSliderAdapter.notifyDataSetChanged()
     }
 
     private fun handleStateInit(state: PictureSliderViewModelState.Init) {

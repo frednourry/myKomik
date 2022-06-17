@@ -13,7 +13,7 @@ import java.io.File
 /**
  * Worker to generate a directory thumbnail with some comic thumbnail
  */
-class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
+class GetImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
         const val MAX_COVER_IN_THUMBNAIL            = 3
 
@@ -28,7 +28,7 @@ class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(
     }
 
     override fun doWork(): Result {
-        Timber.d("ImageDirWorker.doWork")
+        Timber.d("GetImageDirWorker.doWork")
         val thumbnailWidth = inputData.getInt(KEY_THUMBNAIL_WIDTH, 200)
         val thumbnailHeight = inputData.getInt(KEY_THUMBNAIL_HEIGHT, 220)
 
@@ -38,7 +38,7 @@ class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(
         val comicPath3 = inputData.getString(KEY_COMIC_PATH_3)
         val comicPath4 = inputData.getString(KEY_COMIC_PATH_4)
         val destPath = inputData.getString(KEY_DESTINATION_DIRECTORY_PATH)
-        Timber.d("UnzipFirstImageWorker.doWork :: comicPath0=$comicPath0 comicPath1=$comicPath1 comicPath2=$comicPath2 comicPath3=$comicPath3 comicPath4=$comicPath4 destPath=$destPath")
+        Timber.d("GetImageDirWorker.doWork :: comicPath0=$comicPath0 comicPath1=$comicPath1 comicPath2=$comicPath2 comicPath3=$comicPath3 comicPath4=$comicPath4 destPath=$destPath")
 
         val pathList = mutableListOf<String>()
         if (comicPath0 != null && comicPath0 != "")  pathList.add(comicPath0)
@@ -65,8 +65,8 @@ class ImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(
             }
         }
 
-        val outputData = workDataOf(UncompressFirstImageWorker.KEY_IMAGE_DESTINATION_PATH to destPath,
-                                    UncompressFirstImageWorker.KEY_NB_PAGES to bitmapList.size)
+        val outputData = workDataOf(GetCoverWorker.KEY_IMAGE_DESTINATION_PATH to destPath,
+                                    GetCoverWorker.KEY_NB_PAGES to bitmapList.size)
 
         return Result.success(outputData)
     }

@@ -4,14 +4,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import fr.nourry.mynewkomik.App
-import fr.nourry.mynewkomik.ComicPicture
 import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import fr.nourry.mynewkomik.loader.ComicLoadingResult
 import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
 import fr.nourry.mynewkomik.preference.SharedPref
-import fr.nourry.mynewkomik.utils.getImageFilesFromDir
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.Executors
@@ -23,11 +21,11 @@ sealed class  PictureSliderViewModelState(
     class Init() : PictureSliderViewModelState(
         isInitialized = false
     )
-    data class Loading(/*val dir:File, */val currentItem:Int, val nbItem:Int) : PictureSliderViewModelState(
+    data class Loading(val comic:ComicEntry, val currentItem:Int, val nbItem:Int) : PictureSliderViewModelState(
         isInitialized = false
     )
 
-    data class Ready(val pictures: List<ComicPicture>, val currentPage: Int) : PictureSliderViewModelState(
+    data class Ready(val comic:ComicEntry, val currentPage: Int) : PictureSliderViewModelState(
         isInitialized = true
     )
     class Cleaned() : PictureSliderViewModelState(
@@ -38,74 +36,71 @@ sealed class  PictureSliderViewModelState(
 }
 
 class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
-    private var pictures = mutableListOf<ComicPicture>()
-
     private val state = MutableLiveData<PictureSliderViewModelState>()
-    private var currentComic : ComicEntry? = null
+    var currentComic : ComicEntry? = null
     private var currentPage = 0
     fun getState(): LiveData<PictureSliderViewModelState> = state
 
-    fun initialize(comic: ComicEntry, page: Int, shouldUncompress:Boolean) {
-        Timber.d("initialize(${comic.file.name}) page=$page shouldUncompress=$shouldUncompress")
+    fun initialize(comic: ComicEntry, pageToGo: Int/*, shouldUncompress:Boolean*/) {
+        Timber.d("initialize(${comic.file.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
         Timber.d("   comic = $comic")
 
-        currentComic = comic
-        currentPage = page
+        ComicLoadingManager.getInstance().clearComicDir()
 
-        currentComic!!.currentPage = page
+        currentComic = comic
+        currentPage = pageToGo
+
+        currentComic!!.currentPage = pageToGo
+
+        // Determine the pages to ask
+        val offset = 3
+        var numPage = pageToGo-1
+        if (numPage<0) numPage = 0
+        if ((comic.nbPages>0) && (numPage>= comic.nbPages)) numPage = comic.nbPages-1
+
 
         // Uncompress the comic
-        if (shouldUncompress) {
-            state.value = PictureSliderViewModelState.Loading(0, 0)
-            ComicLoadingManager.getInstance().uncompressComic(comic, this)
-        } else {
-            loadPictures(ComicLoadingManager.getInstance().getDirUncompressedComic())
-        }
+        state.value = PictureSliderViewModelState.Loading(comic, 0, 0)
+        ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset)
 
-//        state.value = dir?.let { PictureSliderViewModelState.Loading(it, 0, 0) }
         Timber.d("initialize:: waiting....")
     }
 
     fun setCurrentPage(n:Int) {
         Timber.d("setCurrentPage($n)")
         Timber.d("   comic = $currentComic")
-        currentPage = n
-        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
-        currentComic!!.currentPage = n
 
-        // Update DB
-        Executors.newSingleThreadExecutor().execute {
-            if (currentComic!!.fromDAO) {
-                Timber.d("  UPDATE in DAO")
-                App.db.comicEntryDao().updateComicEntry(currentComic!!)
-            } else {
-                Timber.d("  INSERT in DAO")
-                currentComic!!.fromDAO = true
-                currentComic!!.id = App.db.comicEntryDao().insertComicEntry(currentComic!!)
-                Timber.d("  INSERT in DAO :: id = ${currentComic!!.id}")
+        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
+        currentPage = n
+        if (currentComic!!.currentPage != n) {
+            currentComic!!.currentPage = n
+
+            // Update DB
+            Executors.newSingleThreadExecutor().execute {
+                if (currentComic!!.fromDAO) {
+                    Timber.d("  UPDATE in DAO")
+                    App.db.comicEntryDao().updateComicEntry(currentComic!!)
+                } else {
+                    Timber.d("  INSERT in DAO")
+                    currentComic!!.fromDAO = true
+                    currentComic!!.id = App.db.comicEntryDao().insertComicEntry(currentComic!!)
+                    Timber.d("  INSERT in DAO :: id = ${currentComic!!.id}")
+                }
             }
         }
     }
 
-    private fun loadPictures(dir: File) {
-
+/*    private fun loadPictures(dir: File) {
         val files = getImageFilesFromDir(dir)
         Timber.d("loadPictures(${dir.absolutePath})::$files")
         pictures.clear()
         for (file in files) {
             pictures.add(ComicPicture(file))
         }
-        state.value = PictureSliderViewModelState.Ready(pictures, currentPage)
     }
-
-
+*/
     fun clean() {
         Timber.d("clean")
-
-        pictures.clear()
-
-        // Delete files
-        // ?
 
         // Clean ComicLoadingManager waiting list
         if (currentComic != null) {
@@ -119,15 +114,16 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         state.value = PictureSliderViewModelState.Cleaned()
     }
 
-    override fun onProgress(currentIndex: Int, size: Int) {
-        Timber.d("onProgress currentIndex=$currentIndex")
-        state.value = PictureSliderViewModelState.Loading( currentIndex, size)
+    override fun onProgress(currentIndex: Int, size: Int, path:String, target:Any?) {
+        Timber.d("onProgress currentIndex=$currentIndex size=$size path=$path target=$target")
+        state.value = PictureSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 
-    override fun onFinished(result: ComicLoadingResult, target:Any?, comic: ComicEntry, path: File?) {
-        Timber.d("onFinished result=$result comic=${comic.file.lastModified()} dir=$path")
-        if (result == ComicLoadingResult.SUCCESS && path!=null && path.path!="") {
-            loadPictures(path)
+    override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, file: File?, target:Any?) {
+        Timber.d("onFinished result=$result comic=${comic.file} comic.nbPages=${comic.nbPages} file=$file")
+        if ((result == ComicLoadingResult.SUCCESS) && (file != null) && (file.path != "")) {
+            // Some images were successfully load, so let's go
+            state.value = PictureSliderViewModelState.Ready(currentComic!!, currentPage)
         } else {
             state.value = PictureSliderViewModelState.Error("Error loading directory")
         }
