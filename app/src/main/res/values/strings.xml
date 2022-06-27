@@ -14,6 +14,7 @@
     <string name="action_delete_files">Delete(s) file</string>
     <string name="action_select_all">Select all</string>
     <string name="action_select_none">Select none</string>
+    <string name="about">About</string>
     <string name="actionbar_text_items_selected">Item(s) selected</string>
     <string name="actionbar_button_done">X Done</string>
     <string name="message_files_deleted">File(s) deleted</string>
@@ -25,4 +26,6 @@
     <string name="back_to_browser">Back to browser</string>
     <string name="no_next_issue">There is no more issues.</string>
     <string name="no_previous_issue">There is no previous issues.</string>
+    <string name="about_description">Dev version \n\nDeveloped by Frederic Nourry.</string>
+
 </resources>

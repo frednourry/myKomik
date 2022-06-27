@@ -360,6 +360,10 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                 askToClearCache()
                 true
             }
+            R.id.action_about -> {
+                showAboutPopup()
+                true
+            }
             R.id.action_delete_selection -> {
                 askToDeleteSelection()
                true
@@ -442,6 +446,18 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
 
         alert.show()
+    }
+
+    private fun showAboutPopup() {
+        val title = getString(R.string.app_name)+" "+App.packageInfo.versionName
+        var message = getString(R.string.about_description)
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.ok) { _,_ ->
+                }
+            .create()
+            .show()
     }
 
     private fun showSnackBarUndoDeletion() {
