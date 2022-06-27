@@ -1,7 +1,6 @@
 package fr.nourry.mynewkomik.loader
 
 import android.content.Context
-import android.graphics.Bitmap
 import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -9,8 +8,6 @@ import androidx.work.workDataOf
 import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
 import com.github.junrar.rarfile.FileHeader
-import com.google.common.util.concurrent.ListenableFuture
-import fr.nourry.mynewkomik.utils.BitmapUtil
 import fr.nourry.mynewkomik.utils.RarUtil
 import fr.nourry.mynewkomik.utils.ZipUtil
 import fr.nourry.mynewkomik.utils.isFilePathAnImage
@@ -75,8 +72,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
     private fun unzipPages(comicFile: File, filePath:String, pages:List<Int>):Boolean {
         Timber.v("unzipPages ${comicFile.name} pages=$pages")
 
-        var listenableFuture : ListenableFuture<Void>? = null
-
         // Unzip
         ZipFile(comicFile.absoluteFile).use { zip ->
             try {
@@ -103,8 +98,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 nbPages = zipEntries.size
 
                 if (!isStopped && zipEntries.isNotEmpty()) {
-                    var bitmap: Bitmap?
-
                     for (numPage in pages) {
                         if (isStopped) {    // Check if the work was cancelled
                             break
@@ -116,27 +109,20 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         }
 
                         val entry = zipEntries[numPage]
-                        val input = zip.getInputStream(entry)
-                        bitmap = BitmapUtil.createBitmap(input.readBytes())
-                        if (bitmap != null) {
-                            // Save the bitmap in cache
+                        zip.getInputStream(entry).use { input ->
                             val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+                            Timber.w("  Unzip page=$numPage in $pagePath")
 
-                            Timber.v("unzipPages num_pages=$numPage pagePath=$pagePath")
-                            BitmapUtil.saveBitmapInFile(
-                                bitmap,
-                                pagePath,
-                                true
-                            ) // Do this in an other thread?
-                            bitmap.recycle()
+                            File(pagePath).outputStream().use { output ->
+                                input.copyTo(output)
+                            }
 
-//                            Timber.w("  Prepare setProgressAsync !!!")
-                            listenableFuture = setProgressAsync(Data.Builder().
-                                                                    putInt(KEY_CURRENT_INDEX, numPage).
-                                                                    putString(KEY_CURRENT_PATH, pagePath).
-                                                                    putInt(KEY_NB_PAGES, nbPages).
-                                                                    build())
-//                            Timber.w("  Prepare setProgressAsync DONE !!!")
+                            // Send a progress event
+                            setProgressAsync(Data.Builder().
+                                putInt(KEY_CURRENT_INDEX, numPage).
+                                putString(KEY_CURRENT_PATH, pagePath).
+                                putInt(KEY_NB_PAGES, nbPages).
+                                build())
                         }
                     }
                 }
@@ -149,23 +135,11 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             }
         }
         Timber.v("END unzipPages ${comicFile.name}")
-
-        // Be sure that the last setProgressAsync was received, if any
-        if (listenableFuture != null) {
-            while (true) {
-                Thread.sleep(50)    // Some sleep to be sure the last RUNNING signal (onProgress) is send before the SUCCESS signal
-                Timber.d("NNNNN ${listenableFuture!!.isDone} ${listenableFuture!!.isCancelled}")
-                if (listenableFuture!!.isDone || listenableFuture!!.isCancelled) {
-                    break
-                }
-            }
-        }
         return true
     }
 
     private fun unrarPages(comicFile: File, filePath:String, pages:List<Int>):Boolean {
         Timber.v("unrarPages ${comicFile.name} pages=$pages")
-        var listenableFuture : ListenableFuture<Void>? = null
 
         // Unrar
         try {
@@ -179,10 +153,10 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 val fileHeader = rarArchive.nextFileHeader() ?: break
                 if (fileHeader.fullUnpackSize > 0) {
                     if (!fileHeader.isDirectory && isFilePathAnImage(fileHeader.fileName)) {
-                        Timber.v("  ENTRY $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} ADDED")
+                        Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} ADDED")
                         fileHeaders.add(fileHeader)
                     } else {
-                        Timber.v("  ENTRY $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
+                        Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
 
                     }
                 }
@@ -194,8 +168,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             nbPages = fileHeaders.size
 
             if (!isStopped && fileHeaders.isNotEmpty()) {
-                var bitmap: Bitmap?
-
                 for (numPage in pages) {
                     if (isStopped) {    // Check if the work was cancelled
                         break
@@ -206,25 +178,17 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         continue
                     }
                     val fileHeader = fileHeaders[numPage]
-                    // Extract this file
-                    val input = rarArchive.getInputStream(fileHeader)
-                    bitmap = BitmapUtil.createBitmap(input.readBytes())
-                    if (bitmap != null) {
-                        // Save the bitmap in cache
-                        val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
-                        Timber.v("unrarPages num_pages=$numPage pagePath=$pagePath")
-                        BitmapUtil.saveBitmapInFile(bitmap,pagePath, true) // Do this in an other thread?
-                        bitmap.recycle()
+                    val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+                    Timber.w("  Unrar page=$numPage in $pagePath")
+                    val outputStream = File(pagePath).outputStream()
+                    rarArchive.extractFile(fileHeader, outputStream)
 
-//                        Timber.w("  Prepare setProgressAsync !!!")
-                        listenableFuture = setProgressAsync(Data.Builder().
-                                                                putInt(KEY_CURRENT_INDEX, numPage).
-                                                                putString(KEY_CURRENT_PATH, pagePath).
-                                                                putInt(KEY_NB_PAGES, nbPages).
-                                                                build())
-//                        Timber.w("  Prepare setProgressAsync DONE !!!")
-
-                    }
+                    // Send a progress event
+                    setProgressAsync(Data.Builder().
+                        putInt(KEY_CURRENT_INDEX, numPage).
+                        putString(KEY_CURRENT_PATH, pagePath).
+                        putInt(KEY_NB_PAGES, nbPages).
+                        build())
                 }
             }
         } catch (e: RarException) {
@@ -233,17 +197,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         } catch (e: IOException) {
             Timber.v("unrarPages :: IOException $e")
             return false
-        }
-
-        // Be sure that the last setProgressAsync was received, if any
-        if (listenableFuture != null) {
-            while (true) {
-                Thread.sleep(50)    // Some sleep to be sure the last RUNNING signal (onProgress) is send before the SUCCESS signal
-                Timber.d("NNNNN ${listenableFuture.isDone} ${listenableFuture.isCancelled}")
-                if (listenableFuture.isDone || listenableFuture.isCancelled) {
-                    break
-                }
-            }
         }
 
         Timber.v("unrarPages ${comicFile.name}")

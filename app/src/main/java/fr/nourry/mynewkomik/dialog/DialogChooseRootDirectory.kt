@@ -78,7 +78,7 @@ class DialogChooseRootDirectory(private val rootPath: File?=null) : DialogFragme
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
         builder
-            .setTitle(getString(R.string.choose_root_text))
+            .setTitle(R.string.choose_root_text)
 //          .setCustomTitle()  // TODO to try...
 //            .setView(dialogView)
             .setView(listView)

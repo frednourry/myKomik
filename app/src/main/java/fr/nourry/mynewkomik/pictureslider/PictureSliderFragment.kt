@@ -1,9 +1,11 @@
 package fr.nourry.mynewkomik.pictureslider
 
+import android.app.AlertDialog.THEME_HOLO_LIGHT
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -12,11 +14,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager.widget.ViewPager
+import com.google.android.material.snackbar.Snackbar
+import fr.nourry.mynewkomik.App
+import fr.nourry.mynewkomik.BrowserViewModelState
 import fr.nourry.mynewkomik.R
+import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.databinding.FragmentPictureSliderBinding
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
+import fr.nourry.mynewkomik.utils.getComicEntriesFromDir
 import timber.log.Timber
+
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
@@ -27,7 +35,10 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private lateinit var pictureSliderAdapter: PictureSliderAdapter
 //    private lateinit var pictureSliderAdapter: PictureSliderAdapter2
     private var currentPage = 0
+    private lateinit var currentComic:ComicEntry
     private lateinit var viewModel: PictureSliderViewModel
+
+    private lateinit var toast: Toast
 
     private var dialogComicLoading:DialogComicLoading = DialogComicLoading.newInstance()
 
@@ -35,6 +46,11 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private var _binding: FragmentPictureSliderBinding? = null
     // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
+
+    // Informations when scrolling
+    private var lastPageBeforeScrolling = 0
+    private var lastPositionOffsetPixel = -1
+    private var scrollingDirection = 0
 
 
 
@@ -63,7 +79,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
         val args = PictureSliderFragmentArgs.fromBundle(requireArguments())
-        val comic = args.comic
+        currentComic = args.comic
         currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
 
 
@@ -79,12 +95,25 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
-        viewModel.initialize(comic, currentPage/*, savedInstanceState == null*/)
+        viewModel.initialize(currentComic, currentPage/*, savedInstanceState == null*/)
 
-        binding.viewPager.addOnPageChangeListener(this)
+        // LiveData for the ViewModel :
+        //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
+        viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
+            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
+            viewModel.updateComicEntriesFromDAO(comicEntriesFromDAO)
+        }
+        // End LiveDatas
+
 
         // Replace the title
-        (requireActivity() as AppCompatActivity).supportActionBar?.title = comic.file.name
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = currentComic.file.name
+    }
+
+    private fun changeCurrentComic(comic:ComicEntry) {
+        currentComic = comic
+        viewModel.changeCurrentComic(currentComic, comic.currentPage)
+        pictureSliderAdapter.setNewComic(comic)
     }
 
     override fun onDestroyView() {
@@ -117,6 +146,9 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     private fun handleStateLoading(state: PictureSliderViewModelState.Loading) {
         Timber.i("handleStateLoading")
+
+        binding.viewPager.visibility = View.INVISIBLE
+
         dialogComicLoading.isCancelable = false
         if (!dialogComicLoading.isAdded) {
             dialogComicLoading.show(parentFragmentManager, TAG_DIALOG_COMIC_LOADING)
@@ -133,18 +165,18 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
 
         if (!::pictureSliderAdapter.isInitialized) {
-            Timber.i("   1")
             pictureSliderAdapter = PictureSliderAdapter(requireContext(), state.comic)
-            Timber.i("   2")
             binding.viewPager.currentItem = state.currentPage
-            Timber.i("   3 ${binding.viewPager}")
             binding.viewPager.adapter = pictureSliderAdapter
-            Timber.i("   4 ${binding.viewPager.adapter}")
-//            pictureSliderAdapter.notifyDataSetChanged()
+
+            binding.viewPager.addOnPageChangeListener(this)
         }
 
-        binding.viewPager.currentItem = state.currentPage
         pictureSliderAdapter.notifyDataSetChanged()
+        binding.viewPager.currentItem = state.currentPage
+
+        binding.viewPager.visibility = View.VISIBLE
+
     }
 
     private fun handleStateInit(state: PictureSliderViewModelState.Init) {
@@ -168,17 +200,128 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         return false
     }
 
-    override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
-//        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
+    private fun askNextComic() {
+        Timber.d("askNextComic")
+        val thisFragment = this
+        val alert: AlertDialog = if (!viewModel.hasNextComic()) {
+            AlertDialog.Builder(requireContext())
+                .setMessage(R.string.no_next_issue)
+                .setPositiveButton(R.string.ok) { _,_ -> }
+                .setCancelable(true)
+                .create()
+            } else {
+                AlertDialog.Builder(requireContext())
+                            .setMessage("Begin reading next issue?")
+                            .setPositiveButton(R.string.ok) { _, _ ->
+                                val newComic = viewModel.getNextComic()
+                                Timber.d("    newComic=$newComic")
+                                if (newComic != null && newComic != currentComic) {
+                                    changeCurrentComic(newComic)
+                                }
+                            }
+                            .setNeutralButton(R.string.back_to_browser) { _, _ -> NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false) }
+                            .setNegativeButton(R.string.no) { _, _ -> }
+                            .setCancelable(true)
+                            .create()
+            }
+        alert.show()
     }
 
-    override fun onPageSelected(position: Int) {
-        Timber.i("onPageSelected currentPage = $position")
-        currentPage = position
-        viewModel.setCurrentPage(position)
+    private fun askPreviousComic() {
+        Timber.d("askPreviousComic")
+        val thisFragment = this
+        val alert: AlertDialog = if (!viewModel.hasPreviousComic()) {
+            AlertDialog.Builder(requireContext())
+                .setMessage(R.string.no_previous_issue)
+                .setPositiveButton(R.string.ok) { _,_ -> }
+                .setCancelable(true)
+                .create()
+        } else {
+            AlertDialog.Builder(requireContext())
+                .setMessage(R.string.ask_read_previous_issue)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    val newComic = viewModel.getPreviousComic()
+                    Timber.d("    newComic=$newComic")
+                    if (newComic != null && newComic != currentComic) {
+                        changeCurrentComic(newComic)
+                    }
+                }
+                .setNeutralButton(R.string.back_to_browser) { _, _ -> NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false) }
+                .setNegativeButton(R.string.no) { _, _ -> }
+                .setCancelable(true)
+                .create()
+        }
+        alert.show()
     }
 
     override fun onPageScrollStateChanged(state: Int) {
-//        Timber.i("onPageScrollStateChanged state = $state")
+        Timber.i("onPageScrollStateChanged state = $state")
+        if (state == ViewPager.SCROLL_STATE_DRAGGING) {
+            lastPageBeforeScrolling = currentPage
+        } else if (state == ViewPager.SCROLL_STATE_IDLE) {
+            Timber.w("   lastPageBeforeScrolling=$lastPageBeforeScrolling currentPage=$currentPage")
+            // Compare if we change the page
+            if (lastPageBeforeScrolling == currentPage) {
+                // We couldn't change the current page
+/*                if (scrollingDirection>0) {
+                    Timber.w("LAST PAGE: ASK NEW ONE ?")
+                } else if (scrollingDirection<0) {
+                    Timber.w("FIRST PAGE: ASK PREVIOUS ONE ?")
+                }*/
+                if (currentPage == 0) {
+                    // TODO to change : bug if there only one page in the comic !
+                    Timber.w("FIRST PAGE: ASK PREVIOUS ONE ?")
+                    askPreviousComic()
+                } else if (currentPage == (viewModel.currentComic?.nbPages ?: -1) -1) {
+                    Timber.w("LAST PAGE: ASK NEW ONE ?")
+                    askNextComic()
+                }
+            }
+            lastPositionOffsetPixel = -1
+            scrollingDirection = 0
+        }
+    }
+
+    override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
+        if (lastPositionOffsetPixel > 0) {
+            if (lastPositionOffsetPixel > positionOffsetPixels) {
+                scrollingDirection = -1
+            } else if (lastPositionOffsetPixel < positionOffsetPixels) {
+                scrollingDirection = +1
+            } else {
+                scrollingDirection = 0
+            }
+            Timber.w("    scrollingDirection=$scrollingDirection   positionOffsetPixels=$positionOffsetPixels")
+        } else {
+            scrollingDirection = 0
+        }
+        lastPositionOffsetPixel = positionOffsetPixels
+    }
+
+    override fun onPageSelected(position: Int) {
+        Timber.i("onPageSelected currentPage = $position oldPosition = $currentPage")
+
+        currentPage = position
+        showOrUpdateToast("Page ${position+1} of ${currentComic.nbPages}")
+        viewModel.onSetCurrentPage(position)
+    }
+
+    private fun showOrUpdateToast(text:String) {
+        if (::toast.isInitialized) {
+            toast.cancel()
+        }
+        toast = Toast.makeText(context, text, Toast.LENGTH_SHORT)
+        toast.show()
+
+/*
+        // NOT WORKING !!
+        if (::toast.isInitialized) {
+            toast.cancel()
+            toast.setText(text)
+        } else {
+            toast = Toast.makeText(requireContext(), text, Toast.LENGTH_SHORT)
+        }
+        toast.show()*/
     }
 }

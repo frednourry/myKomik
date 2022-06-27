@@ -378,7 +378,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     private fun askToChangeRootDirectory() {
         val alert = AlertDialog.Builder(requireContext())
-            .setMessage(getString(R.string.ask_change_root_directory))
+            .setMessage(R.string.ask_change_root_directory)
             .setPositiveButton(R.string.ok) { _,_ -> showChooseDirectoryDialog(rootDirectory, true) }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()
@@ -387,7 +387,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     private fun askToClearCache() {
         val alert = AlertDialog.Builder(requireContext())
-            .setMessage(getString(R.string.ask_clear_cache))
+            .setMessage(R.string.ask_clear_cache)
             .setPositiveButton(R.string.ok) { _,_ ->
                 val cacheDir = App.physicalConstants.cacheDir
                 if (cacheDir.exists() && cacheDir.isDirectory) {
@@ -410,7 +410,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         val alert: AlertDialog
         if (selectedComicIndexes.size == 0) {
             alert = AlertDialog.Builder(requireContext())
-                .setMessage(getString(R.string.no_file_selected))
+                .setMessage(R.string.no_file_selected)
                 .setPositiveButton(R.string.ok) { _,_ -> }
                 .create()
         } else {
@@ -446,9 +446,9 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     private fun showSnackBarUndoDeletion() {
         Snackbar
-            .make(binding.coordinatorLayout, getString(R.string.message_files_deleted), Snackbar.LENGTH_LONG)
+            .make(binding.coordinatorLayout, R.string.message_files_deleted, Snackbar.LENGTH_LONG)
             .setDuration(viewModel.TIME_BEFORE_DELETION)
-            .setAction(getString(R.string.message_undo)) {
+            .setAction(R.string.message_undo) {
                 if (viewModel.undoDeleteComicEntries()) {
                     Timber.d("Deleting undone, so need to refresh dir...")
                     loadComics(App.currentDir!!)

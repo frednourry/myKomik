@@ -32,4 +32,8 @@ data class ComicEntry(
     constructor(f: File) : this(f, 0,  if(f.parentFile!=null) f.parentFile.absolutePath else f.absolutePath, f.name, f.isDirectory, stringToHash(f.absolutePath), 0, 0, false)
     constructor(id:Long, dirPath:String, name:String, isDirectory:Boolean, hashkey:String, nbPages:Int, currentPage:Int):
             this(File(concatPath(dirPath, name)), id, dirPath, name, isDirectory, hashkey, nbPages, currentPage, false)
+
+    override fun equals(other: Any?): Boolean {
+        return this.hashkey == (other as ComicEntry).hashkey
+    }
 }

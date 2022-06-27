@@ -46,4 +46,12 @@ interface ComicEntryDao {
      */
     @Query("SELECT * FROM comic_entry WHERE dir_path =:path")
     fun getComicEntriesByDirPath(path:String):LiveData<List<ComicEntry>>
+
+    /**
+     * Usage:
+     * dao.getComicEntriesByDirPath("/sdcard/Download/Comics").observe(this, Observer{ComicEntries-> ... })
+     */
+    @Query("SELECT * FROM comic_entry WHERE dir_path =:path AND NOT is_directory")
+    fun getOnlyFileComicEntriesByDirPath(path:String):LiveData<List<ComicEntry>>
+
 }

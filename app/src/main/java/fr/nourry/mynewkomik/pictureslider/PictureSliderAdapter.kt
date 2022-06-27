@@ -1,6 +1,7 @@
 package fr.nourry.mynewkomik.pictureslider
 
 import android.content.Context
+import android.database.DataSetObserver
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,16 +20,20 @@ import java.io.File
 
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PictureSliderAdapter(context: Context, val comic:ComicEntry):PagerAdapter(), ComicLoadingProgressListener {
+class PictureSliderAdapter(context: Context, var comic:ComicEntry):PagerAdapter(), ComicLoadingProgressListener {
     private val inflater = LayoutInflater.from(context)
 
     data class InnerComic(val comic:ComicEntry, val position:Int, val imageView:ImageView)
 
+    fun setNewComic(newComic:ComicEntry) {
+        Timber.d("setNewComic :: newComic=$newComic")
+
+        comic = newComic
+    }
+
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
         Timber.d("instantiateItem :: position=$position")
-//        val picture = pictures[position]
         val view = inflater.inflate(R.layout.item_picture, container, false)
-
 
         val imageView = view.findViewById<ImageView>(R.id.imageView)
         val cardView = view.findViewById<CardView>(R.id.cardView)
@@ -36,7 +41,6 @@ class PictureSliderAdapter(context: Context, val comic:ComicEntry):PagerAdapter(
 
         Glide.with(imageView)
             .load(R.drawable.ic_launcher_foreground)
-//            .load(picture.file)
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
             .into(imageView)
@@ -69,15 +73,21 @@ class PictureSliderAdapter(context: Context, val comic:ComicEntry):PagerAdapter(
 
             // Check if the target is still waiting this image
             if (holderComic.file.absolutePath == comic.file.absolutePath && currentIndex == holderInnerComic.position) {
-                Timber.d("     UPDATING IMAGEVIEW...")
+                Timber.d("     UPDATING IMAGEVIEW... $path")
                 val image = holderInnerComic.imageView
                 Glide.with(image.context)
                     .load(path)
+                    .fitCenter()
                     .into(image)
             } else {
                 Timber.w("onProgress:: To late. This view no longer requires this image...")
             }
         }
+    }
+
+    override fun getItemPosition(`object`: Any): Int {
+//        return super.getItemPosition(`object`)
+        return POSITION_NONE        // TODO : to adapte when changing the comic, because the loaded items are not updated (https://stackoverflow.com/questions/7263291/why-pageradapternotifydatasetchanged-is-not-updating-the-view)
     }
 
     override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, path: File?, target: Any?) {
@@ -86,5 +96,5 @@ class PictureSliderAdapter(context: Context, val comic:ComicEntry):PagerAdapter(
 }
 
 private fun ImageView.onTouchEvent(function: () -> Unit) {
-
+    Timber.d("onTouchEvent")
 }

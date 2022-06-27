@@ -4,10 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LifecycleOwner
 import androidx.work.*
 import fr.nourry.mynewkomik.database.ComicEntry
-import fr.nourry.mynewkomik.utils.clearFilesInDir
-import fr.nourry.mynewkomik.utils.concatPath
-import fr.nourry.mynewkomik.utils.deleteFile
-import fr.nourry.mynewkomik.utils.getComicEntriesFromDir
+import fr.nourry.mynewkomik.utils.*
 import timber.log.Timber
 import java.io.File
 import java.util.*
@@ -161,14 +158,21 @@ class ComicLoadingManager private constructor() {
                 pageList.add(numPage+num)
             }
 
+            // Search in currentComicLoadingPages.pages[] if pageList elements are in
+            //  if yes, update
+            //  if no, add
+            var found = false
             for (i in 0 until size) {
                 if (pageList.contains(currentComicLoadingPages!!.pages[i].numPage)) {
                     // Update target
                     currentComicLoadingPages!!.pages[i].target = target
-                } else {
-                    // Add this page
-                    currentComicLoadingPages!!.pages = currentComicLoadingPages!!.pages.plusElement(PageTarget(numPage, target))
+                    found=true
+                    break
                 }
+            }
+            if (!found) {
+                // Add this page
+                currentComicLoadingPages!!.pages = currentComicLoadingPages!!.pages.plusElement(PageTarget(numPage, target))
             }
         } else {
             // New comic, so forget the last one
@@ -248,11 +252,22 @@ class ComicLoadingManager private constructor() {
             val cacheFilePath = getComicEntryPageFilePath(comic, pt.numPage)
             val cacheFile = File(cacheFilePath)
             if (cacheFile.exists()) {
+                // The cache file already exists, so no need to proceed
                 Timber.w("    File already exists, so skip it ! pt.target=${pt.target}")
                 if (pt.target != null) {
+                    // Send a onProgress to the target
                     comicLoading.listener.onProgress(pt.numPage, 0, cacheFilePath, pt.target)
                 }
             } else {
+                // We need to unarchive this page.
+                // Before adding this PageTarget to 'newPagesList', check if this target is already used for another page (only one target/view can want this image)
+                for (pt2 in newPagesList) {
+                    if (pt2.target == pt.target) {
+                        // Erase pt2 target !
+                        pt2.target = null
+                        break
+                    }
+                }
                 newPagesList.add(pt)
                 pagesNumberList.add(pt.numPage)
             }
@@ -288,22 +303,31 @@ class ComicLoadingManager private constructor() {
                             val path = workInfo.progress.getString(GetPagesWorker.KEY_CURRENT_PATH)?:""
                             var target:Any? = null
                             if (currentIndex>=0) {
+                                var i=0
+                                var indexToDelete = -1
                                 for (it in newPagesList) {
                                     if (it.numPage == currentIndex) {
                                         target = it.target
+                                        indexToDelete = i
                                         break
                                     }
+                                    i++
                                 }
                                 Timber.w("    RUNNING !!! currentIndex = $currentIndex")
                                 Timber.w("    RUNNING !!! path = $path")
                                 if (path!= "") {
                                     comicLoading.listener.onProgress(currentIndex, nbPages, path, target)
                                 }
+                                // Update newPagesList
+                                if (indexToDelete>=0) {
+                                    Timber.w("   Before updating:  newPagesList.size=${newPagesList.size}")
+                                    newPagesList.removeAt(indexToDelete)
+                                    Timber.w("   After updating :  newPagesList.size=${newPagesList.size}")
+                                }
                             }
                         } else if (workInfo.state.isFinished) {
                             Timber.d(" loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
-                            val imagePath = outputData.getString(GetPagesWorker.KEY_PAGES_DESTINATION_PATH)?:""
                             val nbPages = outputData.getInt(GetPagesWorker.KEY_NB_PAGES, 0)
                             Timber.d("   nbPages=$nbPages")
                             if (nbPages>0) {
@@ -313,6 +337,15 @@ class ComicLoadingManager private constructor() {
                             isLoading = false
                             currentWorkID = null
 
+                            // Before sending the onFinished event, send all remaining onProgress event (could have one last onProgress not sent, due to Worker mechanisms...)
+                            for (pt in newPagesList) {
+                                val pagePath = getComicEntryPageFilePath(comic, pt.numPage)
+                                if (isFileExists(pagePath)) {
+                                    comicLoading.listener.onProgress(pt.numPage, nbPages, pagePath, pt.target)
+                                }
+                            }
+
+                            // Send the onFinished event
                             comicLoading.listener.onFinished(
                                 if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
                                 comic,
@@ -326,7 +359,6 @@ class ComicLoadingManager private constructor() {
                 }
 
         } else {
-//            var callbackResponse = getComicEntryPageFilePath(comic, currentComicLoadingPages!!.pages.get(0).numPage)
             comicLoading.listener.onFinished(ComicLoadingResult.SUCCESS, comic, dirUncompressedComic, comicLoading.pages[0].target)
             currentComicLoadingPages = null
             isLoading = false

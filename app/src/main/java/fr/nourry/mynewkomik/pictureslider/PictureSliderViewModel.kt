@@ -1,8 +1,6 @@
 package fr.nourry.mynewkomik.pictureslider
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import fr.nourry.mynewkomik.App
 import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
@@ -10,6 +8,7 @@ import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import fr.nourry.mynewkomik.loader.ComicLoadingResult
 import fr.nourry.mynewkomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
 import fr.nourry.mynewkomik.preference.SharedPref
+import fr.nourry.mynewkomik.utils.getComicEntriesFromDir
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.Executors
@@ -41,6 +40,14 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
     private var currentPage = 0
     fun getState(): LiveData<PictureSliderViewModelState> = state
 
+    private var comicEntriesInCurrentDir: MutableList<ComicEntry> = mutableListOf()
+    private var currentIndexInDir = -1
+    private var currentDirFile = MutableLiveData<File>()
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = Transformations.switchMap(currentDirFile) { file ->
+        Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
+        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(file.absolutePath)
+    }.distinctUntilChanged()
+
     fun initialize(comic: ComicEntry, pageToGo: Int/*, shouldUncompress:Boolean*/) {
         Timber.d("initialize(${comic.file.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
         Timber.d("   comic = $comic")
@@ -51,6 +58,8 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         currentPage = pageToGo
 
         currentComic!!.currentPage = pageToGo
+
+        currentDirFile.value = comic.file.parentFile
 
         // Determine the pages to ask
         val offset = 3
@@ -66,8 +75,21 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         Timber.d("initialize:: waiting....")
     }
 
-    fun setCurrentPage(n:Int) {
-        Timber.d("setCurrentPage($n)")
+    // Change the current comic with a new one in the list 'comicEntriesInCurrentDir'
+    fun changeCurrentComic(newComic:ComicEntry, numPage:Int){
+        Timber.d("changeCurrentComic $newComic")
+
+        currentIndexInDir = comicEntriesInCurrentDir.indexOf(newComic)
+        Timber.d("  currentIndexInDir=$currentIndexInDir")
+        if (currentIndexInDir < 0) {
+            Timber.w("  newComic not in comicEntriesInCurrentDir!!")
+        }
+
+        initialize(newComic, 0 /*newComic.currentPage*/)
+    }
+
+    fun onSetCurrentPage(n:Int) {
+        Timber.d("onSetCurrentPage($n)")
         Timber.d("   comic = $currentComic")
 
         SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
@@ -90,15 +112,6 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         }
     }
 
-/*    private fun loadPictures(dir: File) {
-        val files = getImageFilesFromDir(dir)
-        Timber.d("loadPictures(${dir.absolutePath})::$files")
-        pictures.clear()
-        for (file in files) {
-            pictures.add(ComicPicture(file))
-        }
-    }
-*/
     fun clean() {
         Timber.d("clean")
 
@@ -113,6 +126,76 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
 
         state.value = PictureSliderViewModelState.Cleaned()
     }
+
+    fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
+        Timber.d("updateComicEntriesFromDAO")
+        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+
+        val comicEntriesFromDisk = getComicEntriesFromDir(currentDirFile.value!!, true)
+        Timber.w("    comicEntriesFromDisk = $comicEntriesFromDisk")
+
+        // Built a correct comicEntries list...
+        comicEntriesInCurrentDir.clear()
+        comicEntriesInCurrentDir = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
+    }
+
+    private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
+        Timber.d("synchronizeDBWithDisk")
+        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
+        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+        val result: MutableList<ComicEntry> = mutableListOf()
+        var found = false
+        var index=0
+        for (fe in comicEntriesFromDisk) {
+//            Timber.v(" Looking for ${fe.dirPath}")
+            found = false
+            // Search in comicEntriesFromDAO
+            for (feDAO in comicEntriesFromDAO) {
+                Timber.v("  -- ${fe.dirPath}")
+                if (fe.hashkey == feDAO.hashkey) {
+                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+                    feDAO.file = fe.file
+                    feDAO.fromDAO = true
+                    result.add(feDAO)
+                    found = true
+                    break
+                }
+            }
+            if (!found) {
+                fe.fromDAO = false
+                result.add(fe)
+            }
+            if (fe.hashkey == currentComic!!.hashkey) {
+                currentIndexInDir = index
+                Timber.d("   currentIndexInDir=$currentIndexInDir")
+            }
+            index++
+        }
+
+        Timber.d(" returns => $result")
+        return result
+    }
+
+    fun hasNextComic():Boolean {
+        return currentIndexInDir<comicEntriesInCurrentDir.size-1
+    }
+    fun getNextComic():ComicEntry? {
+        if (hasNextComic()) {
+            return comicEntriesInCurrentDir[currentIndexInDir+1]
+        }
+        return currentComic
+    }
+
+    fun hasPreviousComic():Boolean {
+        return currentIndexInDir>0
+    }
+    fun getPreviousComic():ComicEntry? {
+        if (hasPreviousComic()) {
+            return comicEntriesInCurrentDir[currentIndexInDir-1]
+        }
+        return currentComic
+    }
+
 
     override fun onProgress(currentIndex: Int, size: Int, path:String, target:Any?) {
         Timber.d("onProgress currentIndex=$currentIndex size=$size path=$path target=$target")

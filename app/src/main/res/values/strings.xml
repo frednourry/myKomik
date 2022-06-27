@@ -18,4 +18,11 @@
     <string name="actionbar_button_done">X Done</string>
     <string name="message_files_deleted">File(s) deleted</string>
     <string name="message_undo">Undo</string>
+    <string name="ok">Ok</string>
+    <string name="no">No</string>
+    <string name="ask_read_previous_issue">Begin reading previous issue?</string>
+    <string name="ask_read_next_issue">Begin reading next issue?</string>
+    <string name="back_to_browser">Back to browser</string>
+    <string name="no_next_issue">There is no more issues.</string>
+    <string name="no_previous_issue">There is no previous issues.</string>
 </resources>

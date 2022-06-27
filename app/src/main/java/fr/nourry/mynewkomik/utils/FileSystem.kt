@@ -118,6 +118,12 @@ fun getDefaultDirectory(appContext: Context): File {
     return storageDir!!
 }
 
+fun isFileExists(path: String):Boolean {
+    val f = File(path)
+    return f.exists()
+}
+
+
 fun isDirExists(path: String):Boolean {
     val dir = File(path)
     return dir.isDirectory
@@ -139,21 +145,21 @@ fun getDirectoriesList(dir: File): List<File> {
     return emptyList()
 }
 
-fun getComicsFromDir(dir: File): List<File> {
+fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false): List<File> {
     Timber.d("getComicFilesFromDir:: ${dir.absolutePath}")
     val l = dir.listFiles()
     if (l != null) {
         val list = l.sortedWith(compareBy{it.name})
-        val directory = list.filter { f-> (f.isDirectory) }
+        val directory = if (bOnlyFile) emptyList() else list.filter { f-> (f.isDirectory) }
         val comics = list.filter { f-> ((f.extension=="cbz" || f.extension=="cbr") && f.isFile) } //.sorted()
         return directory.plus(comics)
     }
     return emptyList()
 }
 
-fun getComicEntriesFromDir(dir: File): List<ComicEntry> {
+fun getComicEntriesFromDir(dir: File, bOnlyFile:Boolean = false): List<ComicEntry> {
     Timber.d("getComicEntriesFromDir:: ${dir.absolutePath}")
-    val listFiles = getComicsFromDir(dir)
+    val listFiles = getComicsFromDir(dir, bOnlyFile)
     var resultList:List<ComicEntry> = emptyList()
 
     for (file in listFiles) {
