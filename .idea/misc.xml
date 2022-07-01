@@ -1,43 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="DesignSurface">
-    <option name="filePathToZoomLevelMap">
-      <map>
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.20833333333333334" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/action_bar_multi_select.xml" value="0.253" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_baseline_horizontal_rule_24.xml" value="0.285" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_baseline_sd_card_24.xml" value="0.285" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_choose_root_dir.xml" value="0.285" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_clear_cache.xml" value="0.237" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_launcher_background.xml" value="0.20833333333333334" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/activity_main.xml" value="0.234375" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root.xml" value="0.18541666666666667" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root_list.xml" value="0.21510416666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root_list2.xml" value="0.19877750611246944" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root_list_item.xml" value="0.36820652173913043" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_comic_loading.xml" value="0.25052083333333336" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_signin.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_signin_item.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/file_browser_entry.xml" value="0.34375" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_browser.xml" value="0.234375" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_browser_actionbar_selection.xml" value="0.67" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_picture_slider.xml" value="0.23541666666666666" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_comic.xml" value="0.25" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_comic2.xml" value="0.21510416666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_comic_sav.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_picture.xml" value="0.23541666666666666" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_select_directory_dialog.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/select_directory_dialog.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/sialog_signin.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/menu/menu_browser_fragment.xml" value="0.21510416666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/menu/menu_browser_selection_fragment.xml" value="0.24739583333333334" />
-      </map>
-    </option>
-  </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="1.8" project-jdk-type="JavaSDK">
-    <output url="file://$PROJECT_DIR$/build/classes" />
-  </component>
-  <component name="ProjectType">
-    <option name="id" value="Android" />
-  </component>
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="11" project-jdk-type="JavaSDK" />
 </project>
