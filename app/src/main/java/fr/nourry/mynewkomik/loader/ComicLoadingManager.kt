@@ -87,10 +87,7 @@ class ComicLoadingManager private constructor() {
 
         cachePathDir = cachePath
         dirUncompressedComic = File(concatPath(cachePathDir,PATH_COMIC_DIR))
-    }
-
-    fun getDirUncompressedComic(): File {
-        return dirUncompressedComic
+        createDirectory(dirUncompressedComic.absolutePath)
     }
 
     fun setLivecycleOwner(lo:LifecycleOwner) {

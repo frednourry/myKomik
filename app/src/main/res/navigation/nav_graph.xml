@@ -8,7 +8,8 @@
     <fragment
         android:id="@+id/permissionFragment"
         android:name="fr.nourry.mynewkomik.permission.PermissionFragment"
-        android:label="PermissionFragment">
+        android:label="PermissionFragment"
+        tools:layout="@layout/fragment_permission">
         <action
             android:id="@+id/action_permissionFragment_to_browserFragment"
             app:destination="@id/browserFragment" />

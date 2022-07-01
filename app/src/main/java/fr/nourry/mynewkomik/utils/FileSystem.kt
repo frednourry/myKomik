@@ -225,3 +225,18 @@ fun deleteFile(f:File): Boolean {
     }
     return true
 }
+
+// Create a directory if it's not exists
+fun createDirectory(path:String) {
+    val dir = File(path)
+    if (dir.exists()) {
+        Timber.v("createDirectory:: $path already exists")
+        return
+    } else {
+        if (dir.mkdirs()) {
+            Timber.v("createDirectory:: $path created")
+        } else {
+            Timber.w("createDirectory:: $path :: error while creating")
+        }
+    }
+}

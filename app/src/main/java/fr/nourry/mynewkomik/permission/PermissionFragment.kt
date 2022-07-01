@@ -31,14 +31,36 @@ class PermissionFragment: Fragment() {
     }
     private lateinit var textView:TextView
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        Timber.d("onCreate $savedInstanceState")
+        super.onCreate(savedInstanceState)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Timber.d("onCreateView")
         return inflater.inflate(R.layout.fragment_permission, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        Timber.d("onViewCreated")
+
         super.onViewCreated(view, savedInstanceState)
 
         textView = view.findViewById(R.id.textViewNoPermission)
+
+        if (savedInstanceState == null) {
+            // Check permissions
+            if (Build.VERSION.SDK_INT < 30) {
+                checkPermissionBefore30()
+            } else {
+                // Build.VERSION.SDK_INT >= 30
+                checkPermission30AndAfter()
+            }
+
+        } else {
+            // No need to check permissions
+            startAppAfterPermissionsCheck()
+        }
     }
 
 
@@ -117,21 +139,10 @@ class PermissionFragment: Fragment() {
     // End permissions after 30
 
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        Timber.d("onCreate")
-        super.onCreate(savedInstanceState)
-
-        if (Build.VERSION.SDK_INT < 30) {
-            checkPermissionBefore30()
-        } else {
-            // Build.VERSION.SDK_INT >= 30
-            checkPermission30AndAfter()
-        }
-    }
-
     // Permissions are OK, so change to BrowserFragment
     private fun startAppAfterPermissionsCheck() {
         Timber.d("startAppAfterPermissionsCheck")
+
         val action = PermissionFragmentDirections.actionPermissionFragmentToBrowserFragment()
         findNavController().navigate(action)
     }
