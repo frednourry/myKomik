@@ -72,11 +72,11 @@ class PageSelectorSliderAdapter(val viewModel:PictureSliderViewModel, var comic:
         val pageNumberTextView = holder.itemPicture.findViewById<TextView>(R.id.pageNumberTextView)
         cardView.tag = InnerComicTag(comic, position, imageView, pageNumberTextView)
         pageNumberTextView.text = "${position+1}"
-/*        if (position == viewModel.getCurrentPage()) {
+        if (position == viewModel.getCurrentPage()) {
             pageNumberTextView.setBackgroundResource(R.drawable.round_shape_blue)
         } else {
             pageNumberTextView.setBackgroundResource(R.drawable.round_shape_black)
-        }*/
+        }
 
         cardView.setOnClickListener(this@PageSelectorSliderAdapter)
 

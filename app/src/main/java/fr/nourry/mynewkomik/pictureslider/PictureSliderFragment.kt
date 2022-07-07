@@ -172,12 +172,17 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
 
         if (binding.viewPager.currentItem != state.currentPage) {
+            val oldPage = binding.viewPager.currentItem
+            val newPage = state.currentPage
 //            pageSliderAdapter.notifyDataSetChanged()
             binding.viewPager.setCurrentItem(state.currentPage, false)
+            if (::pageSelectorSliderAdapter.isInitialized) {
+                pageSelectorSliderAdapter.notifyItemChanged(oldPage)
+                pageSelectorSliderAdapter.notifyItemChanged(newPage)
+            }
         }
 
         binding.viewPager.visibility = View.VISIBLE
-
     }
 
     private fun handleStatePageSelection(state: PictureSliderViewModelState.PageSelection) {
@@ -186,20 +191,9 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         if (!::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter = PageSelectorSliderAdapter(viewModel, state.comic)
 
-/*            binding.viewPagerSelection.apply {
-                offscreenPageLimit = 1
-                val recyclerView = getChildAt(0) as RecyclerView
-                recyclerView.apply {
-                    val padding = 30 //card_margin + peek_offset_margin
-                    setPadding(0, padding, 0, padding)
-                    clipToPadding = false
-                }
-                adapter = pageSelectorSliderAdapter
-            }*/
             binding.recyclerViewPageSelector.layoutManager = GridLayoutManager(requireContext(), 1)  // Should be higher, but cool result so keep it...
             binding.recyclerViewPageSelector.adapter = pageSelectorSliderAdapter
             pageSelectorSliderAdapter.notifyDataSetChanged()
-//            binding.recyclerViewPageSelector.currentItem = state.currentPage
             binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
 
             binding.recyclerViewPageSelector.overScrollMode = View.OVER_SCROLL_ALWAYS
@@ -210,23 +204,16 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             }
             binding.buttonGoFirst.setOnClickListener { _ ->
                 Timber.d("onClick buttonGoFirst")
-//                binding.recyclerViewPageSelector.setCurrentItem(0, false)
                 binding.recyclerViewPageSelector.scrollToPosition(0)
             }
             binding.buttonGoLast.setOnClickListener { _ ->
                 Timber.d("onClick buttonGoLast")
-//                binding.recyclerViewPageSelector.setCurrentItem(currentComic.nbPages-1, false)
                 binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
             }
-
         }
 
-//        if (binding.recyclerViewPageSelector.currentItem != state.currentPage) {
-//            binding.recyclerViewPageSelector.setCurrentItem(state.currentPage, false)
-//        }
         binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
 
-        //binding.cachePageSelectorLayout.visibility = View.VISIBLE
         showPageSelector()
     }
 
@@ -391,6 +378,11 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     override fun onPageSelected(position: Int) {
         Timber.i("onPageSelected currentPage = $position oldPosition = $currentPage")
+
+        if (::pageSelectorSliderAdapter.isInitialized) {
+            pageSelectorSliderAdapter.notifyItemChanged(currentPage)
+            pageSelectorSliderAdapter.notifyItemChanged(position)
+        }
 
         currentPage = position
         showOrUpdateToast("Page ${position+1} of ${currentComic.nbPages}")
