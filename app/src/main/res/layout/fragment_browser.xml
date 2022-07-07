@@ -9,6 +9,12 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="true"
+        android:scrollbarDefaultDelayBeforeFade="@integer/material_motion_duration_short_1"
+        android:fadingEdge="horizontal"
+        android:fadingEdgeLength="50dp"
+        android:requiresFadingEdge="vertical" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
