@@ -1,6 +1,6 @@
 package fr.nourry.mynewkomik.pictureslider
 
-import android.app.AlertDialog.THEME_HOLO_LIGHT
+import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,27 +13,26 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.viewpager.widget.ViewPager
-import com.google.android.material.snackbar.Snackbar
-import fr.nourry.mynewkomik.App
-import fr.nourry.mynewkomik.BrowserViewModelState
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.databinding.FragmentPictureSliderBinding
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
-import fr.nourry.mynewkomik.utils.getComicEntriesFromDir
 import timber.log.Timber
+import java.util.concurrent.Executors
 
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
 class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
+    val PAGE_SELECTOR_ANIMATION_DURATION = 300L
     val STATE_CURRENT_PAGE = "state:current_page"
 
-    private lateinit var pictureSliderAdapter: PictureSliderAdapter
-//    private lateinit var pictureSliderAdapter: PictureSliderAdapter2
+    private lateinit var pageSliderAdapter: PageSliderAdapter
+    private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
     private var currentPage = 0
     private lateinit var currentComic:ComicEntry
     private lateinit var viewModel: PictureSliderViewModel
@@ -70,7 +69,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             // Handle the back button event
             Timber.d("BACK PRESSED !!!!!!!")
 
-            if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
+            if (!handleBackPressed() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
                 Timber.d("    PAS DE RETOUR EN STACK !!")
                 activity?.finish()
             }
@@ -83,13 +82,6 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
 
 
-        // ViewPager2
-//        pictureSliderAdapter = PictureSliderAdapter2(requireContext(), pictures)
-        // ViewPager1
-/*        pictureSliderAdapter = PictureSliderAdapter(requireContext(), comic)
-        binding.viewPager.adapter = pictureSliderAdapter
-            pictureSliderAdapter.notifyDataSetChanged()
-*/
         viewModel = ViewModelProvider(this)[PictureSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
@@ -105,7 +97,6 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
         // End LiveDatas
 
-
         // Replace the title
         (requireActivity() as AppCompatActivity).supportActionBar?.title = currentComic.file.name
     }
@@ -113,7 +104,8 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private fun changeCurrentComic(comic:ComicEntry) {
         currentComic = comic
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
-        pictureSliderAdapter.setNewComic(comic)
+        pageSliderAdapter.setNewComic(comic)
+        pageSliderAdapter.notifyDataSetChanged()
     }
 
     override fun onDestroyView() {
@@ -135,6 +127,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             is PictureSliderViewModelState.Init -> handleStateInit(state)
             is PictureSliderViewModelState.Loading -> handleStateLoading(state)
             is PictureSliderViewModelState.Ready -> handleStateReady(state)
+            is PictureSliderViewModelState.PageSelection -> handleStatePageSelection(state)
             is PictureSliderViewModelState.Cleaned -> handleStateCleaned(state)
             else -> {}
         }
@@ -160,23 +153,116 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         Timber.i("handleStateReady currentPage=${state.currentPage}")
         (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
+        if (binding.cachePageSelectorLayout.visibility == View.VISIBLE) {
+            hidePageSelector()
+        }
+
         if (dialogComicLoading.isAdded) {
             dialogComicLoading.dismiss()
         }
 
-        if (!::pictureSliderAdapter.isInitialized) {
-            pictureSliderAdapter = PictureSliderAdapter(requireContext(), state.comic)
-            binding.viewPager.currentItem = state.currentPage
-            binding.viewPager.adapter = pictureSliderAdapter
+        if (!::pageSliderAdapter.isInitialized) {
+            pageSliderAdapter = PageSliderAdapter(requireContext(), viewModel, state.comic)
+//            binding.viewPager.setCurrentItem(state.currentPage, false)
+
+            binding.viewPager.adapter = pageSliderAdapter
 
             binding.viewPager.addOnPageChangeListener(this)
+            pageSliderAdapter.notifyDataSetChanged()
         }
 
-        pictureSliderAdapter.notifyDataSetChanged()
-        binding.viewPager.currentItem = state.currentPage
+        if (binding.viewPager.currentItem != state.currentPage) {
+//            pageSliderAdapter.notifyDataSetChanged()
+            binding.viewPager.setCurrentItem(state.currentPage, false)
+        }
 
         binding.viewPager.visibility = View.VISIBLE
 
+    }
+
+    private fun handleStatePageSelection(state: PictureSliderViewModelState.PageSelection) {
+        Timber.i("handleStatePageSelection currentPage=${state.currentPage}")
+
+        if (!::pageSelectorSliderAdapter.isInitialized) {
+            pageSelectorSliderAdapter = PageSelectorSliderAdapter(viewModel, state.comic)
+
+/*            binding.viewPagerSelection.apply {
+                offscreenPageLimit = 1
+                val recyclerView = getChildAt(0) as RecyclerView
+                recyclerView.apply {
+                    val padding = 30 //card_margin + peek_offset_margin
+                    setPadding(0, padding, 0, padding)
+                    clipToPadding = false
+                }
+                adapter = pageSelectorSliderAdapter
+            }*/
+            binding.recyclerViewPageSelector.layoutManager = GridLayoutManager(requireContext(), 1)  // Should be higher, but cool result so keep it...
+            binding.recyclerViewPageSelector.adapter = pageSelectorSliderAdapter
+            pageSelectorSliderAdapter.notifyDataSetChanged()
+//            binding.recyclerViewPageSelector.currentItem = state.currentPage
+            binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
+
+            binding.recyclerViewPageSelector.overScrollMode = View.OVER_SCROLL_ALWAYS
+
+            binding.cachePageSelectorLayout.setOnClickListener { _->
+                Timber.d("onClick background")
+                viewModel.cancelPageSelector()
+            }
+            binding.buttonGoFirst.setOnClickListener { _ ->
+                Timber.d("onClick buttonGoFirst")
+//                binding.recyclerViewPageSelector.setCurrentItem(0, false)
+                binding.recyclerViewPageSelector.scrollToPosition(0)
+            }
+            binding.buttonGoLast.setOnClickListener { _ ->
+                Timber.d("onClick buttonGoLast")
+//                binding.recyclerViewPageSelector.setCurrentItem(currentComic.nbPages-1, false)
+                binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
+            }
+
+        }
+
+//        if (binding.recyclerViewPageSelector.currentItem != state.currentPage) {
+//            binding.recyclerViewPageSelector.setCurrentItem(state.currentPage, false)
+//        }
+        binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
+
+        //binding.cachePageSelectorLayout.visibility = View.VISIBLE
+        showPageSelector()
+    }
+
+    private fun showPageSelector() {
+        Timber.d("showPageSelector")
+
+        binding.pageSelectorLayout.x = -(binding.pageSelectorLayout.width.toFloat())
+        val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", 0f)
+        animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        binding.cachePageSelectorLayout.alpha = 0F
+        val animAlpha = ObjectAnimator.ofFloat(binding.cachePageSelectorLayout, "alpha", 100f)
+        animAlpha.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        animMove.start()
+        animAlpha.start()
+
+        binding.cachePageSelectorLayout.visibility = View.VISIBLE
+    }
+
+    private fun hidePageSelector() {
+        Timber.d("hidePageSelector")
+
+        val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", -binding.pageSelectorLayout.width.toFloat())
+        animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        val animAlpha = ObjectAnimator.ofFloat(binding.cachePageSelectorLayout, "alpha", 0f)
+        animAlpha.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        animMove.start()
+        animAlpha.start()
+
+        Executors.newSingleThreadExecutor().execute {
+            Thread.sleep(PAGE_SELECTOR_ANIMATION_DURATION)
+            binding.cachePageSelectorLayout.visibility = View.INVISIBLE
+        }
     }
 
     private fun handleStateInit(state: PictureSliderViewModelState.Init) {
@@ -195,9 +281,13 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         alert.show()
     }
 
-    private fun handleBackPressedToChangeDirectory(): Boolean {
-        viewModel.clean()
-        return false
+    private fun handleBackPressed(): Boolean {
+        return if (binding.cachePageSelectorLayout.visibility == View.VISIBLE) {
+            // Hide the PageSelector
+            viewModel.cancelPageSelector()
+            true
+        } else
+            false
     }
 
     private fun askNextComic() {

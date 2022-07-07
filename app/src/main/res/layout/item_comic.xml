@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="250dp"
     android:layout_margin="5dp"
@@ -42,7 +41,7 @@
                 android:layout_alignParentTop="true"
                 android:layout_marginBottom="10dp"
                 android:layout_toEndOf="@+id/checkBox"
-                android:contentDescription="Comic image"
+                android:contentDescription="@string/browser_comic_image"
                 android:scaleType="fitCenter" />
 
             <ImageView
@@ -55,7 +54,8 @@
                 android:layout_marginEnd="10dp"
                 android:layout_marginBottom="65dp"
                 android:gravity="center_horizontal"
-                app:srcCompat="@drawable/ic_baseline_book_open_24" />
+                app:srcCompat="@drawable/ic_baseline_book_open_24"
+                android:contentDescription="@string/browser_reading_completed_or_not" />
 
             <TextView
                 android:id="@+id/percentView"
@@ -82,7 +82,7 @@
                 android:layout_marginEnd="10dp"
                 android:gravity="top|center"
                 android:padding="0dp"
-                android:text="TextView"
+                android:text="@string/browser_comic_title"
                 android:textStyle="bold" />
 
         </RelativeLayout>

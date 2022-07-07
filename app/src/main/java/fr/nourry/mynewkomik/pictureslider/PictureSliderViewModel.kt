@@ -3,6 +3,7 @@ package fr.nourry.mynewkomik.pictureslider
 import androidx.lifecycle.*
 import fr.nourry.mynewkomik.App
 import fr.nourry.mynewkomik.database.ComicEntry
+import fr.nourry.mynewkomik.loader.ComicLoadingFinishedListener
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import fr.nourry.mynewkomik.loader.ComicLoadingResult
@@ -27,6 +28,11 @@ sealed class  PictureSliderViewModelState(
     data class Ready(val comic:ComicEntry, val currentPage: Int) : PictureSliderViewModelState(
         isInitialized = true
     )
+
+    data class PageSelection(val comic:ComicEntry, val currentPage: Int) : PictureSliderViewModelState(
+        isInitialized = true
+    )
+
     class Cleaned() : PictureSliderViewModelState(
         isInitialized = false
     )
@@ -34,7 +40,7 @@ sealed class  PictureSliderViewModelState(
     )
 }
 
-class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
+class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoadingFinishedListener {
     private val state = MutableLiveData<PictureSliderViewModelState>()
     var currentComic : ComicEntry? = null
     private var currentPage = 0
@@ -47,6 +53,11 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
         App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(file.absolutePath)
     }.distinctUntilChanged()
+
+    fun getCurrentPage():Int {
+//        Timber.w("   currentPage=$currentPage")
+        return currentPage
+    }
 
     fun initialize(comic: ComicEntry, pageToGo: Int/*, shouldUncompress:Boolean*/) {
         Timber.d("initialize(${comic.file.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
@@ -70,7 +81,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
 
         // Uncompress the comic
         state.value = PictureSliderViewModelState.Loading(comic, 0, 0)
-        ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset)
+        ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset, this)
 
         Timber.d("initialize:: waiting....")
     }
@@ -89,8 +100,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
     }
 
     fun onSetCurrentPage(n:Int) {
-        Timber.d("onSetCurrentPage($n)")
-        Timber.d("   comic = $currentComic")
+        Timber.d("onSetCurrentPage($n) comic = $currentComic")
 
         SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
         currentPage = n
@@ -196,19 +206,34 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener {
         return currentComic
     }
 
-
-    override fun onProgress(currentIndex: Int, size: Int, path:String, target:Any?) {
-        Timber.d("onProgress currentIndex=$currentIndex size=$size path=$path target=$target")
+    override fun onRetrieved(comic:ComicEntry, currentIndex: Int, size: Int, path:String) {
+        Timber.d("onRetrieved currentIndex=$currentIndex size=$size path=$path")
         state.value = PictureSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 
-    override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, file: File?, target:Any?) {
-        Timber.d("onFinished result=$result comic=${comic.file} comic.nbPages=${comic.nbPages} file=$file")
-        if ((result == ComicLoadingResult.SUCCESS) && (file != null) && (file.path != "")) {
-            // Some images were successfully load, so let's go
+    override fun onFinished(result: ComicLoadingResult, comic: ComicEntry) {
+        Timber.d("onFinished result=$result comic=${comic.file} comic.nbPages=${comic.nbPages}")
+        if (result == ComicLoadingResult.SUCCESS) {
+            // Images were successfully load, so let's go
             state.value = PictureSliderViewModelState.Ready(currentComic!!, currentPage)
         } else {
             state.value = PictureSliderViewModelState.Error("Error loading directory")
         }
     }
+
+    fun showPageSelector(page:Int) {
+        Timber.d("showPageSelector page=$page")
+        state.value = PictureSliderViewModelState.PageSelection(currentComic!!, page)
+    }
+
+    fun cancelPageSelector() {
+        Timber.d("cancelPageSelector")
+        state.value = PictureSliderViewModelState.Ready(currentComic!!, currentPage)
+    }
+
+    fun onClickPageSelector(page:Int) {
+        Timber.d("onClickPageSelector page=$page")
+        state.value = PictureSliderViewModelState.Ready(currentComic!!, page)
+    }
+
 }

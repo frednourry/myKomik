@@ -11,12 +11,40 @@ import fr.nourry.mynewkomik.database.ComicEntry
 import fr.nourry.mynewkomik.databinding.ItemComicBinding
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
-import fr.nourry.mynewkomik.loader.ComicLoadingResult
 import timber.log.Timber
 import java.io.File
 
 
-class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, View.OnLongClickListener, ComicLoadingProgressListener {
+class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, View.OnLongClickListener {
+
+    inner class ViewHolder(binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root), ComicLoadingProgressListener {
+        val cardView = binding.cardView
+        val imageView = binding.imageView
+        val textView = binding.textView
+        val imageIconView = binding.imageIconView
+        val checkBox = binding.checkBox
+        val percentView = binding.percentView
+
+        override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
+            Timber.d("onRetrieved currentIndex=$currentIndex size=$size path=$path")
+            if (path != "" && File(path).exists()) {
+                // Check if the target is still waiting this image
+                val holderInnerComic = cardView.tag as InnerComicEntry
+                val holderComic = holderInnerComic.comic
+
+                if (holderComic.file.absolutePath == comic.file.absolutePath) {
+                    Glide.with(imageView.context)
+                        .load(path)
+                        .into(imageView)
+                } else {
+                    Timber.w("onRetrieved:: To late. This view no longer requires this image...")
+                }
+            } else {
+                Timber.w("onRetrieved:: empty path ! (do nothing)")
+            }
+        }
+    }
+
     interface OnComicAdapterListener {
         fun onComicEntryClicked(comic: ComicEntry, position:Int)
         fun onComicEntryLongClicked(comic: ComicEntry, position:Int)
@@ -26,7 +54,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
     private var showFilterMode = false
     private var arrCheckedItems:MutableList<Int> = ArrayList(0)
 
-    data class InnerComic(val comic:ComicEntry, val position:Int, var checked:Boolean)
+    data class InnerComicEntry(val comic:ComicEntry, val position:Int, var checked:Boolean)
 
     fun setFilterMode(bFilter:Boolean, selectedPosition:ArrayList<Int>?) {
         if (bFilter != showFilterMode) {
@@ -44,23 +72,14 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
         }
     }
 
-    inner class ViewHolder(binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root) {
-        val cardView = binding.cardView
-        val imageView = binding.imageView
-        val textView = binding.textView
-        val imageIconView = binding.imageIconView
-        val checkBox = binding.checkBox
-        val percentView = binding.percentView
-    }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(ItemComicBinding.inflate(LayoutInflater.from(parent.context), parent,false))
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val comic = comics[position]
-        val innerComic = InnerComic(comic, position, false)
+        val innerComic = InnerComicEntry(comic, position, false)
 
-        val comicAdapter = this
         with (holder) {
             cardView.tag = innerComic
             cardView.setOnClickListener(this@BrowserAdapter)
@@ -91,7 +110,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
             Glide.with(imageView.context)
                 .load(R.drawable.ic_launcher_foreground)
                 .into(imageView)
-            ComicLoadingManager.getInstance().loadComicEntryCoverInImageView(comic, comicAdapter, holder)
+            ComicLoadingManager.getInstance().loadComicEntryCoverInImageView(comic, holder)
         }
     }
 
@@ -100,7 +119,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
     override fun onClick(v: View) {
         Timber.v("onClick showFilterMode=$showFilterMode")
 
-        val innerComic = v.tag as InnerComic
+        val innerComic = v.tag as InnerComicEntry
         if (showFilterMode) {
             val checkBox = v.findViewById<CheckBox>(R.id.checkBox)!!
 
@@ -133,35 +152,9 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
     }
 
     override fun onLongClick(v: View): Boolean {
-        val innerComic = v.tag as InnerComic
+        val innerComic = v.tag as InnerComicEntry
         listener?.onComicEntryLongClicked(innerComic.comic, innerComic.position)
         return true
-    }
-
-
-    override fun onProgress(currentIndex: Int, size: Int, path:String, target:Any?) {
-    }
-
-    override fun onFinished(result: ComicLoadingResult, comic:ComicEntry, path: File?, target:Any?) {
-        Timber.d("onFinished ${comic.file} $path" )
-        if (result == ComicLoadingResult.SUCCESS && target!= null && path != null && path.absolutePath != "" && path.exists()) {
-            // Check if the target is still waiting this image
-            val holder = target as ViewHolder
-            val cardView = holder.cardView
-            val holderInnerComic = cardView.tag as InnerComic
-            val holderComic = holderInnerComic.comic
-
-            if (holderComic.file.absolutePath == comic.file.absolutePath) {
-                val image = holder.imageView
-                Glide.with(image.context)
-                    .load(path)
-                    .into(image)
-            } else {
-                Timber.w("onFinished:: To late. This view no longer requires this image...")
-            }
-        } else {
-            Timber.w("onFinished:: $result")
-        }
     }
 
 }
