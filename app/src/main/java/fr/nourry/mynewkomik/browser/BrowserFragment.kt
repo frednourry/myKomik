@@ -259,6 +259,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                             viewModel.setPrefLastComicPath("")      // Forget the last comic...
                             loadComics(rootDirectory)
                         }
+                        .setCancelable(false)
                         .create()
                     alert.show()
                 } else {
