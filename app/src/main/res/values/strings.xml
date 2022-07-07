@@ -33,5 +33,7 @@
     <string name="browser_reading_completed_or_not">Reading completed or not?</string>
     <string name="go_first_page">Go first page</string>
     <string name="go_last_page">Go last page</string>
+    <string name="previous_comic">Previous Comic</string>
+    <string name="next_comic">Next Comic</string>
 
 </resources>

@@ -317,10 +317,10 @@ class ComicLoadingManager private constructor() {
                                             // Notify all the listeners
                                             page.listeners.forEach { it.onRetrieved(comic, currentIndex, nbPages, path) }
 
-                                            Timber.w("    REMOVING PAGE")
-                                            Timber.w("        size=${newPagesList.size} before")
+//                                            Timber.w("    REMOVING PAGE")
+//                                            Timber.w("        size=${newPagesList.size} before")
                                             newPagesList.remove(page)
-                                            Timber.w("        size=${newPagesList.size} after")
+//                                            Timber.w("        size=${newPagesList.size} after")
                                             break
                                         }
                                     }

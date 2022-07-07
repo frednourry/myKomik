@@ -2,11 +2,10 @@ package fr.nourry.mynewkomik.pictureslider
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -36,6 +35,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private var currentPage = 0
     private lateinit var currentComic:ComicEntry
     private lateinit var viewModel: PictureSliderViewModel
+    private lateinit var supportActionBar: ActionBar
 
     private lateinit var toast: Toast
 
@@ -51,7 +51,10 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private var lastPositionOffsetPixel = -1
     private var scrollingDirection = 0
 
-
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity?.actionBar?.hide()
@@ -98,18 +101,56 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         // End LiveDatas
 
         // Replace the title
-        (requireActivity() as AppCompatActivity).supportActionBar?.title = currentComic.file.name
+        supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
+        supportActionBar.title = currentComic.file.name
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        val previousItem = menu.findItem(R.id.action_go_previous)
+        previousItem.isVisible = viewModel.hasPreviousComic()
+
+        val nextItem = menu.findItem(R.id.action_go_next)
+        nextItem.isVisible = viewModel.hasNextComic()
+
+        super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_picture_slider_fragment, menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_go_previous -> {
+                val newComic = viewModel.getPreviousComic()
+                if (newComic != null && newComic != currentComic) {
+                    changeCurrentComic(newComic)
+                }
+                true
+            }
+            R.id.action_go_next -> {
+                val newComic = viewModel.getNextComic()
+                if (newComic != null && newComic != currentComic) {
+                    changeCurrentComic(newComic)
+                }
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+        }
     }
 
     private fun changeCurrentComic(comic:ComicEntry) {
+        Timber.i("changeCurrentComic")
         currentComic = comic
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
         pageSliderAdapter.setNewComic(comic)
-        pageSliderAdapter.notifyDataSetChanged()
+        if (::pageSelectorSliderAdapter.isInitialized) {
+            pageSelectorSliderAdapter.setNewComic(comic)
+        }
     }
 
     override fun onDestroyView() {
-        (requireActivity() as AppCompatActivity).supportActionBar?.show()
+        supportActionBar.show()
         _binding = null
         super.onDestroyView()
     }
@@ -150,8 +191,11 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     }
 
     private fun handleStateReady(state: PictureSliderViewModelState.Ready) {
-        Timber.i("handleStateReady currentPage=${state.currentPage}")
-        (requireActivity() as AppCompatActivity).supportActionBar?.hide()
+        Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters}")
+        var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
+        var shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
+
+        supportActionBar.hide()
 
         if (binding.cachePageSelectorLayout.visibility == View.VISIBLE) {
             hidePageSelector()
@@ -163,30 +207,36 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         if (!::pageSliderAdapter.isInitialized) {
             pageSliderAdapter = PageSliderAdapter(requireContext(), viewModel, state.comic)
-//            binding.viewPager.setCurrentItem(state.currentPage, false)
 
             binding.viewPager.adapter = pageSliderAdapter
 
             binding.viewPager.addOnPageChangeListener(this)
+            shouldUpdatePageSliderAdapter = true
             pageSliderAdapter.notifyDataSetChanged()
         }
+
+        if (shouldUpdatePageSliderAdapter)  pageSliderAdapter.notifyDataSetChanged()
 
         if (binding.viewPager.currentItem != state.currentPage) {
             val oldPage = binding.viewPager.currentItem
             val newPage = state.currentPage
-//            pageSliderAdapter.notifyDataSetChanged()
             binding.viewPager.setCurrentItem(state.currentPage, false)
-            if (::pageSelectorSliderAdapter.isInitialized) {
+            if (::pageSelectorSliderAdapter.isInitialized && !shouldUpdatePageSelectorSliderAdapter) {
                 pageSelectorSliderAdapter.notifyItemChanged(oldPage)
                 pageSelectorSliderAdapter.notifyItemChanged(newPage)
             }
         }
+        if (::pageSelectorSliderAdapter.isInitialized && shouldUpdatePageSelectorSliderAdapter)  pageSelectorSliderAdapter.notifyDataSetChanged()
 
         binding.viewPager.visibility = View.VISIBLE
     }
 
     private fun handleStatePageSelection(state: PictureSliderViewModelState.PageSelection) {
         Timber.i("handleStatePageSelection currentPage=${state.currentPage}")
+
+        // Ask to refresh the menu (for the previous and next items...)
+        requireActivity().invalidateOptionsMenu()
+
 
         if (!::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter = PageSelectorSliderAdapter(viewModel, state.comic)
@@ -232,10 +282,12 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         animAlpha.start()
 
         binding.cachePageSelectorLayout.visibility = View.VISIBLE
+        supportActionBar.show()
     }
 
     private fun hidePageSelector() {
         Timber.d("hidePageSelector")
+        supportActionBar.hide()
 
         val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", -binding.pageSelectorLayout.width.toFloat())
         animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION

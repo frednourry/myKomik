@@ -32,12 +32,6 @@ class PageSelectorSliderAdapter(val viewModel:PictureSliderViewModel, var comic:
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
                 Timber.d("     cardView=${cardView.width} ${cardView.height}")
 
-/*                if (currentIndex == viewModel.getCurrentPage()) {
-                    pageNumberTextView.setBackgroundResource(R.drawable.round_shape_blue)
-                } else {
-                    pageNumberTextView.setBackgroundResource(R.drawable.round_shape_black)
-                }*/
-
                 // Check if the target is still waiting this image
                 if (holderComic.file.absolutePath == comic.file.absolutePath && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
@@ -105,6 +99,11 @@ class PageSelectorSliderAdapter(val viewModel:PictureSliderViewModel, var comic:
         Timber.d("onClick")
         val innerComic = v.tag as InnerComicTag
         viewModel.onClickPageSelector(innerComic.position)
+    }
 
+    fun setNewComic(newComic:ComicEntry) {
+        Timber.d("setNewComic :: newComic=$newComic")
+        comic = newComic
+        this.notifyDataSetChanged()
     }
 }

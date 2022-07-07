@@ -48,9 +48,9 @@ class PageSliderAdapter(context: Context, val viewModel:PictureSliderViewModel, 
     private val inflater = LayoutInflater.from(context)
 
     fun setNewComic(newComic:ComicEntry) {
-        Timber.d("setNewComic :: newComic=$newComic")
-
+        Timber.d("setNewComic :: newComic=$newComic nbPage=${newComic.nbPages}")
         comic = newComic
+        this.notifyDataSetChanged()
     }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
