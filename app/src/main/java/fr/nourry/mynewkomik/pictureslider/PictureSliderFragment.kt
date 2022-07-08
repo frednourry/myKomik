@@ -313,6 +313,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         dialogComicLoading.dismiss()
         val alert = AlertDialog.Builder(requireContext())
             .setMessage("This file is not valid !")
+            .setCancelable(false)
             .setPositiveButton(R.string.ok) { _,_ ->
                 findNavController().popBackStack()
             }
