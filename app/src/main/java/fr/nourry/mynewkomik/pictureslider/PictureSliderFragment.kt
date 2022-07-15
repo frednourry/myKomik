@@ -60,8 +60,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         activity?.actionBar?.hide()
 
         _binding = FragmentPictureSliderBinding.inflate(inflater, container, false)
-        val view = binding.root
-        return view
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -193,7 +192,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private fun handleStateReady(state: PictureSliderViewModelState.Ready) {
         Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters}")
         var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
-        var shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
+        val shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
 
         supportActionBar.hide()
 
@@ -213,6 +212,10 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             binding.viewPager.addOnPageChangeListener(this)
             shouldUpdatePageSliderAdapter = true
             pageSliderAdapter.notifyDataSetChanged()
+        } else {
+            if (binding.viewPager.currentItem != state.currentPage) {
+                pageSliderAdapter.onPageChanged()
+            }
         }
 
         if (shouldUpdatePageSliderAdapter)  pageSliderAdapter.notifyDataSetChanged()
@@ -248,15 +251,15 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
             binding.recyclerViewPageSelector.overScrollMode = View.OVER_SCROLL_ALWAYS
 
-            binding.cachePageSelectorLayout.setOnClickListener { _->
+            binding.cachePageSelectorLayout.setOnClickListener {
                 Timber.d("onClick background")
                 viewModel.cancelPageSelector()
             }
-            binding.buttonGoFirst.setOnClickListener { _ ->
+            binding.buttonGoFirst.setOnClickListener {
                 Timber.d("onClick buttonGoFirst")
                 binding.recyclerViewPageSelector.scrollToPosition(0)
             }
-            binding.buttonGoLast.setOnClickListener { _ ->
+            binding.buttonGoLast.setOnClickListener {
                 Timber.d("onClick buttonGoLast")
                 binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
             }
@@ -406,6 +409,9 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
                     Timber.w("LAST PAGE: ASK NEW ONE ?")
                     askNextComic()
                 }
+            } else {
+                // Informs the pageSliderAdapter that the page was changed
+                pageSliderAdapter.onPageChanged()
             }
             lastPositionOffsetPixel = -1
             scrollingDirection = 0
@@ -459,4 +465,6 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
         toast.show()*/
     }
+
+
 }

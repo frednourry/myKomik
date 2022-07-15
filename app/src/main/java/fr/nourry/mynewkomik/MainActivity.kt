@@ -13,10 +13,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val comicEntryDao = App.db.comicEntryDao()
+/*        val comicEntryDao = App.db.comicEntryDao()
         comicEntryDao.getAllComicEntries().observe(this) { comicEntries ->
             Timber.d("comicEntries = $comicEntries")
-        }
+        }*/
     }
 
     override fun onSupportNavigateUp(): Boolean {

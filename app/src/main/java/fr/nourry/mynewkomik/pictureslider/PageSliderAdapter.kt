@@ -2,9 +2,9 @@ package fr.nourry.mynewkomik.pictureslider
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.cardview.widget.CardView
 import androidx.viewpager.widget.PagerAdapter
 import com.bumptech.glide.Glide
@@ -16,10 +16,19 @@ import fr.nourry.mynewkomik.loader.ComicLoadingProgressListener
 import timber.log.Timber
 
 
-// To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(context: Context, val viewModel:PictureSliderViewModel, var comic:ComicEntry):PagerAdapter(), View.OnClickListener {
+enum class MovementType {
+    NONE,
+    CLICK,
+    DRAG,
+    ZOOM
+}
 
-    data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:ImageView)
+// To work with a androidx.viewpager.widget.ViewPager
+class PageSliderAdapter(context: Context, private val viewModel:PictureSliderViewModel, var comic:ComicEntry):PagerAdapter(), MagnifyImageViewListener {
+
+    private var imageViewModified: MagnifyImageView? = null
+
+    data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:MagnifyImageView)
 
     inner class MyCardView(private val cardView:CardView):ComicLoadingProgressListener {
 
@@ -49,6 +58,7 @@ class PageSliderAdapter(context: Context, val viewModel:PictureSliderViewModel, 
 
     fun setNewComic(newComic:ComicEntry) {
         Timber.d("setNewComic :: newComic=$newComic nbPage=${newComic.nbPages}")
+        onPageChanged()
         comic = newComic
         this.notifyDataSetChanged()
     }
@@ -57,27 +67,27 @@ class PageSliderAdapter(context: Context, val viewModel:PictureSliderViewModel, 
         Timber.d("instantiateItem :: position=$position")
         val view = inflater.inflate(R.layout.item_page, container, false)
 
-        val imageView = view.findViewById<ImageView>(R.id.imageView)
+        val magnifyImageView = view.findViewById<MagnifyImageView>(R.id.imageView)
         val cardView= view.findViewById<CardView>(R.id.cardView)
-        cardView.tag = InnerComicTag(comic, position, imageView)
+        cardView.tag = InnerComicTag(comic, position, magnifyImageView)
         val myCardView = MyCardView(cardView)
 
-        cardView.setOnClickListener(this@PageSliderAdapter)
+        cardView.setOnTouchListener { view, motionEvent ->
+            imageViewModified = magnifyImageView
+           onTouch(view, motionEvent)
+        }
 
+        magnifyImageView.setMagnifyImageViewListener(this, cardView)
 
-        Glide.with(imageView)
+        Glide.with(magnifyImageView)
             .load(R.drawable.ic_launcher_foreground)
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
-            .into(imageView)
+            .into(magnifyImageView)
         container.addView(view, 0)
 
         // Ask the ComicLoadingManager to find this page path
         ComicLoadingManager.getInstance().loadComicPages(comic, myCardView, position, 1)
-/*
-        view.setOnClickListener { _ ->
-            Timber.v("onClick on $position ${cardView.tag}")
-        }*/
 
         return view
     }
@@ -95,16 +105,32 @@ class PageSliderAdapter(context: Context, val viewModel:PictureSliderViewModel, 
     }
     override fun getItemPosition(`object`: Any): Int {
 //        return super.getItemPosition(`object`)
-        return POSITION_NONE        // TODO : to adapte when changing the comic, because the loaded items are not updated (https://stackoverflow.com/questions/7263291/why-pageradapternotifydatasetchanged-is-not-updating-the-view)
+        return POSITION_NONE        // TODO : to adapt when changing the comic, because the loaded items are not updated (https://stackoverflow.com/questions/7263291/why-pageradapternotifydatasetchanged-is-not-updating-the-view)
     }
 
-    override fun onClick(view: View) {
-        Timber.v("onClick")
-        val innerComic = view.tag as InnerComicTag
-        viewModel.showPageSelector(innerComic.position)
+    private fun onTouch(view: View, event: MotionEvent): Boolean {
+        return try {
+            val cardView:CardView = view as CardView
+            val imageView = cardView.findViewById<MagnifyImageView>(R.id.imageView)
+            imageView.onTouchImageView(event)
+        } catch(e:Exception) {
+            Timber.d("onTouch::  error = ${e.printStackTrace()}")
+            false
+        }
     }
-}
 
-private fun ImageView.onTouchEvent(function: () -> Unit) {
-    Timber.d("onTouchEvent")
+    fun onPageChanged() {
+        imageViewModified?.resetImage()
+        imageViewModified = null
+    }
+
+    override fun onMagnifyImageViewClick(param: Any?) {
+        try {
+            val cardView = param as CardView
+            val innerComic = cardView.tag as InnerComicTag
+            viewModel.showPageSelector(innerComic.position)
+        } catch (e:Exception) {
+            Timber.w("onMagnifyImageViewClick :: error = "+e.printStackTrace())
+        }
+    }
 }
