@@ -4,7 +4,7 @@
     android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".pictureslider.PictureSliderFragment" >
+    tools:context=".pageslider.PageSliderFragment" >
 
     <androidx.viewpager.widget.ViewPager
         android:id="@+id/viewPager"

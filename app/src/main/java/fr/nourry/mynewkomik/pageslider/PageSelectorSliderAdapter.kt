@@ -1,4 +1,4 @@
-package fr.nourry.mynewkomik.pictureslider
+package fr.nourry.mynewkomik.pageslider
 
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +17,7 @@ import timber.log.Timber
 
 
 // To work with a viewPager2
-class PageSelectorSliderAdapter(val viewModel:PictureSliderViewModel, var comic: ComicEntry): RecyclerView.Adapter<PageSelectorSliderAdapter.MyViewHolder>(), View.OnClickListener {
+class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: ComicEntry): RecyclerView.Adapter<PageSelectorSliderAdapter.MyViewHolder>(), View.OnClickListener {
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:ImageView, val textView:TextView)
 

@@ -1,4 +1,4 @@
-package fr.nourry.mynewkomik.pictureslider
+package fr.nourry.mynewkomik.pageslider
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.viewpager.widget.ViewPager
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.database.ComicEntry
-import fr.nourry.mynewkomik.databinding.FragmentPictureSliderBinding
+import fr.nourry.mynewkomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mynewkomik.dialog.DialogComicLoading
 import fr.nourry.mynewkomik.loader.ComicLoadingManager
 import timber.log.Timber
@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
-class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
+class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     val PAGE_SELECTOR_ANIMATION_DURATION = 300L
     val STATE_CURRENT_PAGE = "state:current_page"
@@ -34,7 +34,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
     private var currentPage = 0
     private lateinit var currentComic:ComicEntry
-    private lateinit var viewModel: PictureSliderViewModel
+    private lateinit var viewModel: PageSliderViewModel
     private lateinit var supportActionBar: ActionBar
 
     private lateinit var toast: Toast
@@ -42,7 +42,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private var dialogComicLoading:DialogComicLoading = DialogComicLoading.newInstance()
 
     // Test for View Binding (replace 'kotlin-android-extensions')
-    private var _binding: FragmentPictureSliderBinding? = null
+    private var _binding: FragmentPageSliderBinding? = null
     // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
 
@@ -59,7 +59,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity?.actionBar?.hide()
 
-        _binding = FragmentPictureSliderBinding.inflate(inflater, container, false)
+        _binding = FragmentPageSliderBinding.inflate(inflater, container, false)
         return binding.root
     }
 
@@ -79,12 +79,12 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
-        val args = PictureSliderFragmentArgs.fromBundle(requireArguments())
+        val args = PageSliderFragmentArgs.fromBundle(requireArguments())
         currentComic = args.comic
         currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
 
 
-        viewModel = ViewModelProvider(this)[PictureSliderViewModel::class.java]
+        viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
@@ -115,7 +115,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_picture_slider_fragment, menu)
+        inflater.inflate(R.menu.menu_page_slider_fragment, menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -160,24 +160,24 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     }
 
     // Update UI according to the model state events
-    private fun updateUI(state: PictureSliderViewModelState) {
+    private fun updateUI(state: PageSliderViewModelState) {
         Timber.i("Calling updateUI, switch state=${state::class}")
         return when(state) {
-            is PictureSliderViewModelState.Error -> handleStateError(state)
-            is PictureSliderViewModelState.Init -> handleStateInit(state)
-            is PictureSliderViewModelState.Loading -> handleStateLoading(state)
-            is PictureSliderViewModelState.Ready -> handleStateReady(state)
-            is PictureSliderViewModelState.PageSelection -> handleStatePageSelection(state)
-            is PictureSliderViewModelState.Cleaned -> handleStateCleaned(state)
+            is PageSliderViewModelState.Error -> handleStateError(state)
+            is PageSliderViewModelState.Init -> handleStateInit(state)
+            is PageSliderViewModelState.Loading -> handleStateLoading(state)
+            is PageSliderViewModelState.Ready -> handleStateReady(state)
+            is PageSliderViewModelState.PageSelection -> handleStatePageSelection(state)
+            is PageSliderViewModelState.Cleaned -> handleStateCleaned(state)
             else -> {}
         }
     }
 
-    private fun handleStateCleaned(state: PictureSliderViewModelState.Cleaned) {
+    private fun handleStateCleaned(state: PageSliderViewModelState.Cleaned) {
         Timber.i("handleStateCleaned")
     }
 
-    private fun handleStateLoading(state: PictureSliderViewModelState.Loading) {
+    private fun handleStateLoading(state: PageSliderViewModelState.Loading) {
         Timber.i("handleStateLoading")
 
         binding.viewPager.visibility = View.INVISIBLE
@@ -189,7 +189,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         dialogComicLoading.setProgress(state.currentItem, state.nbItem)
     }
 
-    private fun handleStateReady(state: PictureSliderViewModelState.Ready) {
+    private fun handleStateReady(state: PageSliderViewModelState.Ready) {
         Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters}")
         var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
         val shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
@@ -234,7 +234,7 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         binding.viewPager.visibility = View.VISIBLE
     }
 
-    private fun handleStatePageSelection(state: PictureSliderViewModelState.PageSelection) {
+    private fun handleStatePageSelection(state: PageSliderViewModelState.PageSelection) {
         Timber.i("handleStatePageSelection currentPage=${state.currentPage}")
 
         // Ask to refresh the menu (for the previous and next items...)
@@ -307,11 +307,11 @@ class PictureSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
     }
 
-    private fun handleStateInit(state: PictureSliderViewModelState.Init) {
+    private fun handleStateInit(state: PageSliderViewModelState.Init) {
         Timber.i("handleStateInit")
     }
 
-    private fun handleStateError(state: PictureSliderViewModelState.Error) {
+    private fun handleStateError(state: PageSliderViewModelState.Error) {
         Timber.i("handleStateError")
         dialogComicLoading.dismiss()
         val alert = AlertDialog.Builder(requireContext())

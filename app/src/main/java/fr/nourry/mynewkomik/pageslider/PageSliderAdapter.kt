@@ -1,4 +1,4 @@
-package fr.nourry.mynewkomik.pictureslider
+package fr.nourry.mynewkomik.pageslider
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.cardview.widget.CardView
 import androidx.viewpager.widget.PagerAdapter
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import fr.nourry.mynewkomik.R
 import fr.nourry.mynewkomik.database.ComicEntry
@@ -24,7 +25,7 @@ enum class MovementType {
 }
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(context: Context, private val viewModel:PictureSliderViewModel, var comic:ComicEntry):PagerAdapter(), MagnifyImageViewListener {
+class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry):PagerAdapter(), MagnifyImageViewListener {
 
     private var imageViewModified: MagnifyImageView? = null
 

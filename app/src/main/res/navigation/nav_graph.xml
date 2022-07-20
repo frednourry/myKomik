@@ -20,14 +20,14 @@
         android:label="@string/app_name"
         tools:layout="@layout/fragment_browser">
         <action
-            android:id="@+id/action_browserFragment_to_pictureSliderFragment"
-            app:destination="@id/pictureSliderFragment" />
+            android:id="@+id/action_browserFragment_to_pageSliderFragment"
+            app:destination="@id/pageSliderFragment" />
     </fragment>
     <fragment
-        android:id="@+id/pictureSliderFragment"
-        android:name="fr.nourry.mynewkomik.pictureslider.PictureSliderFragment"
+        android:id="@+id/pageSliderFragment"
+        android:name="fr.nourry.mynewkomik.pageslider.PageSliderFragment"
         android:label="Slider"
-        tools:layout="@layout/fragment_picture_slider">
+        tools:layout="@layout/fragment_page_slider">
         <argument
             android:name="comic"
             app:argType="fr.nourry.mynewkomik.database.ComicEntry" />

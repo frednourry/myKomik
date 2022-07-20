@@ -252,7 +252,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                             if (prefCurrentPage != "") {
                                 currentPage = prefCurrentPage.toInt()
                             }
-                            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(ComicEntry(lastComic!!), currentPage)
+                            val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(ComicEntry(lastComic!!), currentPage)
                             findNavController().navigate(action)
                         }
                         .setNegativeButton(android.R.string.cancel) { _,_ ->
@@ -287,7 +287,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             Timber.i("File ${comic.file.name} !")
             lastComic= comic.file
             viewModel.setPrefLastComicPath(comic.file.absolutePath)
-            val action = BrowserFragmentDirections.actionBrowserFragmentToPictureSliderFragment(comic, comic.currentPage)
+            val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, comic.currentPage)
             findNavController().navigate(action)
         }
     }

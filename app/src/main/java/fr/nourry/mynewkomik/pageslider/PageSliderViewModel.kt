@@ -1,4 +1,4 @@
-package fr.nourry.mynewkomik.pictureslider
+package fr.nourry.mynewkomik.pageslider
 
 import androidx.lifecycle.*
 import fr.nourry.mynewkomik.App
@@ -16,38 +16,38 @@ import java.io.File
 import java.util.concurrent.Executors
 
 
-sealed class  PictureSliderViewModelState(
+sealed class  PageSliderViewModelState(
     val isInitialized: Boolean = false
 ) {
-    class Init() : PictureSliderViewModelState(
+    class Init() : PageSliderViewModelState(
         isInitialized = false
     )
-    data class Loading(val comic:ComicEntry, val currentItem:Int, val nbItem:Int) : PictureSliderViewModelState(
+    data class Loading(val comic:ComicEntry, val currentItem:Int, val nbItem:Int) : PageSliderViewModelState(
         isInitialized = false
     )
 
-    data class Ready(val comic:ComicEntry, val currentPage: Int, val shouldUpdateAdapters:Boolean) : PictureSliderViewModelState(
+    data class Ready(val comic:ComicEntry, val currentPage: Int, val shouldUpdateAdapters:Boolean) : PageSliderViewModelState(
         isInitialized = true
     )
 
-    data class PageSelection(val comic:ComicEntry, val currentPage: Int) : PictureSliderViewModelState(
+    data class PageSelection(val comic:ComicEntry, val currentPage: Int) : PageSliderViewModelState(
         isInitialized = true
     )
 
-    class Cleaned() : PictureSliderViewModelState(
+    class Cleaned() : PageSliderViewModelState(
         isInitialized = false
     )
-    class Error(val errorMessage:String) : PictureSliderViewModelState(
+    class Error(val errorMessage:String) : PageSliderViewModelState(
     )
 }
 
-class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoadingFinishedListener {
-    private val state = MutableLiveData<PictureSliderViewModelState>()
+class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoadingFinishedListener {
+    private val state = MutableLiveData<PageSliderViewModelState>()
     var currentComic : ComicEntry? = null
     private var currentPage = 0
     private var nbExpectedPages = 0
 
-    fun getState(): LiveData<PictureSliderViewModelState> = state
+    fun getState(): LiveData<PageSliderViewModelState> = state
 
     private var comicEntriesInCurrentDir: MutableList<ComicEntry> = mutableListOf()
     private var currentIndexInDir = -1
@@ -83,7 +83,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicL
 
 
         // Uncompress the comic
-        state.value = PictureSliderViewModelState.Loading(comic, 0, 0)
+        state.value = PageSliderViewModelState.Loading(comic, 0, 0)
         nbExpectedPages = comic.nbPages
         ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset, this)
 
@@ -140,7 +140,7 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicL
         currentComic = null
         ComicLoadingManager.getInstance().clearComicDir()
 
-        state.value = PictureSliderViewModelState.Cleaned()
+        state.value = PageSliderViewModelState.Cleaned()
     }
 
     fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
@@ -214,14 +214,14 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicL
 
     override fun onRetrieved(comic:ComicEntry, currentIndex: Int, size: Int, path:String) {
         Timber.d("onRetrieved currentIndex=$currentIndex size=$size path=$path")
-        state.value = PictureSliderViewModelState.Loading(currentComic!!, currentIndex, size)
+        state.value = PageSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 
     override fun onFinished(result: ComicLoadingResult, comic: ComicEntry) {
         Timber.d("onFinished result=$result comic=${comic.file} comic.nbPages=${comic.nbPages}")
         if (result == ComicLoadingResult.SUCCESS) {
             // Images were successfully load, so let's go
-            state.value = PictureSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
+            state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
 
             // Update DB if needed
             if (nbExpectedPages != comic.nbPages) {
@@ -240,23 +240,23 @@ class PictureSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicL
             }
 
         } else {
-            state.value = PictureSliderViewModelState.Error("Error loading directory")
+            state.value = PageSliderViewModelState.Error("Error loading directory")
         }
     }
 
     fun showPageSelector(page:Int) {
         Timber.d("showPageSelector page=$page")
-        state.value = PictureSliderViewModelState.PageSelection(currentComic!!, page)
+        state.value = PageSliderViewModelState.PageSelection(currentComic!!, page)
     }
 
     fun cancelPageSelector() {
         Timber.d("cancelPageSelector")
-        state.value = PictureSliderViewModelState.Ready(currentComic!!, currentPage, false)
+        state.value = PageSliderViewModelState.Ready(currentComic!!, currentPage, false)
     }
 
     fun onClickPageSelector(page:Int) {
         Timber.d("onClickPageSelector page=$page")
-        state.value = PictureSliderViewModelState.Ready(currentComic!!, page, false)
+        state.value = PageSliderViewModelState.Ready(currentComic!!, page, false)
     }
 
     fun setPrefLastComicPath(path: String) {

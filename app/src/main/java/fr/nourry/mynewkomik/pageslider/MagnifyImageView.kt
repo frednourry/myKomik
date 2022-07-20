@@ -1,4 +1,4 @@
-package fr.nourry.mynewkomik.pictureslider
+package fr.nourry.mynewkomik.pageslider
 
 import android.content.Context
 import android.graphics.Matrix
