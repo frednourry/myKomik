@@ -15,7 +15,7 @@ Frédéric Nourry - [@frednourry][2] sur GitHub
 
 
 #### myNewKomik
-![](static/screenshots/Browser_MyNewKomik.jpg "myNewKomik browser") ![](static/screenshots/SelectFiles_MyNewKomik.jpg "myNewKomik browser with file selection") ![](static/screenshots/PageSelector_MyNewKomik.jpg "myNewKomik page selector") ![](static/screenshots/SelectRootDirectory_MyNewKomik.jpg "myNewKomik root directory selection popup")|
+![](static/screenshots/Browser_MyNewKomik.jpg "myNewKomik browser") ![](static/screenshots/SelectFiles_MyNewKomik.jpg "myNewKomik browser with file selection") ![](static/screenshots/PageSelector_MyNewKomik.jpg "myNewKomik page selector") ![](static/screenshots/SelectRootDirectory_MyNewKomik.jpg "myNewKomik root directory selection popup")
 
 
 #### Komik
