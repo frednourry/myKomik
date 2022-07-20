@@ -13,19 +13,13 @@ Frédéric Nourry - [@frednourry][2] sur GitHub
 
 -----------------------------------
 
-<style>
-td, th , tr{
-   border: none!important;
-   background-color: none!important;
-}
-</style>
-<div align="center">
 
-**myNewKomik**|    |    |    |
-:------|------|------|------|
-![](static/screenshots/Browser_myNewKomik.jpg "myNewKomik browser")|![](static/screenshots/SelectFiles_myNewKomik.jpg "myNewKomik browser with file selection")|![](static/screenshots/PageSelector_myNewKomik.jpg "myNewKomik page selector")|![](static/screenshots/SelectRootDirectory_myNewKomik.jpg "myNewKomik root directory selection popup")|
-**Komik**|    |    |    |
-![](static/screenshots/Browser_Komik.jpg "Komik browser")|![](static/screenshots/SelectFiles_Komik.jpg "Komik browser with file selection")|![](static/screenshots/PageSelector_Komik.jpg "Komik page selector")|![](static/screenshots/SelectRootDirectory_Komik.jpg "Komik root directory selection popup")|
+#### myNewKomik
+![](static/screenshots/Browser_myNewKomik.jpg "myNewKomik browser") ![](static/screenshots/SelectFiles_myNewKomik.jpg "myNewKomik browser with file selection") ![](static/screenshots/PageSelector_myNewKomik.jpg "myNewKomik page selector") ![](static/screenshots/SelectRootDirectory_myNewKomik.jpg "myNewKomik root directory selection popup")|
+
+
+#### Komik
+![](static/screenshots/Browser_Komik.jpg "Komik browser") ![](static/screenshots/SelectFiles_Komik.jpg "Komik browser with file selection") ![](static/screenshots/PageSelector_Komik.jpg "Komik page selector") ![](static/screenshots/SelectRootDirectory_Komik.jpg "Komik root directory selection popup")|
 </div>
 
 -----------------------------------
