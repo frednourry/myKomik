@@ -1,5 +1,7 @@
 myKomik
 ==========
+![](static/banner.png "myKomik browser")
+
 
 Présentation (Français)
 ------------
