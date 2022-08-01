@@ -17,7 +17,7 @@
             android:layout_height="match_parent"
             android:layout_margin="3dp">
 
-            <fr.nourry.mynewkomik.pageslider.MagnifyImageView
+            <fr.nourry.mykomik.pageslider.MagnifyImageView
                 android:id="@+id/imageView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
