@@ -1,6 +1,6 @@
 myKomik
 ==========
-![](static/banner.png "myKomik browser")
+![](static/banner.png "myKomik banner")
 
 
 Présentation (Français)
@@ -17,7 +17,7 @@ Frédéric Nourry - [@frednourry][2] sur GitHub
 
 
 #### myKomik
-![](static/screenshots/Browser_myKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_myKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_myKomik.jpg "myKomik page selector") ![](static/screenshots/SelectRootDirectory_myKomik.jpg "myKomik root directory selection popup")
+![](static/screenshots/Browser_myNewKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_myNewKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_myNewKomik.jpg "myKomik page selector") ![](static/screenshots/SelectRootDirectory_myNewKomik.jpg "myKomik root directory selection popup")
 
 
 #### Komik
