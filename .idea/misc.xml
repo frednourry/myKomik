@@ -3,33 +3,33 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/ic_baseline_keyboard_double_arrow_down_24.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/round_shape.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/round_shape_blue.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/round_shape_dark_grey.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/round_shape_light_grey.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/rounded_corner.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/selectable_round_button.xml" value="0.1975" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/drawable/test_gradient.xml" value="0.1995" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/activity_main.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root_list.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_choose_root_list_item.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/dialog_comic_loading.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_browser.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_browser_actionbar_selection.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_page_slider.xml" value="0.23333333333333334" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_permission.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/fragment_picture_slider.xml" value="0.22" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_comic.xml" value="0.1" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_page.xml" value="0.1" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_page_selector.xml" value="0.1" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/layout/item_picture.xml" value="0.38697916666666665" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/menu/menu_browser_fragment.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/menu/menu_browser_selection_fragment.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/menu/menu_picture_slider_fragment.xml" value="0.19166666666666668" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.2185" />
-        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyNewKomik/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.2185" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/ic_baseline_keyboard_double_arrow_down_24.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/round_shape.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/round_shape_blue.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/round_shape_dark_grey.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/round_shape_light_grey.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/rounded_corner.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/selectable_round_button.xml" value="0.1975" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/drawable/test_gradient.xml" value="0.1995" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/activity_main.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/dialog_choose_root.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/dialog_choose_root_list.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/dialog_choose_root_list_item.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/dialog_comic_loading.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/fragment_browser.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/fragment_browser_actionbar_selection.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/fragment_page_slider.xml" value="0.23333333333333334" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/fragment_permission.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/fragment_picture_slider.xml" value="0.22" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/item_comic.xml" value="0.1" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/item_page.xml" value="0.1" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/item_page_selector.xml" value="0.1" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/layout/item_picture.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/menu/menu_browser_fragment.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/menu/menu_browser_selection_fragment.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/menu/menu_picture_slider_fragment.xml" value="0.19166666666666668" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.2185" />
+        <entry key="..\:/Users/Nourry/AndroidStudioProjects/MyKomik/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.2185" />
       </map>
     </option>
   </component>
