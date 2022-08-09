@@ -82,6 +82,7 @@ class ComicLoadingManager private constructor() {
     }
 
     fun initialize(appContext: Context, cachePath: String) {
+        Timber.v("initialize")
         context = appContext
 
         workManager = WorkManager.getInstance(context)
@@ -93,9 +94,12 @@ class ComicLoadingManager private constructor() {
     }
 
     fun setLivecycleOwner(lo:LifecycleOwner) {
-        lifecycleOwner = lo
+        Timber.v("setLivecycleOwner")
 
-        // Clean the WorkManager ?
+        // Clean the WorkManager
+        clean()
+
+        lifecycleOwner = lo
     }
 
     fun loadComicEntryCoverInImageView(comic:ComicEntry, listener:ComicLoadingProgressListener) {
@@ -200,13 +204,14 @@ class ComicLoadingManager private constructor() {
 
     // Stop all loading and clear the waiting list
     fun clean() {
-        Timber.d("clean() !!!")
+        Timber.d("clean")
 
         // Stop currentJob
         workManager.cancelAllWork()
 
-        // Clean list
+        // Clean waitingCoversList ?
         waitingCoversList.clear()
+
         isLoading = false
     }
 
@@ -358,7 +363,6 @@ class ComicLoadingManager private constructor() {
                         }
                     }
                 }
-
         } else {
 //            comicLoading.listener.onFinished(ComicLoadingResult.SUCCESS, comic, dirUncompressedComic)
             currentComicLoadingPages = null

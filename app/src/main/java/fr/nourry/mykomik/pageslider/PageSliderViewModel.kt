@@ -144,10 +144,10 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
         Timber.d("updateComicEntriesFromDAO")
-        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+//        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
         val comicEntriesFromDisk = getComicEntriesFromDir(currentDirFile.value!!, true)
-        Timber.w("    comicEntriesFromDisk = $comicEntriesFromDisk")
+//        Timber.w("    comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesInCurrentDir.clear()
@@ -156,8 +156,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
         Timber.d("synchronizeDBWithDisk")
-        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
-        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+//        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
+//        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val result: MutableList<ComicEntry> = mutableListOf()
         var found = false
         var index=0
@@ -166,9 +166,9 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             found = false
             // Search in comicEntriesFromDAO
             for (feDAO in comicEntriesFromDAO) {
-                Timber.v("  -- ${fe.dirPath}")
+//                Timber.v("  -- ${fe.dirPath}")
                 if (fe.hashkey == feDAO.hashkey) {
-                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+//                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
                     feDAO.file = fe.file
                     feDAO.fromDAO = true
                     result.add(feDAO)
@@ -182,7 +182,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             }
             if (fe.hashkey == currentComic!!.hashkey) {
                 currentIndexInDir = index
-                Timber.d("   currentIndexInDir=$currentIndexInDir")
+//                Timber.d("   currentIndexInDir=$currentIndexInDir")
             }
             index++
         }
