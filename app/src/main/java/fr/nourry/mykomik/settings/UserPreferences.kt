@@ -1,0 +1,85 @@
+package fr.nourry.mykomik.settings
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
+import fr.nourry.mykomik.R
+import timber.log.Timber
+
+
+class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceChangeListener {
+    // Preferences values (according to array.xml !!)
+    private var readingDirectionValues: Array<String> = context.resources.getStringArray(R.array.settings_page_turn_direction_values)
+    private var ReadingDirectionLTR:String = readingDirectionValues[0]
+    private var ReadingDirectionRTL:String = readingDirectionValues[1]
+    private var ReadingDirectionTTB:String = readingDirectionValues[2]
+
+    // Preference label
+    private val hidePageNumberLabel = "hide_page_number"
+    private val readingDirectionLabel = "page_turn_direction"
+    private val hideReadComicsLabel = "hide_read_comics"
+    private val disableRotationLabel = "disable_rotation"
+
+    // Variables
+    lateinit var reading_direction:String
+    private var hide_page_number:Boolean = false
+    private var hide_read_comics:Boolean = false
+    private var disable_rotation:Boolean = false
+
+    var sharedPreferences: SharedPreferences
+
+    companion object {
+        private var mInstance: UserPreferences? = null
+        fun getInstance(context:Context): UserPreferences {
+            if (mInstance == null) {
+                mInstance = UserPreferences(context)
+            }
+            return mInstance!!
+        }
+    }
+
+    init {
+        // Respect the same order present in array.xml !!
+
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        loadUserPreferences()
+
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this)
+    }
+
+    private fun loadUserPreferences() {
+        val temp = sharedPreferences.getString(readingDirectionLabel, ReadingDirectionLTR)
+        Timber.i("loadUserPreferences:: $temp")
+        reading_direction = temp ?: ReadingDirectionLTR
+
+        hide_page_number = sharedPreferences.getBoolean(hidePageNumberLabel, false)
+        hide_read_comics = sharedPreferences.getBoolean(hideReadComicsLabel, false)
+        disable_rotation = sharedPreferences.getBoolean(disableRotationLabel, false)
+    }
+
+    override fun onSharedPreferenceChanged(sharePref: SharedPreferences, key: String) {
+        Timber.v("loadUserPreferences:: onSharedPreferenceChanged key==$key")
+        if (sharePref == sharedPreferences) {
+            when (key) {
+                readingDirectionLabel -> reading_direction =
+                    sharePref.getString(readingDirectionLabel, ReadingDirectionLTR)!!
+                hidePageNumberLabel -> hide_page_number =
+                    sharePref.getBoolean(hidePageNumberLabel, false)
+                hideReadComicsLabel -> hide_read_comics =
+                    sharePref.getBoolean(hideReadComicsLabel, false)
+                disableRotationLabel -> disable_rotation =
+                    sharePref.getBoolean(disableRotationLabel, false)
+            }
+        }
+    }
+
+    fun shouldHideReadComics():Boolean = hide_read_comics
+    fun isReadingDirectionLTR():Boolean = reading_direction==ReadingDirectionLTR
+/*    fun isReadingDirectionLTR():Boolean{
+        Timber.e("loadUserPreferences:: reading_direction=$reading_direction");
+        return reading_direction==ReadingDirectionLTR
+    }*/
+    fun shouldHidePageNumber():Boolean = hide_page_number
+    fun isRotationDisabled():Boolean = disable_rotation
+
+}

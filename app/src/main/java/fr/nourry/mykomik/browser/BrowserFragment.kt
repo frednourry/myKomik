@@ -1,5 +1,6 @@
 package fr.nourry.mykomik.browser
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.*
 import android.widget.Button
@@ -17,17 +18,16 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
-import fr.nourry.mykomik.*
+import fr.nourry.mykomik.App
+import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
 import fr.nourry.mykomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mykomik.loader.ComicLoadingManager
-import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.utils.clearFilesInDir
 import fr.nourry.mykomik.utils.getDefaultDirectory
 import fr.nourry.mykomik.utils.isDirExists
-import fr.nourry.mykomik.BrowserViewModel
-import fr.nourry.mykomik.BrowserViewModelState
+import fr.nourry.mykomik.settings.UserPreferences
 import timber.log.Timber
 import java.io.File
 
@@ -128,8 +128,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             }
         }
 
-        activity?.let { SharedPref.init(it) }
-
         browserAdapter = BrowserAdapter(comics, this)
         binding.recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))  // Should be higher, but cool result so keep it...
         binding.recyclerView.adapter = browserAdapter
@@ -150,7 +148,8 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
 
-        viewModel.init()
+        val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
+        viewModel.init(skipReadComic)
     }
 
     private fun getNbColumns(columnWidth: Int): Int {
@@ -226,6 +225,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     private fun initBrowser(directoryPath:String, lastComicPath:String, prefCurrentPage:String) {
         Timber.d("initBrowser directoryPath=$directoryPath lastComicPath=$lastComicPath prefCurrentPage=$prefCurrentPage")
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
         if (directoryPath == "" || !isDirExists(directoryPath)) {
             showChooseDirectoryDialog(null, false)
@@ -375,6 +375,10 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                 selectAll()
                 true
             }
+            R.id.action_settings -> {
+                goSettings()
+                true
+            }
             R.id.action_select_none -> {
                 selectNone()
                 true
@@ -451,9 +455,14 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         alert.show()
     }
 
+    private fun goSettings() {
+        val action = BrowserFragmentDirections.actionBrowserFragmentToSettingsFragment()
+        findNavController().navigate(action)
+    }
+
     private fun showAboutPopup() {
-        val title = getString(R.string.app_name)+" "+ fr.nourry.mykomik.App.packageInfo.versionName
-        var message = getString(R.string.about_description)
+        val title = getString(R.string.app_name)+" "+ App.packageInfo.versionName
+        val message = getString(R.string.about_description)
         AlertDialog.Builder(requireContext())
             .setTitle(title)
                 .setMessage(message)
@@ -470,7 +479,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             .setAction(R.string.message_undo) {
                 if (viewModel.undoDeleteComicEntries()) {
                     Timber.d("Deleting undone, so need to refresh dir...")
-                    loadComics(fr.nourry.mykomik.App.currentDir!!)
+                    loadComics(App.currentDir!!)
                 }
             }
             .show()
@@ -480,14 +489,14 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     // The button back is pressed, so can we move to the parent directory?
     // Returns true if and only if we can
     private fun handleBackPressedToChangeDirectory():Boolean {
-        Timber.d("handleBackPressedToChangeDirectory - current=${fr.nourry.mykomik.App.currentDir} (root=$rootDirectory)")
+        Timber.d("handleBackPressedToChangeDirectory - current=${App.currentDir} (root=$rootDirectory)")
         return if (isFilteredMode) {
             setFilterMode(false)
             true
-        } else if (fr.nourry.mykomik.App.currentDir?.parentFile == null || fr.nourry.mykomik.App.currentDir?.absolutePath == rootDirectory.absolutePath) {
+        } else if (App.currentDir?.parentFile == null || App.currentDir?.absolutePath == rootDirectory.absolutePath) {
             false
         } else {
-            loadComics(fr.nourry.mykomik.App.currentDir?.parentFile!!)
+            loadComics(App.currentDir?.parentFile!!)
             true
         }
     }

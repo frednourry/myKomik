@@ -14,4 +14,8 @@
         android:icon="@drawable/ic_baseline_skip_next_24"
         android:title="@string/next_comic"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/settings"
+        app:showAsAction="never" />
 </menu>

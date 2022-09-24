@@ -12,34 +12,21 @@ const val PREF_LAST_COMIC_PATH          = "comics_last_comic"
 const val PREF_CURRENT_PAGE_LAST_COMIC  = "comics_current_page_last_comic"
 
 object SharedPref {
-    private var sharedPref : SharedPreferences? = null
+    private lateinit var sharedPref : SharedPreferences
 
     fun init(a: FragmentActivity) {
-        sharedPref = a.getPreferences(Context.MODE_PRIVATE) ?: return
+        sharedPref = a.getPreferences(Context.MODE_PRIVATE)
     }
 
     fun get(param_name:String, defaultValue:String=""): String? {
-        if (sharedPref == null) {
-            Timber.i("SharedPref.get($param_name) with SharedPref not initialized !")
-            return null
-        }
-
-        return sharedPref!!.getString(param_name, defaultValue)
+        return sharedPref.getString(param_name, defaultValue)
     }
 
     fun set(param_name:String, value:String) {
-        if (sharedPref == null) {
-            Timber.i("SharedPref.set($param_name) with SharedPref not initialized !")
-            return
-        }
-
-        with (sharedPref!!.edit()) {
+        with (sharedPref.edit()) {
             Timber.i("SharedPref.set($param_name, $value) ")
             putString(param_name, value)
             apply()
         }
     }
-
-
-
 }

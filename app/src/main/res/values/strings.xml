@@ -15,6 +15,7 @@
     <string name="action_select_all">Select all</string>
     <string name="action_select_none">Select none</string>
     <string name="about">About</string>
+    <string name="settings">Settings</string>
     <string name="actionbar_text_items_selected">Item(s) selected</string>
     <string name="actionbar_button_done">X Done</string>
     <string name="message_files_deleted">File(s) deleted</string>
@@ -35,5 +36,22 @@
     <string name="go_last_page">Go last page</string>
     <string name="previous_comic">Previous Comic</string>
     <string name="next_comic">Next Comic</string>
+
+    <string name="settings_library">Library Settings</string>
+    <string name="settings_reader">Reader Settings</string>
+    <string name="settings_hide_read_comics">Hide "read" comics</string>
+    <string name="settings_hide_read_comics_summary">Hides comics marked as "read" in the file browser</string>
+    <string name="settings_page_turn_direction">Page turn direction</string>
+    <string name="settings_page_turn_direction_summary">The direction to swipe to change the page</string>
+    <string name="settings_disable_rotation">Disable landscape mode</string>
+    <string name="settings_disable_rotation_summary">Enabling this preference will prevent the device from rotating into landscape mode</string>
+    <string name="settings_hide_page_number">Hide page number display</string>
+
+
+    <string-array name="settings_page_turn_direction_labels">
+        <item>Left to right</item>
+        <item>Right to left</item>
+        <item>Top to bottom</item>
+    </string-array>
 
 </resources>

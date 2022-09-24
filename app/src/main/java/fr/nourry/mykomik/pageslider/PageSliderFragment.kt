@@ -1,6 +1,7 @@
 package fr.nourry.mykomik.pageslider
 
 import android.animation.ObjectAnimator
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.*
 import android.widget.Toast
@@ -20,6 +21,7 @@ import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
+import fr.nourry.mykomik.settings.UserPreferences
 import timber.log.Timber
 
 
@@ -29,6 +31,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     val PAGE_SELECTOR_ANIMATION_DURATION = 300L
     val STATE_CURRENT_PAGE = "state:current_page"
+
 
     private lateinit var pageSliderAdapter: PageSliderAdapter
     private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
@@ -50,6 +53,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     private var lastPageBeforeScrolling = 0
     private var lastPositionOffsetPixel = -1
     private var scrollingDirection = 0
+
+    private var bRefreshSliderAdapter = false
+    private var bRefreshSelectorSliderAdapter = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,10 +85,20 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
-        val args = PageSliderFragmentArgs.fromBundle(requireArguments())
-        currentComic = args.comic
-        currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
 
+        if (::currentComic.isInitialized) {
+            // We were already here, so no need to use PageSliderFragmentArgs.fromBundle(requireArguments())
+            Timber.w("Using last value of currentComic($currentComic). Not using args.")
+            bRefreshSelectorSliderAdapter = true
+            bRefreshSliderAdapter = true
+        } else {
+            Timber.w("Using args to set currentComic and currentPage")
+            val args = PageSliderFragmentArgs.fromBundle(requireArguments())
+            currentComic = args.comic
+            currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
+            bRefreshSelectorSliderAdapter = false
+            bRefreshSliderAdapter = true
+        }
 
         viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
@@ -120,6 +136,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_settings -> {
+                goSettings()
+                true
+            }
             R.id.action_go_previous -> {
                 val newComic = viewModel.getPreviousComic()
                 if (newComic != null && newComic != currentComic) {
@@ -190,7 +210,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
     }
 
     private fun handleStateReady(state: PageSliderViewModelState.Ready) {
-        Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters}")
+        Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters} bRefreshSliderAdapter=$bRefreshSliderAdapter bRefreshSelectorSliderAdapter=$bRefreshSelectorSliderAdapter")
         var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
         val shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
 
@@ -204,27 +224,44 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             dialogComicLoading.dismiss()
         }
 
-        if (!::pageSliderAdapter.isInitialized) {
-            pageSliderAdapter = PageSliderAdapter(requireContext(), viewModel, state.comic)
+        if (!::pageSliderAdapter.isInitialized || bRefreshSliderAdapter) {
+            // Trick for Right To Left reading:
+            // As ViewPager doesn't support "layoutDirection",
+            //  - we should inverse the viewPager (viewPager.rotationY = 180F)
+            //  - we should inverse each item of the recyclerView (item.rotationY = 180F)
+            val isLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
+            pageSliderAdapter = PageSliderAdapter(requireContext(), viewModel, state.comic, isLTR)
 
             binding.viewPager.adapter = pageSliderAdapter
+            if (!isLTR) binding.viewPager.rotationY = 180F
+
+            // Avoid screen rotation, if asked
+            val isRotationDisabled = UserPreferences.getInstance(requireContext()).isRotationDisabled()
+            if (isRotationDisabled)
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            else
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
             binding.viewPager.addOnPageChangeListener(this)
             shouldUpdatePageSliderAdapter = true
             pageSliderAdapter.notifyDataSetChanged()
+            bRefreshSliderAdapter = false
         } else {
             if (binding.viewPager.currentItem != state.currentPage) {
                 pageSliderAdapter.onPageChanged()
             }
+            shouldUpdatePageSliderAdapter = true
         }
 
-        if (shouldUpdatePageSliderAdapter)  pageSliderAdapter.notifyDataSetChanged()
+        if (shouldUpdatePageSliderAdapter) {
+            pageSliderAdapter.notifyDataSetChanged()
+        }
 
         if (binding.viewPager.currentItem != state.currentPage) {
             val oldPage = binding.viewPager.currentItem
             val newPage = state.currentPage
             binding.viewPager.setCurrentItem(state.currentPage, false)
-            if (::pageSelectorSliderAdapter.isInitialized && !shouldUpdatePageSelectorSliderAdapter) {
+            if (::pageSelectorSliderAdapter.isInitialized) {
                 pageSelectorSliderAdapter.notifyItemChanged(oldPage)
                 pageSelectorSliderAdapter.notifyItemChanged(newPage)
             }
@@ -241,7 +278,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         requireActivity().invalidateOptionsMenu()
 
 
-        if (!::pageSelectorSliderAdapter.isInitialized) {
+        if (!::pageSelectorSliderAdapter.isInitialized || bRefreshSelectorSliderAdapter) {
             pageSelectorSliderAdapter = PageSelectorSliderAdapter(viewModel, state.comic)
 
             binding.recyclerViewPageSelector.layoutManager = GridLayoutManager(requireContext(), 1)  // Should be higher, but cool result so keep it...
@@ -263,6 +300,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
                 Timber.d("onClick buttonGoLast")
                 binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
             }
+            bRefreshSelectorSliderAdapter = false
         }
 
         binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
@@ -385,26 +423,32 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         alert.show()
     }
 
+    private fun goSettings() {
+        val action = PageSliderFragmentDirections.actionPageSliderFragmentToSettingsFragment()
+        findNavController().navigate(action)
+    }
+
+
     override fun onPageScrollStateChanged(state: Int) {
         Timber.i("onPageScrollStateChanged state = $state")
         if (state == ViewPager.SCROLL_STATE_DRAGGING) {
             lastPageBeforeScrolling = currentPage
         } else if (state == ViewPager.SCROLL_STATE_IDLE) {
-            Timber.w("   lastPageBeforeScrolling=$lastPageBeforeScrolling currentPage=$currentPage")
+            Timber.i("   lastPageBeforeScrolling=$lastPageBeforeScrolling currentPage=$currentPage")
             // Compare if we change the page
             if (lastPageBeforeScrolling == currentPage) {
                 // We couldn't change the current page
 /*                if (scrollingDirection>0) {
-                    Timber.w("LAST PAGE: ASK NEW ONE ?")
+                    Timber.i("LAST PAGE: ASK NEW ONE ?")
                 } else if (scrollingDirection<0) {
-                    Timber.w("FIRST PAGE: ASK PREVIOUS ONE ?")
+                    Timber.i("FIRST PAGE: ASK PREVIOUS ONE ?")
                 }*/
                 if (currentPage == 0) {
                     // TODO to change : bug if there only one page in the comic !
-                    Timber.w("FIRST PAGE: ASK PREVIOUS ONE ?")
+                    Timber.i("FIRST PAGE: ASK PREVIOUS ONE ?")
                     askPreviousComic()
                 } else if (currentPage == (viewModel.currentComic?.nbPages ?: -1) -1) {
-                    Timber.w("LAST PAGE: ASK NEW ONE ?")
+                    Timber.i("LAST PAGE: ASK NEW ONE ?")
                     askNextComic()
                 }
             } else {
@@ -426,7 +470,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             } else {
                 scrollingDirection = 0
             }
-            Timber.w("    scrollingDirection=$scrollingDirection   positionOffsetPixels=$positionOffsetPixels")
+            Timber.i("    scrollingDirection=$scrollingDirection   positionOffsetPixels=$positionOffsetPixels")
         } else {
             scrollingDirection = 0
         }
@@ -442,7 +486,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
 
         currentPage = position
-        showOrUpdateToast("Page ${position+1} of ${currentComic.nbPages}")
+
+        if (!UserPreferences.getInstance(requireContext()).shouldHidePageNumber()) showOrUpdateToast("Page ${position+1} of ${currentComic.nbPages}")
+
         viewModel.onSetCurrentPage(position)
     }
 

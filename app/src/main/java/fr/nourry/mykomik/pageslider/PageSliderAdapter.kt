@@ -24,7 +24,7 @@ enum class MovementType {
 }
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry):PagerAdapter(), MagnifyImageViewListener {
+class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry, val isLTR:Boolean):PagerAdapter(), MagnifyImageViewListener {
 
     private var imageViewModified: MagnifyImageView? = null
 
@@ -66,6 +66,8 @@ class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewMo
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
         Timber.d("instantiateItem :: position=$position")
         val view = inflater.inflate(R.layout.item_page, container, false)
+
+        if (!isLTR) view.rotationY = 180F
 
         val magnifyImageView = view.findViewById<MagnifyImageView>(R.id.imageView)
         val cardView= view.findViewById<CardView>(R.id.cardView)

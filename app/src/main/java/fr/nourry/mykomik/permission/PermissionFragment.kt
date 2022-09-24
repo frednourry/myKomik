@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import fr.nourry.mykomik.R
+import fr.nourry.mykomik.preference.SharedPref
 import timber.log.Timber
 
 class PermissionFragment: Fragment() {
@@ -45,6 +46,9 @@ class PermissionFragment: Fragment() {
         Timber.d("onViewCreated")
 
         super.onViewCreated(view, savedInstanceState)
+
+        // Init SharePref
+        activity?.let { SharedPref.init(it) }
 
         textView = view.findViewById(R.id.textViewNoPermission)
 

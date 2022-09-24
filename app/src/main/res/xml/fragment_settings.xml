@@ -1,0 +1,33 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/settings_library">
+        <CheckBoxPreference app:key="hide_read_comics"
+            app:title="@string/settings_hide_read_comics"
+            android:summary="@string/settings_hide_read_comics_summary"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/settings_reader">
+
+        <ListPreference
+            android:defaultValue="LTR"
+            android:key="page_turn_direction"
+            android:dialogTitle="@string/settings_page_turn_direction"
+            android:entries="@array/settings_page_turn_direction_labels"
+            android:entryValues="@array/settings_page_turn_direction_values"
+            android:summary="@string/settings_page_turn_direction_summary"
+            android:title="@string/settings_page_turn_direction"/>
+        <CheckBoxPreference app:key="disable_rotation"
+            app:title="@string/settings_disable_rotation"
+            android:defaultValue="false"
+            android:summary="@string/settings_disable_rotation_summary"/>
+        <CheckBoxPreference app:key="hide_page_number"
+            app:title="@string/settings_hide_page_number"
+            android:defaultValue="false"/>
+
+    </PreferenceCategory>
+
+
+</PreferenceScreen>

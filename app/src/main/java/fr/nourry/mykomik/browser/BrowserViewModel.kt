@@ -1,6 +1,7 @@
-package fr.nourry.mykomik
+package fr.nourry.mykomik.browser
 
 import androidx.lifecycle.*
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.preference.*
@@ -38,6 +39,7 @@ class BrowserViewModel() : ViewModel() {
     private var comicEntriesToDelete = mutableListOf<ComicEntry>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
     private var deletionJob: Any? = null                // Job to delete all the files in 'comicEntriesToDelete'
 
+    private var bSkipReadComic = false
 
     private val state = MutableLiveData<BrowserViewModelState>()
     fun getState(): LiveData<BrowserViewModelState> = state
@@ -47,7 +49,7 @@ class BrowserViewModel() : ViewModel() {
 
     var comicEntriesFromDAO: LiveData<List<ComicEntry>> = Transformations.switchMap(currentDirFile) { file ->
         Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
-        fr.nourry.mykomik.App.db.comicEntryDao().getComicEntriesByDirPath(file.absolutePath)
+        App.db.comicEntryDao().getComicEntriesByDirPath(file.absolutePath)
     }/*.distinctUntilChanged() */   // Important or else the livedata will send a changed signal even if nothing change...
 
 
@@ -62,12 +64,14 @@ class BrowserViewModel() : ViewModel() {
         )
     }
 
-    fun init() {
+    fun init(skipReadComic:Boolean) {
         Timber.d("init")
         val directoryPath = SharedPref.get(PREF_ROOT_DIR, "")
         val lastComicPath = SharedPref.get(PREF_LAST_COMIC_PATH, "")
         val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
         state.value = BrowserViewModelState.Init(directoryPath!!, lastComicPath!!, prefCurrentPage!!)
+
+        bSkipReadComic = skipReadComic
     }
 
     // Load informations about a directory (comics and directories list)
@@ -104,7 +108,7 @@ class BrowserViewModel() : ViewModel() {
         }
 
         // Refresh view
-        loadComics(fr.nourry.mykomik.App.currentDir!!)
+        loadComics(App.currentDir!!)
     }
 
     // Stop the timer that should delete the files in 'comicEntriesToDelete'
@@ -130,7 +134,7 @@ class BrowserViewModel() : ViewModel() {
             if (comicEntry.fromDAO) {
                 Executors.newSingleThreadExecutor().execute {
                     Timber.d("  DELETE IN DATABASE...")
-                    fr.nourry.mykomik.App.db.comicEntryDao().deleteComicEntry(comicEntry)
+                    App.db.comicEntryDao().deleteComicEntry(comicEntry)
                     Timber.d("  END DELETE IN DATABASE...")
                 }
             }
@@ -142,7 +146,7 @@ class BrowserViewModel() : ViewModel() {
     }
 
     fun setAppCurrentDir(dir:File) {
-        fr.nourry.mykomik.App.currentDir = dir
+        App.currentDir = dir
     }
 
     fun setPrefLastComicPath(path: String) {
@@ -171,8 +175,8 @@ class BrowserViewModel() : ViewModel() {
         Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
         Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val hashkeyToIgnore: MutableList<String> = mutableListOf()
-        val result: MutableList<ComicEntry> = mutableListOf()
-        var found = false
+        var result: MutableList<ComicEntry> = mutableListOf()
+        var found: Boolean
         for (fe in comicEntriesFromDisk) {
 //            Timber.v(" Looking for ${fe.dirPath}")
             found = false
@@ -203,7 +207,7 @@ class BrowserViewModel() : ViewModel() {
             if (!found) {
                 fe.fromDAO = false
                 result.add(fe)
-//                Timber.v("  -- ADDING FROM DISK ${result.size}")
+//                Timber.v("  -- ADDING FROM DISK ${result.size} ${fe.name}")
             }
         }
 
@@ -221,9 +225,21 @@ class BrowserViewModel() : ViewModel() {
         if (comicEntriesToDelete.isNotEmpty()) {
             Executors.newSingleThreadExecutor().execute {
                 Timber.d("  DELETE ENTRIES IN DATABASE...")
-                fr.nourry.mykomik.App.db.comicEntryDao().deleteComicEntries(*comicEntriesToDelete.map{it}.toTypedArray())
+                App.db.comicEntryDao().deleteComicEntries(*comicEntriesToDelete.map{it}.toTypedArray())
                 Timber.d("  END DELETE ENTRIES IN DATABASE...")
             }
+        }
+
+        val result2: MutableList<ComicEntry> = mutableListOf()
+        if (bSkipReadComic) {
+            for (comic in result) {
+                if (comic.fromDAO && comic.nbPages == (comic.currentPage+1)) {
+                    Timber.v("  skip ${comic.name} (already read)")
+                } else {
+                    result2.add(comic)
+                }
+            }
+            result = result2
         }
 
         Timber.d(" returns => $result")

@@ -42,7 +42,8 @@
                 android:listSelector="@android:color/transparent"
                 android:orientation="vertical"
                 android:requiresFadingEdge="vertical"
-                android:scrollbars="none" />
+                android:scrollbars="none"
+                tools:listitem="@layout/item_page" />
 
             <ImageButton
                 android:id="@+id/buttonGoFirst"

@@ -22,6 +22,9 @@
         <action
             android:id="@+id/action_browserFragment_to_pageSliderFragment"
             app:destination="@id/pageSliderFragment" />
+        <action
+            android:id="@+id/action_browserFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/pageSliderFragment"
@@ -34,5 +37,12 @@
         <argument
             android:name="currentPage"
             app:argType="integer" />
+        <action
+            android:id="@+id/action_pageSliderFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="fr.nourry.mykomik.settings.SettingsFragment"
+        android:label="SettingsFragment" />
 </navigation>

@@ -102,14 +102,15 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         setPrefLastComicPath(newComic.file.absolutePath)
 
         initialize(newComic, 0 /*newComic.currentPage*/)
+        onSetCurrentPage(0, true)
     }
 
-    fun onSetCurrentPage(n:Int) {
+    fun onSetCurrentPage(n:Int, forceUpdateDAO:Boolean=false) {
         Timber.d("onSetCurrentPage($n) comic = $currentComic")
 
         SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
         currentPage = n
-        if (currentComic!!.currentPage != n) {
+        if (forceUpdateDAO || currentComic!!.currentPage != n) {
             currentComic!!.currentPage = n
 
             // Update DB
@@ -159,7 +160,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 //        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
 //        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val result: MutableList<ComicEntry> = mutableListOf()
-        var found = false
+        var found: Boolean
         var index=0
         for (fe in comicEntriesFromDisk) {
 //            Timber.v(" Looking for ${fe.dirPath}")
