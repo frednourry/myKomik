@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="no_permission">Merci d\'autoriser cette applications à parcourir vos répertoires.</string>
+    <string name="app_name">MyKomik</string>
+    <string name="choose_root_text">Choisissez le répertoire avec vos comics</string>
+    <string name="empty_cache">Vider le cache</string>
+    <string name="change_root_directory">Changer le répertoire racine</string>
+    <string name="ask_change_root_directory">Voulez-vous vraiment changer le répertoire racine?</string>
+    <string name="ask_clear_cache">Voulez-vous vraiment vider le cacher?</string>
+    <string name="ask_delete_this_file">Voulez-vous vraiment supprimer ce fichier?</string>
+    <string name="ask_delete_files">Voulez-vous vraiment supprimer les %1$d fichiers suivant?</string>
+    <string name="no_file_selected">Pas de fichier sélectionné!</string>
+    <string name="ask_continue_with_same_comic">Continuer la lecture du dernier comic?</string>
+    <string name="dialog_choose_root_select">Selectionner</string>
+    <string name="action_delete_files">Supprimer</string>
+    <string name="action_select_all">Tous sélectionner</string>
+    <string name="action_select_none">Ne rien sélectionner</string>
+    <string name="page_number_info">Page %1$d sur %2$d</string>
+    <string name="about">A propos</string>
+    <string name="settings">Paramètres</string>
+    <string name="actionbar_text_items_selected">Fichier(s) choisis</string>
+    <string name="actionbar_button_done">X Fini</string>
+    <string name="message_files_deleted">Fichier(s) supprimé(s)</string>
+    <string name="message_undo">Annuler</string>
+    <string name="ok">Ok</string>
+    <string name="no">Non</string>
+    <string name="ask_read_previous_issue">Lire le comic précédent?</string>
+    <string name="ask_read_next_issue">Lire le prochain comic?</string>
+    <string name="back_to_browser">Retour librairie</string>
+    <string name="no_next_issue">Il n\'y a pas d\'autres comic.</string>
+    <string name="no_previous_issue">Il n\'y a pas de comic précédent.</string>
+    <string name="about_description">Version de dev\n\nDevelopé par Frederic Nourry.</string>
+    <string name="descriptionComicPages">Pages du comic</string>
+    <string name="browser_comic_image">Image du comic</string>
+    <string name="browser_comic_title">Titre du comic</string>
+    <string name="browser_reading_completed_or_not">Comic lu ou pas?</string>
+    <string name="go_first_page">Aller à la première page</string>
+    <string name="go_last_page">Aller à la dernière page</string>
+    <string name="previous_comic">Comic précédent</string>
+    <string name="next_comic">Prochain comic </string>
+
+    <string name="settings_library">Paramètre de la librairie</string>
+    <string name="settings_reader">Paramètre de lecture</string>
+    <string name="settings_hide_read_comics">Cacher les comics "lus"</string>
+    <string name="settings_hide_read_comics_summary">Cacher les comics marqués comme "lu" dans la librairie</string>
+    <string name="settings_page_turn_direction">Sens de lecture des pages</string>
+    <string name="settings_page_turn_direction_summary">Sens du balayage pour changer de page</string>
+    <string name="settings_disable_rotation">Désactiver le mode paysage</string>
+    <string name="settings_disable_rotation_summary">Activer cette option pour empêcher de passer en mode paysage</string>
+    <string name="settings_hide_page_number">Cacher le numéro des pages</string>
+
+
+    <string-array name="settings_page_turn_direction_labels">
+        <item>Gauche à droite</item>
+        <item>Droite à gauche</item>
+    </string-array>
+
+</resources>

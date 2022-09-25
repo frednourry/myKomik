@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="no_permission">Please, permit this application to browse your folders.</string>
     <string name="app_name">MyKomik</string>
@@ -14,6 +15,7 @@
     <string name="action_delete_files">Delete(s) file</string>
     <string name="action_select_all">Select all</string>
     <string name="action_select_none">Select none</string>
+    <string name="page_number_info">Page %1$d of %2$d</string>
     <string name="about">About</string>
     <string name="settings">Settings</string>
     <string name="actionbar_text_items_selected">Item(s) selected</string>
@@ -51,7 +53,6 @@
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>
         <item>Right to left</item>
-        <item>Top to bottom</item>
     </string-array>
 
 </resources>

@@ -374,13 +374,13 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         val thisFragment = this
         val alert: AlertDialog = if (!viewModel.hasNextComic()) {
             AlertDialog.Builder(requireContext())
-                .setMessage(R.string.no_next_issue)
+                .setMessage(resources.getString(R.string.no_next_issue))
                 .setPositiveButton(R.string.ok) { _,_ -> }
                 .setCancelable(true)
                 .create()
             } else {
                 AlertDialog.Builder(requireContext())
-                            .setMessage("Begin reading next issue?")
+                            .setMessage(resources.getString(R.string.ask_read_next_issue))
                             .setPositiveButton(R.string.ok) { _, _ ->
                                 val newComic = viewModel.getNextComic()
                                 Timber.d("    newComic=$newComic")
@@ -401,13 +401,13 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         val thisFragment = this
         val alert: AlertDialog = if (!viewModel.hasPreviousComic()) {
             AlertDialog.Builder(requireContext())
-                .setMessage(R.string.no_previous_issue)
+                .setMessage(resources.getString(R.string.no_previous_issue))
                 .setPositiveButton(R.string.ok) { _,_ -> }
                 .setCancelable(true)
                 .create()
         } else {
             AlertDialog.Builder(requireContext())
-                .setMessage(R.string.ask_read_previous_issue)
+                .setMessage(resources.getString(R.string.ask_read_previous_issue))
                 .setPositiveButton(R.string.ok) { _, _ ->
                     val newComic = viewModel.getPreviousComic()
                     Timber.d("    newComic=$newComic")
@@ -487,7 +487,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
 
         currentPage = position
 
-        if (!UserPreferences.getInstance(requireContext()).shouldHidePageNumber()) showOrUpdateToast("Page ${position+1} of ${currentComic.nbPages}")
+        if (!UserPreferences.getInstance(requireContext()).shouldHidePageNumber()) {
+            showOrUpdateToast(resources.getString(R.string.page_number_info, (position+1), currentComic.nbPages))
+        }
 
         viewModel.onSetCurrentPage(position)
     }

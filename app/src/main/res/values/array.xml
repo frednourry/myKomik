@@ -3,6 +3,5 @@
     <string-array name="settings_page_turn_direction_values">
         <item>LTR</item>
         <item>RTL</item>
-        <item>TTB</item>
     </string-array>
 </resources>

@@ -12,13 +12,13 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private var readingDirectionValues: Array<String> = context.resources.getStringArray(R.array.settings_page_turn_direction_values)
     private var ReadingDirectionLTR:String = readingDirectionValues[0]
     private var ReadingDirectionRTL:String = readingDirectionValues[1]
-    private var ReadingDirectionTTB:String = readingDirectionValues[2]
+//    private var ReadingDirectionTTB:String = readingDirectionValues[2]
 
     // Preference label
-    private val hidePageNumberLabel = "hide_page_number"
-    private val readingDirectionLabel = "page_turn_direction"
-    private val hideReadComicsLabel = "hide_read_comics"
-    private val disableRotationLabel = "disable_rotation"
+    private val hideReadComicsLabel     = "hide_read_comics"
+    private val hidePageNumberLabel     = "hide_page_number"
+    private val readingDirectionLabel   = "page_turn_direction"
+    private val disableRotationLabel    = "disable_rotation"
 
     // Variables
     lateinit var reading_direction:String
