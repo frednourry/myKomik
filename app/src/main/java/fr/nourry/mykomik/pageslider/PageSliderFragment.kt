@@ -118,6 +118,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         // Replace the title
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.title = currentComic.file.name
+        supportActionBar.setDisplayHomeAsUpEnabled(false)
+/*        supportActionBar.setLogo(R.mipmap.ic_launcher)
+        supportActionBar.setDisplayUseLogoEnabled(true)*/
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {

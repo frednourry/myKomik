@@ -58,7 +58,7 @@ class DialogChooseRootDirectory(private val rootPath: File?=null) : DialogFragme
         if (rootPath == null) {
             // Do nothing (this dialog is recreated)
             Timber.v("onCreateDialog: rootPath = null")
-            if (volumeList.count()>0) File(volumeList[0].path) else rootPath
+            if (volumeList.isNotEmpty()) File(volumeList[0].path) else rootPath
         } else {
             val origin:File = rootPath
             //if (volumeList.count()>0) File(volumeList[0].path) else rootPath

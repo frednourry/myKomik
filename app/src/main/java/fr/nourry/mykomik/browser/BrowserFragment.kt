@@ -24,6 +24,8 @@ import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
 import fr.nourry.mykomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mykomik.loader.ComicLoadingManager
+import fr.nourry.mykomik.preference.PREF_ROOT_DIR
+import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.utils.clearFilesInDir
 import fr.nourry.mykomik.utils.getDefaultDirectory
 import fr.nourry.mykomik.utils.isDirExists
@@ -147,6 +149,9 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         // End LiveDatas
 
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
+        supportActionBar.setDisplayHomeAsUpEnabled(false)
+/*        supportActionBar.setLogo(R.mipmap.ic_launcher)
+        supportActionBar.setDisplayUseLogoEnabled(true)*/
 
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
         viewModel.init(skipReadComic)
@@ -198,7 +203,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         Timber.i("handleStateReady")
         Timber.i("  state.comics=${state.comics}")
 
-        supportActionBar.title = fr.nourry.mykomik.App.currentDir?.canonicalPath
+        supportActionBar.title = getLocalDirName(App.currentDir?.canonicalPath)
 
         viewModel.setPrefLastComicPath("")      // Forget the last comic...
 
@@ -232,7 +237,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         } else {
             rootDirectory = File(directoryPath)
 
-            if (fr.nourry.mykomik.App.currentDir == null) {
+            if (App.currentDir == null) {
                 // It's the first time we come in this fragment
 
                 // Ask if we should use the last comic
@@ -270,7 +275,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
             } else {
                 //
-                loadComics(fr.nourry.mykomik.App.currentDir!!)
+                loadComics(App.currentDir!!)
             }
         }
     }
@@ -499,6 +504,22 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
             loadComics(App.currentDir?.parentFile!!)
             true
         }
+    }
+
+    // Strip 'dirPath' of the root directory path (except the last dir name)
+    private fun getLocalDirName(dirPath:String?):String {
+        var result = dirPath ?: ""
+        var rootPath = SharedPref.get(PREF_ROOT_DIR, "")
+        if (rootPath != null && rootPath != "") {
+            rootPath = rootPath.substring(0, rootPath.lastIndexOf("/"))
+            if (rootPath.isNotEmpty()) {
+                val i = result.indexOf(rootPath)
+                if (i >= 0) {
+                    result = result.substring(rootPath.length)+"/"
+                }
+            }
+        }
+        return result
     }
 
 }
