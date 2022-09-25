@@ -83,8 +83,6 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
 
                     Timber.v(entry.name + " " + entry.size)
 
-                    // Todo Reorder files...
-
                     if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
                         val input = zip.getInputStream(entry)
                         bitmap = BitmapUtil.createBitmap(input.readBytes())
