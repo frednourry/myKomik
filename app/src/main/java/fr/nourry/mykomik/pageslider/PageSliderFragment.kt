@@ -16,6 +16,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.viewpager.widget.ViewPager
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
@@ -27,7 +28,7 @@ import timber.log.Timber
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
-class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
+class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSliderAdapter.Listener  {
 
     val PAGE_SELECTOR_ANIMATION_DURATION = 300L
     val STATE_CURRENT_PAGE = "state:current_page"
@@ -234,6 +235,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
             //  - we should inverse each item of the recyclerView (item.rotationY = 180F)
             val isLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
             pageSliderAdapter = PageSliderAdapter(requireContext(), viewModel, state.comic, isLTR)
+            pageSliderAdapter.setPageSliderAdapterListener(this)
 
             binding.viewPager.adapter = pageSliderAdapter
             if (!isLTR) binding.viewPager.rotationY = 180F
@@ -431,6 +433,45 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         findNavController().navigate(action)
     }
 
+    override fun onPageTap(currentPage:Int, x:Float, y:Float) {
+        Timber.i("onPageTap x=$x y=$y")
+
+        if (UserPreferences.getInstance(requireContext()).isTappingToChangePage()) {
+            // Check if the tap is near the border
+            val width = App.physicalConstants.metrics.widthPixels
+            Timber.i("   onPageTap "+(width*0.1)+" < $x < "+(width*0.9))
+
+            if (x<width*0.1) {
+                scrollToPreviousPage()
+                return
+            }
+            if (x>width*0.9) {
+                scrollToNextPage()
+                return
+            }
+        }
+        viewModel.showPageSelector(currentPage)
+    }
+
+    private fun scrollToNextPage() {
+        Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
+        if (currentPage+1<currentComic.nbPages) {
+            lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
+            binding.viewPager.setCurrentItem(currentPage+1, true)
+        } else {
+            askNextComic()
+        }
+    }
+
+    private fun scrollToPreviousPage() {
+        Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
+        if (currentPage-1>=0) {
+            lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
+            binding.viewPager.setCurrentItem(currentPage-1, true)
+        } else {
+            askPreviousComic()
+        }
+    }
 
     override fun onPageScrollStateChanged(state: Int) {
         Timber.i("onPageScrollStateChanged state = $state")
@@ -514,6 +555,4 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener  {
         }
         toast.show()*/
     }
-
-
 }

@@ -11,7 +11,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     // Preferences values (according to array.xml !!)
     private var readingDirectionValues: Array<String> = context.resources.getStringArray(R.array.settings_page_turn_direction_values)
     private var ReadingDirectionLTR:String = readingDirectionValues[0]
-    private var ReadingDirectionRTL:String = readingDirectionValues[1]
+//    private var ReadingDirectionRTL:String = readingDirectionValues[1]
 //    private var ReadingDirectionTTB:String = readingDirectionValues[2]
 
     // Preference label
@@ -19,12 +19,14 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private val hidePageNumberLabel     = "hide_page_number"
     private val readingDirectionLabel   = "page_turn_direction"
     private val disableRotationLabel    = "disable_rotation"
+    private val tapToChangePageLabel    = "tap_to_change_page"
 
     // Variables
-    lateinit var reading_direction:String
+    private lateinit var reading_direction:String
     private var hide_page_number:Boolean = false
     private var hide_read_comics:Boolean = false
     private var disable_rotation:Boolean = false
+    private var tap_to_change_page:Boolean = false
 
     var sharedPreferences: SharedPreferences
 
@@ -55,6 +57,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
         hide_page_number = sharedPreferences.getBoolean(hidePageNumberLabel, false)
         hide_read_comics = sharedPreferences.getBoolean(hideReadComicsLabel, false)
         disable_rotation = sharedPreferences.getBoolean(disableRotationLabel, false)
+        tap_to_change_page = sharedPreferences.getBoolean(tapToChangePageLabel, false)
     }
 
     override fun onSharedPreferenceChanged(sharePref: SharedPreferences, key: String) {
@@ -69,6 +72,8 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
                     sharePref.getBoolean(hideReadComicsLabel, false)
                 disableRotationLabel -> disable_rotation =
                     sharePref.getBoolean(disableRotationLabel, false)
+                tapToChangePageLabel -> tap_to_change_page =
+                    sharePref.getBoolean(tapToChangePageLabel, false)
             }
         }
     }
@@ -81,5 +86,6 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     }*/
     fun shouldHidePageNumber():Boolean = hide_page_number
     fun isRotationDisabled():Boolean = disable_rotation
+    fun isTappingToChangePage():Boolean = tap_to_change_page
 
 }

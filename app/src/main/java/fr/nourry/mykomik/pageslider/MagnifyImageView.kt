@@ -10,10 +10,6 @@ import fr.nourry.mykomik.R
 import timber.log.Timber
 import kotlin.math.sqrt
 
-interface MagnifyImageViewListener {
-    fun onMagnifyImageViewClick(param:Any?)
-}
-
 /**
  *
  * A ImageView that can zoom in/out and move on the visible part. The min/max zoom are constants.
@@ -21,6 +17,11 @@ interface MagnifyImageViewListener {
  *
  */
 class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatImageView(context, attrs) {
+
+    interface Listener {
+        fun onMagnifyImageViewClick(param:Any?, x:Float, y:Float)
+    }
+
     companion object {
         private const val defaultMinZoom = 1f        // Min total zoom out
         private const val defaultMaxZoom = 3f        // Max total zoom in
@@ -48,7 +49,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         }
     }
 
-    private var magnifyImageViewListener:MagnifyImageViewListener? = null
+    private var magnifyImageViewListener:Listener? = null
     private var magnifyImageViewListenerParam:Any? = null
 
     private var isImageModified = false
@@ -146,7 +147,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 Timber.d("onTouchImageView :: deltaTime=$deltaTime")
                 if (deltaTime<clickDelay && movementMode == MovementType.CLICK) {
                     // It's a click !
-                    magnifyImageViewListener?.onMagnifyImageViewClick(magnifyImageViewListenerParam)
+                    magnifyImageViewListener?.onMagnifyImageViewClick(magnifyImageViewListenerParam, event.x, event.y)
                 }
 
                 movementMode = MovementType.NONE
@@ -260,7 +261,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         }
     }
 
-    fun setMagnifyImageViewListener(l: MagnifyImageViewListener?, param:Any?=null) {
+    fun setMagnifyImageViewListener(l: Listener?, param:Any?=null) {
         magnifyImageViewListener = l
         magnifyImageViewListenerParam = param
     }

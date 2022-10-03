@@ -11,6 +11,10 @@
 
     <PreferenceCategory android:title="@string/settings_reader">
 
+        <CheckBoxPreference app:key="tap_to_change_page"
+            app:title="@string/settings_tap_to_change_page"
+            android:defaultValue="false"
+            android:summary="@string/settings_tap_to_change_page"/>
         <ListPreference
             android:defaultValue="LTR"
             android:key="page_turn_direction"

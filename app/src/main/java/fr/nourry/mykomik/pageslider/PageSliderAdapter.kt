@@ -24,9 +24,15 @@ enum class MovementType {
 }
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry, val isLTR:Boolean):PagerAdapter(), MagnifyImageViewListener {
+class PageSliderAdapter(val context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
+    interface Listener {
+        fun onPageTap(currentPage:Int, x:Float, y:Float)
+    }
+
 
     private var imageViewModified: MagnifyImageView? = null
+    private var pageSliderAdapterListener:Listener? = null
+
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:MagnifyImageView)
 
@@ -61,6 +67,10 @@ class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewMo
         onPageChanged()
         comic = newComic
         this.notifyDataSetChanged()
+    }
+
+    fun setPageSliderAdapterListener(l: Listener?) {
+        pageSliderAdapterListener = l
     }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
@@ -126,11 +136,11 @@ class PageSliderAdapter(context: Context, private val viewModel:PageSliderViewMo
         imageViewModified = null
     }
 
-    override fun onMagnifyImageViewClick(param: Any?) {
+    override fun onMagnifyImageViewClick(param: Any?, x:Float, y:Float) {
         try {
             val cardView = param as CardView
             val innerComic = cardView.tag as InnerComicTag
-            viewModel.showPageSelector(innerComic.position)
+            pageSliderAdapterListener?.onPageTap(innerComic.position, x, y)
         } catch (e:Exception) {
             Timber.w("onMagnifyImageViewClick :: error = "+e.printStackTrace())
         }
