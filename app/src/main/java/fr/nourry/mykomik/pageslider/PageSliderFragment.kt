@@ -238,6 +238,25 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             pageSliderAdapter.setPageSliderAdapterListener(this)
 
             binding.viewPager.adapter = pageSliderAdapter
+
+/*
+            // If use this, comment "onPageScrolled()" !!
+            binding.viewPager.setPageTransformer(true)  { _, position ->
+                Timber.w("setPageTransformer $position")
+                if (position < -1) {
+                    // [-00,-1): the page is way off-screen to the left.
+                    Timber.w("  setPageTransformer finger LEFT")
+                    scrollingDirection = 1
+                } else if (position <= 1) {
+                    // [-1,1]: the page is "centered"
+                    Timber.w("  setPageTransformer finger CENTERED")
+                } else {
+                    // (1,+00]: the page is way off-screen to the right.
+                    Timber.w("  setPageTransformer finger RIGHT")
+                    scrollingDirection = -1
+                }
+            }
+ */
             if (!isLTR) binding.viewPager.rotationY = 180F
 
             // Avoid screen rotation, if asked
@@ -439,14 +458,22 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         if (UserPreferences.getInstance(requireContext()).isTappingToChangePage()) {
             // Check if the tap is near the border
             val width = App.physicalConstants.metrics.widthPixels
+            val directionLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
             Timber.i("   onPageTap "+(width*0.1)+" < $x < "+(width*0.9))
 
             if (x<width*0.1) {
-                scrollToPreviousPage()
+                if (directionLTR)
+                    scrollToPreviousPage()
+                else
+                    scrollToNextPage()
                 return
             }
             if (x>width*0.9) {
-                scrollToNextPage()
+                if (directionLTR)
+                    scrollToNextPage()
+                else
+                    scrollToPreviousPage()
+
                 return
             }
         }
