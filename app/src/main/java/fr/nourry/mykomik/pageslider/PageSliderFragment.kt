@@ -273,8 +273,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         } else {
             if (binding.viewPager.currentItem != state.currentPage) {
                 pageSliderAdapter.onPageChanged()
+                shouldUpdatePageSliderAdapter = true
             }
-            shouldUpdatePageSliderAdapter = true
         }
 
         if (shouldUpdatePageSliderAdapter) {
