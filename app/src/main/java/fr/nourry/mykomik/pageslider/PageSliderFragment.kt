@@ -24,6 +24,7 @@ import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.settings.UserPreferences
 import timber.log.Timber
+import java.io.File
 
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
@@ -31,6 +32,7 @@ private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSliderAdapter.Listener  {
 
     val PAGE_SELECTOR_ANIMATION_DURATION = 300L
+    val STATE_CURRENT_COMIC = "state:current_comic"
     val STATE_CURRENT_PAGE = "state:current_page"
 
 
@@ -86,7 +88,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
-
         if (::currentComic.isInitialized) {
             // We were already here, so no need to use PageSliderFragmentArgs.fromBundle(requireArguments())
             Timber.w("Using last value of currentComic($currentComic). Not using args.")
@@ -95,7 +96,19 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         } else {
             Timber.w("Using args to set currentComic and currentPage")
             val args = PageSliderFragmentArgs.fromBundle(requireArguments())
-            currentComic = args.comic
+
+            // Check if a comic path was saved in savedInstanceState[STATE_CURRENT_COMIC] (when rotating for example)
+            val currentComicPath = savedInstanceState?.getString(STATE_CURRENT_COMIC) ?: ""
+            if (currentComicPath == "") {
+                currentComic = args.comic
+            } else {
+                var f = File(currentComicPath)
+                if (f.isFile() && f.exists()) {
+                    currentComic = ComicEntry(f)
+                } else {
+                    currentComic = args.comic
+                }
+            }
             currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
             bRefreshSelectorSliderAdapter = false
             bRefreshSliderAdapter = true
@@ -180,6 +193,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putString(STATE_CURRENT_COMIC, currentComic.file.absolutePath)
         outState.putInt(STATE_CURRENT_PAGE, currentPage)
     }
 
