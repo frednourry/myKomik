@@ -26,6 +26,11 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         private const val defaultMinZoom = 1f        // Min total zoom out
         private const val defaultMaxZoom = 3f        // Max total zoom in
         private const val defaultClickDelay = 200    // Delay between ACTION_DOWN and ACTION_UP to consider this as a click
+
+        fun printFloatArray(f:FloatArray, label:String="printMatrix") {
+            Timber.e("$label${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
+        }
+
     }
 
     // XML Parameters
@@ -60,9 +65,29 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     private var fingersDistance0 = 0f                   // To remember the initial distance between the fingers when zooming
     private var oldScaleType = ScaleType.FIT_CENTER     // To remember the initial scaleType
     private var currentScale = 1f                       // The current zoom level
+    private var matrixScale = 1f                        // The current zoom level
+    private var matrixOffsetX = 0f                      // Offset on X axis
+    private var matrixOffsetY = 0f                      // Offset on Y axis
     private var lastActionDownDate = SystemClock.elapsedRealtime()  // To remember when was the last MotionEvent.ACTION_DOWN
 
     private var movementMode:MovementType = MovementType.NONE
+
+
+    fun getCurrentScale() = matrixScale
+    fun getOffsetX() = matrixOffsetX
+    fun getOffsetY() = matrixOffsetY
+    fun getMatrixValues():FloatArray {
+        val f = FloatArray(9)
+        imageMatrix.getValues(f)
+        return f
+    }
+
+    private fun printMatrix(label:String="printMatrix :: ") {
+        val f = FloatArray(9)
+        imageMatrix.getValues(f)
+
+        printFloatArray(f, label)
+    }
 
 
     /**
@@ -107,7 +132,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             dx = marginX - f[Matrix.MTRANS_X]
         }
 
-//        Timber.w("     => dx=$dx dy=$dy scale=$scale")
+        Timber.w("     => dx=$dx dy=$dy deltaScale=$deltaScale")
         if (dx != 0f || dy != 0f || deltaScale!= 0f) {
             scaleType = ScaleType.MATRIX
             imageMatrix = Matrix().apply {
@@ -121,8 +146,15 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     postTranslate(dx, dy)
                 }
                 preConcat(imageMatrix)
+
             }
         }
+        // Save value
+        imageMatrix.getValues(f)
+        matrixScale = f[Matrix.MSCALE_X]
+        matrixOffsetX = f[Matrix.MTRANS_X]
+        matrixOffsetY = f[Matrix.MTRANS_Y]
+        printMatrix("checkAndUpdateImage :: ")
     }
 
     /**
@@ -252,6 +284,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
      * Reset the image to its initial state
      */
     fun resetImage() {
+        Timber.w("resetImage")
         if (isImageModified) {
             scaleType = oldScaleType
             currentScale = 1f
@@ -259,6 +292,43 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
             isImageModified = false
         }
+    }
+
+    fun updateParameters(scale:Float = 1f, offsetX:Float = 0f, offsetY:Float = 0f, matrixValues:FloatArray = FloatArray(9)) {
+        Timber.w("updateParameters $scale $offsetX $offsetY")
+
+        oldScaleType = scaleType
+
+        printMatrix("updateParameters 0 :: ")
+
+        printFloatArray(matrixValues, "   matrixValues = ")
+        currentScale = scale
+
+//        checkAndUpdateImage(offsetX, offsetY, scale, 0f, 0f)
+        scaleType = ScaleType.MATRIX
+        imageMatrix = Matrix().apply {
+            // Scale
+            if (scale != 0f) {
+                postScale(scale, scale, 0f, 0f)
+            }
+
+            // Translate
+            if (offsetX != 0f || offsetY != 0f) {
+                postTranslate(offsetX, offsetY)
+            }
+//            preConcat(imageMatrix)
+        }
+
+        Timber.e("    => drawable=$drawable")
+        imageMatrix.setValues(matrixValues) // Marche pas ici car drawable==null (voir https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/java/android/widget/ImageView.java)
+
+
+
+        printMatrix("updateParameters 1 :: ")
+
+        isImageModified = true
+        movementMode = MovementType.NONE
+        fingersDistance0 = 0f
     }
 
     fun setMagnifyImageViewListener(l: Listener?, param:Any?=null) {

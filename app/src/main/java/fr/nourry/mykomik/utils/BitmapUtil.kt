@@ -50,7 +50,7 @@ class BitmapUtil {
         fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
             var bitmapToReturn:Bitmap? = null
 
-            val pixelDxRatio = fr.nourry.mykomik.App.physicalConstants.pixelDxRatio
+            val pixelDxRatio = App.physicalConstants.pixelDxRatio
             val trueBorderSize = (borderSize*pixelDxRatio).toInt()
             var trueThumbnailWidth = (thumbnailWidth*pixelDxRatio).toInt()
             val trueThumbnailHeight = (thumbnailHeight*pixelDxRatio).toInt()
@@ -67,7 +67,7 @@ class BitmapUtil {
 
             try {
                 // Transform the ByteArray in Bitmap
-                var bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+                val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
                 if (bitmap == null) return bitmap
                 Timber.v("bitmap.width=${bitmap.width} bitmap.height=${bitmap.height}")
                 val shouldRotate = bitmap.width>bitmap.height

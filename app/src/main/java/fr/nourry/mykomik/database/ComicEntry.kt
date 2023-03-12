@@ -35,4 +35,18 @@ data class ComicEntry(
     override fun equals(other: Any?): Boolean {
         return this.hashkey == (other as ComicEntry).hashkey
     }
+
+    // Generated function...
+    override fun hashCode(): Int {
+        var result = file.hashCode()
+        result = 31 * result + id.hashCode()
+        result = 31 * result + dirPath.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + isDirectory.hashCode()
+        result = 31 * result + hashkey.hashCode()
+        result = 31 * result + nbPages
+        result = 31 * result + currentPage
+        result = 31 * result + fromDAO.hashCode()
+        return result
+    }
 }

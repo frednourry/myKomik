@@ -33,7 +33,7 @@ sealed class BrowserViewModelState(val isInit: Boolean = false, val currentDir: 
 }
 
 
-class BrowserViewModel() : ViewModel() {
+class BrowserViewModel : ViewModel() {
     private var currentDir:File? = null
     private var comicEntriesToShow: MutableList<ComicEntry> = mutableListOf()
     private var comicEntriesToDelete = mutableListOf<ComicEntry>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
@@ -47,7 +47,7 @@ class BrowserViewModel() : ViewModel() {
 
     private var currentDirFile = MutableLiveData<File>()
 
-    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = Transformations.switchMap(currentDirFile) { file ->
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentDirFile.switchMap { file ->
         Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
         App.db.comicEntryDao().getComicEntriesByDirPath(file.absolutePath)
     }/*.distinctUntilChanged() */   // Important or else the livedata will send a changed signal even if nothing change...

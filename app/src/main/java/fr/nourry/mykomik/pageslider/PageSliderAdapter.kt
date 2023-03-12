@@ -26,12 +26,19 @@ enum class MovementType {
 // To work with a androidx.viewpager.widget.ViewPager
 class PageSliderAdapter(val context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
     interface Listener {
-        fun onPageTap(currentPage:Int, x:Float, y:Float)
+        fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
     }
 
 
     private var imageViewModified: MagnifyImageView? = null
     private var pageSliderAdapterListener:Listener? = null
+
+    private var numPageToUpdate = -1
+    private var scalePageToUpdate = 1f
+    private var offsetXPageToUpdate = 0f
+    private var offsetYPageToUpdate = 0f
+    private var matrixValuesToUpdate = FloatArray(9)
+
 
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:MagnifyImageView)
@@ -41,6 +48,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
             Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
             if ((path != "")) {
+                var image:MagnifyImageView? = null
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
@@ -48,14 +56,22 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
                 // Check if the target is still waiting this image
                 if (holderComic.file.absolutePath == comic.file.absolutePath && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
-                    val image = holderInnerComic.imageView
+                    image = holderInnerComic.imageView
                     Glide.with(image.context)
                         .load(path)
-                        .fitCenter()
                         .into(image)
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
                 }
+
+                // Update parameters ?
+                if (currentIndex == numPageToUpdate && image != null) {
+                    Timber.v("  onRetrieved:: update parameters ($scalePageToUpdate, $offsetXPageToUpdate, $offsetYPageToUpdate)")
+                    image.updateParameters(scalePageToUpdate, offsetXPageToUpdate, offsetYPageToUpdate, matrixValuesToUpdate)
+
+                    resetImageToUpdateParameters()
+                }
+
             }
         }
     }
@@ -136,11 +152,29 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         imageViewModified = null
     }
 
+    private fun resetImageToUpdateParameters()  {
+        numPageToUpdate = -1
+        scalePageToUpdate = 1f
+        offsetXPageToUpdate = 0f
+        offsetYPageToUpdate = 0f
+    }
+
+    fun setImageToUpdateParameters(numPage:Int, scale:Float = 1f, offsetX:Float = 0f, offsetY:Float = 0f, matrixValues:FloatArray = FloatArray(9)) {
+        Timber.v("setImageParameters numPage=$numPage $scale $offsetX $offsetY")
+        MagnifyImageView.printFloatArray(matrixValues, "  setImageParameters :: ")
+        numPageToUpdate = numPage
+        scalePageToUpdate = scale
+        offsetXPageToUpdate = offsetX
+        offsetYPageToUpdate = offsetY
+        matrixValuesToUpdate = matrixValues
+    }
+
     override fun onMagnifyImageViewClick(param: Any?, x:Float, y:Float) {
         try {
             val cardView = param as CardView
             val innerComic = cardView.tag as InnerComicTag
-            pageSliderAdapterListener?.onPageTap(innerComic.position, x, y)
+            innerComic.imageView
+            pageSliderAdapterListener?.onPageTap(innerComic.imageView, innerComic.position, x, y)
         } catch (e:Exception) {
             Timber.w("onMagnifyImageViewClick :: error = "+e.printStackTrace())
         }

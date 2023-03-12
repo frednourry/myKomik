@@ -18,7 +18,7 @@ import java.util.concurrent.Executors
 sealed class  PageSliderViewModelState(
     val isInitialized: Boolean = false
 ) {
-    class Init() : PageSliderViewModelState(
+    class Init : PageSliderViewModelState(
         isInitialized = false
     )
     data class Loading(val comic:ComicEntry, val currentItem:Int, val nbItem:Int) : PageSliderViewModelState(
@@ -33,7 +33,7 @@ sealed class  PageSliderViewModelState(
         isInitialized = true
     )
 
-    class Cleaned() : PageSliderViewModelState(
+    class Cleaned : PageSliderViewModelState(
         isInitialized = false
     )
     class Error(val errorMessage:String) : PageSliderViewModelState(
@@ -51,7 +51,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     private var comicEntriesInCurrentDir: MutableList<ComicEntry> = mutableListOf()
     private var currentIndexInDir = -1
     private var currentDirFile = MutableLiveData<File>()
-    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = Transformations.switchMap(currentDirFile) { file ->
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentDirFile.switchMap { file ->
         Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
         fr.nourry.mykomik.App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(file.absolutePath)
     }.distinctUntilChanged()
@@ -161,8 +161,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 //        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
-        var index=0
-        for (fe in comicEntriesFromDisk) {
+        for ((index, fe) in comicEntriesFromDisk.withIndex()) {
 //            Timber.v(" Looking for ${fe.dirPath}")
             found = false
             // Search in comicEntriesFromDAO
@@ -185,7 +184,6 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
                 currentIndexInDir = index
 //                Timber.d("   currentIndexInDir=$currentIndexInDir")
             }
-            index++
         }
 
         Timber.d(" returns => $result")

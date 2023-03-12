@@ -1,6 +1,5 @@
 package fr.nourry.mykomik.settings
 
-import android.app.ActionBar
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -18,7 +17,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.title = getString(R.string.settings)
         supportActionBar.setDisplayHomeAsUpEnabled(true)
-/*        supportActionBar.setLogo(R.mipmap.ic_launcher)
-        supportActionBar.setDisplayUseLogoEnabled(true)*/
+        supportActionBar.setLogo(R.mipmap.ic_launcher)
+        supportActionBar.setDisplayUseLogoEnabled(true)
     }
 }

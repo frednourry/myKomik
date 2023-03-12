@@ -10,7 +10,10 @@ import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
@@ -57,15 +60,16 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private var lastPositionOffsetPixel = -1
     private var scrollingDirection = 0
 
+    // Information on the last current image information
+    private var lastImageScale = 1f
+    private var lastImageOffsetX = 0f
+    private var lastImageOffsetY = 0f
+    private var lastMatrixValues : FloatArray = FloatArray(9)
+
     private var bRefreshSliderAdapter = false
     private var bRefreshSelectorSliderAdapter = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-    }
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         activity?.actionBar?.hide()
 
         _binding = FragmentPageSliderBinding.inflate(inflater, container, false)
@@ -74,6 +78,59 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+
+        //// MENU
+        // The usage of an interface lets you inject your own implementation
+        val menuHost: MenuHost = requireActivity()
+
+        // Add menu items without using the Fragment Menu APIs
+        // Note how we can tie the MenuProvider to the viewLifecycleOwner
+        // and an optional Lifecycle.State (here, RESUMED) to indicate when
+        // the menu should be visible
+        menuHost.addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Add menu items here
+                menuInflater.inflate(R.menu.menu_page_slider_fragment, menu)
+            }
+
+            override fun onPrepareMenu(menu: Menu) {
+                val previousItem = menu.findItem(R.id.action_go_previous)
+                previousItem.isVisible = viewModel.hasPreviousComic()
+
+                val nextItem = menu.findItem(R.id.action_go_next)
+                nextItem.isVisible = viewModel.hasNextComic()
+
+                super.onPrepareMenu(menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                // Handle the menu selection
+                return when (menuItem.itemId) {
+                    R.id.action_settings -> {
+                        goSettings()
+                        true
+                    }
+                    R.id.action_go_previous -> {
+                        val newComic = viewModel.getPreviousComic()
+                        if (newComic != null && newComic != currentComic) {
+                            changeCurrentComic(newComic)
+                        }
+                        true
+                    }
+                    R.id.action_go_next -> {
+                        val newComic = viewModel.getNextComic()
+                        if (newComic != null && newComic != currentComic) {
+                            changeCurrentComic(newComic)
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+        //// End MENU
+
 
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
@@ -102,11 +159,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             if (currentComicPath == "") {
                 currentComic = args.comic
             } else {
-                var f = File(currentComicPath)
-                if (f.isFile() && f.exists()) {
-                    currentComic = ComicEntry(f)
+                val f = File(currentComicPath)
+                currentComic = if (f.isFile && f.exists()) {
+                    ComicEntry(f)
                 } else {
-                    currentComic = args.comic
+                    args.comic
                 }
             }
             currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
@@ -137,43 +194,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         supportActionBar.setDisplayUseLogoEnabled(true)*/
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu) {
-        val previousItem = menu.findItem(R.id.action_go_previous)
-        previousItem.isVisible = viewModel.hasPreviousComic()
-
-        val nextItem = menu.findItem(R.id.action_go_next)
-        nextItem.isVisible = viewModel.hasNextComic()
-
-        super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_page_slider_fragment, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                goSettings()
-                true
-            }
-            R.id.action_go_previous -> {
-                val newComic = viewModel.getPreviousComic()
-                if (newComic != null && newComic != currentComic) {
-                    changeCurrentComic(newComic)
-                }
-                true
-            }
-            R.id.action_go_next -> {
-                val newComic = viewModel.getNextComic()
-                if (newComic != null && newComic != currentComic) {
-                    changeCurrentComic(newComic)
-                }
-                true
-            }
-            else -> return super.onOptionsItemSelected(item)
-        }
-    }
 
     private fun changeCurrentComic(comic:ComicEntry) {
         Timber.i("changeCurrentComic")
@@ -197,6 +217,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         outState.putInt(STATE_CURRENT_PAGE, currentPage)
     }
 
+    private fun resetLastImageParameters() {
+        lastImageScale = 1f
+        lastImageOffsetX = 0f
+        lastImageOffsetY = 0f
+    }
+
     // Update UI according to the model state events
     private fun updateUI(state: PageSliderViewModelState) {
         Timber.i("Calling updateUI, switch state=${state::class}")
@@ -207,7 +233,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             is PageSliderViewModelState.Ready -> handleStateReady(state)
             is PageSliderViewModelState.PageSelection -> handleStatePageSelection(state)
             is PageSliderViewModelState.Cleaned -> handleStateCleaned(state)
-            else -> {}
         }
     }
 
@@ -289,6 +314,15 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 pageSliderAdapter.onPageChanged()
                 shouldUpdatePageSliderAdapter = true
             }
+
+
+            Timber.e("PLOP ${binding.viewPager.currentItem} ${state.currentPage} $lastImageScale $lastImageOffsetX $lastImageOffsetY")
+            MagnifyImageView.printFloatArray(lastMatrixValues, "  PLOP :: ")
+//            if (lastImageScale != 1f && lastImageOffsetX != 0f && lastImageOffsetY != 0f) {
+                pageSliderAdapter.setImageToUpdateParameters(state.currentPage, lastImageScale, lastImageOffsetX, lastImageOffsetY, lastMatrixValues)
+                resetLastImageParameters()
+//            }
+
         }
 
         if (shouldUpdatePageSliderAdapter) {
@@ -423,6 +457,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                                 val newComic = viewModel.getNextComic()
                                 Timber.d("    newComic=$newComic")
                                 if (newComic != null && newComic != currentComic) {
+                                    resetLastImageParameters()
                                     changeCurrentComic(newComic)
                                 }
                             }
@@ -450,6 +485,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                     val newComic = viewModel.getPreviousComic()
                     Timber.d("    newComic=$newComic")
                     if (newComic != null && newComic != currentComic) {
+                        resetLastImageParameters()
                         changeCurrentComic(newComic)
                     }
                 }
@@ -466,7 +502,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         findNavController().navigate(action)
     }
 
-    override fun onPageTap(currentPage:Int, x:Float, y:Float) {
+    override fun onPageTap(currentMagnifyImageView:MagnifyImageView, currentPage:Int, x:Float, y:Float) {
         Timber.i("onPageTap x=$x y=$y")
 
         if (UserPreferences.getInstance(requireContext()).isTappingToChangePage()) {
@@ -491,6 +527,14 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 return
             }
         }
+
+        // Save current image informations
+        Timber.v("currentMagnifyImageView:: scale=${currentMagnifyImageView.getCurrentScale()} offsetx=${currentMagnifyImageView.getOffsetX()} offsety=${currentMagnifyImageView.getOffsetY()}")
+        lastImageScale = currentMagnifyImageView.getCurrentScale()
+        lastImageOffsetX = currentMagnifyImageView.getOffsetX()
+        lastImageOffsetY = currentMagnifyImageView.getOffsetY()
+        lastMatrixValues = currentMagnifyImageView.getMatrixValues()
+
         viewModel.showPageSelector(currentPage)
     }
 
@@ -498,6 +542,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
+            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage+1, true)
         } else {
             askNextComic()
@@ -508,6 +553,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
         if (currentPage-1>=0) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
+            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage-1, true)
         } else {
             askPreviousComic()
@@ -548,12 +594,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
         Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
         if (lastPositionOffsetPixel > 0) {
-            if (lastPositionOffsetPixel > positionOffsetPixels) {
-                scrollingDirection = -1
+            scrollingDirection = if (lastPositionOffsetPixel > positionOffsetPixels) {
+                -1
             } else if (lastPositionOffsetPixel < positionOffsetPixels) {
-                scrollingDirection = +1
+                +1
             } else {
-                scrollingDirection = 0
+                0
             }
             Timber.i("    scrollingDirection=$scrollingDirection   positionOffsetPixels=$positionOffsetPixels")
         } else {
@@ -577,6 +623,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         }
 
         viewModel.onSetCurrentPage(position)
+
+        lastImageScale = 1f
+        lastImageOffsetX = 0f
+        lastImageOffsetY = 0f
+
     }
 
     private fun showOrUpdateToast(text:String) {

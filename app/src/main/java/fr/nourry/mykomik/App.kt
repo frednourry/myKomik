@@ -3,6 +3,8 @@ package fr.nourry.mykomik
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.room.Room
 import fr.nourry.mykomik.database.AppDatabase
 import fr.nourry.mykomik.database.DATABASE_NAME
@@ -26,7 +28,12 @@ class App: Application() {
         Timber.plant(Timber.DebugTree())
         appContext = this
         physicalConstants = PhysicalConstants.newInstance(appContext)
-        packageInfo = packageManager.getPackageInfo(packageName, 0)
+
+        packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            packageManager.getPackageInfo(packageName, 0)
+        }
 
         db = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME)
 //            .allowMainThreadQueries()     // Very bad !!

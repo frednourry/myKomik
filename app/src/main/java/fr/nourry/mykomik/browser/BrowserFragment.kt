@@ -11,7 +11,10 @@ import androidx.activity.addCallback
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
@@ -40,7 +43,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
 
     companion object {
         fun newInstance() = BrowserFragment()
-
     }
 
     private lateinit var viewModel: BrowserViewModel
@@ -72,26 +74,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu) {
-        menu.clear()
-        if (isFilteredMode) {
-            requireActivity().menuInflater.inflate(R.menu.menu_browser_selection_fragment, menu)
-        } else {
-            requireActivity().menuInflater.inflate(R.menu.menu_browser_fragment, menu)
-
-        }
-        super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_browser_fragment, menu)
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         Timber.i("onCreateView")
 
@@ -117,6 +99,74 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Timber.i("onViewCreated")
+
+        //// MENU
+        // The usage of an interface lets you inject your own implementation
+        val menuHost: MenuHost = requireActivity()
+
+        // Add menu items without using the Fragment Menu APIs
+        // Note how we can tie the MenuProvider to the viewLifecycleOwner
+        // and an optional Lifecycle.State (here, RESUMED) to indicate when
+        // the menu should be visible
+        menuHost.addMenuProvider(object : MenuProvider {
+
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Add menu items here
+                if (isFilteredMode) {
+                    menuInflater.inflate(R.menu.menu_browser_selection_fragment, menu)
+                } else {
+                    menuInflater.inflate(R.menu.menu_browser_fragment, menu)
+                }
+            }
+
+            override fun onPrepareMenu(menu: Menu) {
+                menu.clear()
+                if (isFilteredMode) {
+                    requireActivity().menuInflater.inflate(R.menu.menu_browser_selection_fragment, menu)
+                } else {
+                    requireActivity().menuInflater.inflate(R.menu.menu_browser_fragment, menu)
+                }
+                super.onPrepareMenu(menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                // Handle the menu selection
+                return when (menuItem.itemId) {
+                    R.id.action_choose -> {
+                        askToChangeRootDirectory()
+                        true
+                    }
+                    R.id.action_clear_cache -> {
+                        askToClearCache()
+                        true
+                    }
+                    R.id.action_about -> {
+                        showAboutPopup()
+                        true
+                    }
+                    R.id.action_delete_selection -> {
+                        askToDeleteSelection()
+                        true
+                    }
+                    R.id.action_select_all -> {
+                        selectAll()
+                        true
+                    }
+                    R.id.action_settings -> {
+                        goSettings()
+                        true
+                    }
+                    R.id.action_select_none -> {
+                        selectNone()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+        //// End MENU
+
+
 
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
@@ -165,12 +215,11 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     // Update UI according to the model state events
     private fun updateUI(state: BrowserViewModelState) {
         Timber.i("Calling updateUI, switch state=${state::class}")
-        return when(state) {
+        when(state) {
             is BrowserViewModelState.Error -> handleStateError(state)
             is BrowserViewModelState.Init -> handleStateInit(state)
             is BrowserViewModelState.ComicLoading -> handleStateLoading(state.currentDir)
             is BrowserViewModelState.ComicReady -> handleStateReady(state)
-            else -> {}
         }
     }
 
@@ -252,7 +301,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                     val alert = AlertDialog.Builder(requireContext())
                         .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic!!.name+")")
                         .setPositiveButton(R.string.ok) { _,_ ->
-                            fr.nourry.mykomik.App.currentDir = File(lastComic!!.parent!!) // Set the last comic path as the current directory
+                            App.currentDir = File(lastComic!!.parent!!) // Set the last comic path as the current directory
 
                             // Call the fragment to view the last comic
                             var currentPage = 0
@@ -358,40 +407,6 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         updateNbItemsSelected(0)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_choose -> {
-                askToChangeRootDirectory()
-                true
-            }
-            R.id.action_clear_cache -> {
-                askToClearCache()
-                true
-            }
-            R.id.action_about -> {
-                showAboutPopup()
-                true
-            }
-            R.id.action_delete_selection -> {
-                askToDeleteSelection()
-               true
-            }
-            R.id.action_select_all -> {
-                selectAll()
-                true
-            }
-            R.id.action_settings -> {
-                goSettings()
-                true
-            }
-            R.id.action_select_none -> {
-                selectNone()
-                true
-            }
-            else -> return super.onOptionsItemSelected(item)
-        }
-    }
-
     private fun askToChangeRootDirectory() {
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_change_root_directory)
@@ -405,7 +420,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_clear_cache)
             .setPositiveButton(R.string.ok) { _,_ ->
-                val cacheDir = fr.nourry.mykomik.App.physicalConstants.cacheDir
+                val cacheDir = App.physicalConstants.cacheDir
                 if (cacheDir.exists() && cacheDir.isDirectory) {
                     Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
                     clearFilesInDir(cacheDir)
