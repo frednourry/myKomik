@@ -1,6 +1,7 @@
 package fr.nourry.mykomik.pageslider
 
 import androidx.lifecycle.*
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingFinishedListener
 import fr.nourry.mykomik.loader.ComicLoadingManager
@@ -108,21 +109,25 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     fun onSetCurrentPage(n:Int, forceUpdateDAO:Boolean=false) {
         Timber.d("onSetCurrentPage($n) comic = $currentComic")
 
-        SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
+        if (!App.isGuestMode)
+            SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
+
         currentPage = n
         if (forceUpdateDAO || currentComic!!.currentPage != n) {
             currentComic!!.currentPage = n
 
-            // Update DB
-            Executors.newSingleThreadExecutor().execute {
-                if (currentComic!!.fromDAO) {
-                    Timber.d("  UPDATE in DAO")
-                    fr.nourry.mykomik.App.db.comicEntryDao().updateComicEntry(currentComic!!)
-                } else {
-                    Timber.d("  INSERT in DAO")
-                    currentComic!!.fromDAO = true
-                    currentComic!!.id = fr.nourry.mykomik.App.db.comicEntryDao().insertComicEntry(currentComic!!)
-                    Timber.d("  INSERT in DAO :: id = ${currentComic!!.id}")
+            // Update DB if not in guest mode
+            if (!App.isGuestMode) {
+                Executors.newSingleThreadExecutor().execute {
+                    if (currentComic!!.fromDAO) {
+                        Timber.d("  UPDATE in DAO")
+                        App.db.comicEntryDao().updateComicEntry(currentComic!!)
+                    } else {
+                        Timber.d("  INSERT in DAO")
+                        currentComic!!.fromDAO = true
+                        currentComic!!.id = App.db.comicEntryDao().insertComicEntry(currentComic!!)
+                        Timber.d("  INSERT in DAO :: id = ${currentComic!!.id}")
+                    }
                 }
             }
         }
@@ -221,13 +226,13 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
 
-            // Update DB if needed
-            if (nbExpectedPages != comic.nbPages) {
+            // Update DB if needed (and not in Guest Mode)
+            if (nbExpectedPages != comic.nbPages && !App.isGuestMode) {
                 // Update DB
                 Executors.newSingleThreadExecutor().execute {
                     if (comic.fromDAO) {
                         Timber.d("  UPDATE in DAO")
-                        fr.nourry.mykomik.App.db.comicEntryDao().updateComicEntry(comic)
+                        App.db.comicEntryDao().updateComicEntry(comic)
                     } else {
                         Timber.d("  INSERT in DAO")
                         comic.fromDAO = true
@@ -258,7 +263,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     private fun setPrefLastComicPath(path: String) {
-        SharedPref.set(PREF_LAST_COMIC_PATH, path)
+        if (!App.isGuestMode)
+            SharedPref.set(PREF_LAST_COMIC_PATH, path)
     }
-
 }

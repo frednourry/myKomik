@@ -20,6 +20,8 @@ class App: Application() {
         lateinit var db : AppDatabase
         lateinit var packageInfo: PackageInfo
 
+        var isGuestMode = false
+
         var currentDir: File? = null
     }
 

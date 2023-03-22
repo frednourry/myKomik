@@ -145,21 +145,35 @@ fun getDirectoriesList(dir: File): List<File> {
     return emptyList()
 }
 
-fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false): List<File> {
+fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = false): List<File> {
     Timber.d("getComicFilesFromDir:: ${dir.absolutePath}")
-    val l = dir.listFiles()
-    if (l != null) {
-        val list = l.sortedWith(compareBy{it.name})
-        val directory = if (bOnlyFile) emptyList() else list.filter { f-> (f.isDirectory) }
-        val comics = list.filter { f-> ((f.extension=="cbz" || f.extension=="cbr") && f.isFile) } //.sorted()
-        return directory.plus(comics)
+    if (!recursive) {
+        val l = dir.listFiles()
+        if (l != null) {
+            val list = l.sortedWith(compareBy { it.name })
+            val directory = if (bOnlyFile) emptyList() else list.filter { f -> (f.isDirectory) }
+            val comics = list.filter { f -> ((f.extension == "cbz" || f.extension == "cbr") && f.isFile) } //.sorted()
+            return directory.plus(comics)
+        }
+    } else {
+        val l : MutableList<File> = ArrayList()
+        dir.walkTopDown().forEach {
+            l.add(it)
+        }
+        val list = l.sortedWith(compareBy { it.name })
+        val comics = list.filter { f -> ((f.extension == "cbz" || f.extension == "cbr") && f.isFile) } //.sorted()
+        comics.forEach {
+            println(" rec ${it.isDirectory} ${it.name}")
+        }
+        return comics
     }
     return emptyList()
 }
 
-fun getComicEntriesFromDir(dir: File, bOnlyFile:Boolean = false): List<ComicEntry> {
+fun getComicEntriesFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = false): List<ComicEntry> {
     Timber.d("getComicEntriesFromDir:: ${dir.absolutePath}")
-    val listFiles = getComicsFromDir(dir, bOnlyFile)
+
+    val listFiles = getComicsFromDir(dir, bOnlyFile, recursive)
     var resultList:List<ComicEntry> = emptyList()
 
     for (file in listFiles) {

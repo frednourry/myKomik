@@ -28,22 +28,27 @@ data class TuplePageListenerList (val numPage:Int, var listeners:MutableList<Com
     }
 }
 
-abstract class ComicLoading {
+abstract class ComicEntryLoading {
     abstract val comic:ComicEntry
 }
-data class ComicLoadingCover(override val comic: ComicEntry, val listener:ComicLoadingProgressListener?, val fileList:List<ComicEntry>?=null):ComicLoading()
-data class ComicLoadingPages(override val comic: ComicEntry, var pages: MutableList<TuplePageListenerList>, val finishListener:ComicLoadingFinishedListener?=null):ComicLoading()
+data class ComicEntryLoadingCover(override val comic: ComicEntry, val listener:ComicLoadingProgressListener?, val fileList:List<ComicEntry>?=null):ComicEntryLoading() {
+    override fun toString(): String {
+        return comic.name
+    }
+
+}
+data class ComicEntryLoadingPages(override val comic: ComicEntry, var pages: MutableList<TuplePageListenerList>, val finishListener:ComicLoadingFinishedListener?=null):ComicEntryLoading()
 
 
 class ComicLoadingManager private constructor() {
     private val PATH_COMIC_DIR = "current/"
 
     // Priority
-    private var currentComicLoadingPages:ComicLoadingPages? = null    //  The ComicLoadingManager will firstly process this action
-    private var waitingCoversList: MutableList<ComicLoadingCover> = ArrayList() // If there is currently no ComicEntryLoadingPages, the ComicLoadingManager will process this list
+    private var currentComicLoadingPages:ComicEntryLoadingPages? = null    //  The ComicLoadingManager will firstly process this action
+    private var waitingCoversList: MutableList<ComicEntryLoadingCover> = ArrayList() // If there is currently no ComicEntryLoadingPages, the ComicLoadingManager will process this list
 
     private var isLoading: Boolean = false
-    private var currentComicLoadingCover: ComicLoadingCover? = null
+    private var currentComicLoadingCover: ComicEntryLoadingCover? = null
     private var currentWorkID: UUID? = null
 
     private lateinit var workManager:WorkManager
@@ -102,6 +107,26 @@ class ComicLoadingManager private constructor() {
         lifecycleOwner = lo
     }
 
+    // Add a ComicEntryLoadingCover if not already present in waitingCoversList
+    private fun addInWaitingCoverList(comicEntryLoading: ComicEntryLoadingCover) {
+
+        val pathToFind = comicEntryLoading.comic.file.absolutePath
+        var cpt=0
+        while (cpt <waitingCoversList.size) {
+            var entry = waitingCoversList[cpt]
+            if (pathToFind == entry.comic.file.absolutePath) {
+                Timber.v("addInWaitingList:: file already in list, so replace it ! $pathToFind")    // NOTE : Should replace it because the old listener may not be still valid...
+
+                waitingCoversList[cpt] = comicEntryLoading
+                return
+            }
+            cpt++
+        }
+
+        waitingCoversList.add(comicEntryLoading)
+    }
+
+
     fun loadComicEntryCoverInImageView(comic:ComicEntry, listener:ComicLoadingProgressListener) {
         if (comic.isDirectory) {
             loadComicDirectoryCoverInImageView(comic, listener)
@@ -112,7 +137,7 @@ class ComicLoadingManager private constructor() {
 
     // Find in the comic archive the first image and put it in the given ImageView
     private fun loadComicCoverInImageView(comic:ComicEntry, listener:ComicLoadingProgressListener) {
-        waitingCoversList.add(ComicLoadingCover(comic, listener))
+        addInWaitingCoverList(ComicEntryLoadingCover(comic, listener))
         loadNext()
     }
 
@@ -126,7 +151,7 @@ class ComicLoadingManager private constructor() {
             // Check if an image is in cache
             if (cacheFile.exists()) {
                 // Use cache
-                waitingCoversList.add(ComicLoadingCover(dirComic, listener, null))
+                addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, null))
                 loadNext()
             } else {
                 // Add some comics in the cache
@@ -136,14 +161,14 @@ class ComicLoadingManager private constructor() {
                 for (i in fileList.indices) {
                     val f = fileList[i]
                     if (!f.isDirectory) {
-                        waitingCoversList.add(ComicLoadingCover(f, null, null))
+                        addInWaitingCoverList(ComicEntryLoadingCover(f, null, null))
                     }
                 }
                 Timber.w("loadComicDirectoryCoverInImageView :: $fileList")
 
                 if (fileList.isNotEmpty()) {
                     // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
-                    waitingCoversList.add(ComicLoadingCover(dirComic, listener, fileList))
+                    addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, fileList))
                     loadNext()
                 }
             }
@@ -192,7 +217,7 @@ class ComicLoadingManager private constructor() {
                 pageList.add(TuplePageListenerList(numPage+num, mutableListOf(listener)))
             }
             Timber.d("loadComicPages:: targetList = $pageList")
-            currentComicLoadingPages = ComicLoadingPages(comic, pageList, finishedListener)
+            currentComicLoadingPages = ComicEntryLoadingPages(comic, pageList, finishedListener)
         }
         loadNext()
     }
@@ -242,17 +267,21 @@ class ComicLoadingManager private constructor() {
                 startLoadingPages(comicLoading)
             }
             else if (waitingCoversList.size > 0) {
+                Timber.w("waitingCoversList.size = "+waitingCoversList.size+ " $waitingCoversList")
                 isLoading = true
                 val comicLoading = waitingCoversList.removeAt(0)
                 Timber.d("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
                 startLoadingCover(comicLoading)
             } else {
+                Timber.w("waitingCoversList.size = "+waitingCoversList.size)
                 isLoading = false
+
+                // TODO if nothing left to load, check if we can load the rest of the comics !
             }
         }
     }
 
-    private fun startLoadingPages(comicLoading:ComicLoadingPages) {
+    private fun startLoadingPages(comicLoading:ComicEntryLoadingPages) {
         Timber.d("startLoadingPages(${comicLoading.comic.file.absoluteFile})")
 
         val comic = comicLoading.comic
@@ -371,7 +400,7 @@ class ComicLoadingManager private constructor() {
         }
     }
 
-    private fun startLoadingCover(comicLoading: ComicLoadingCover) {
+    private fun startLoadingCover(comicLoading: ComicEntryLoadingCover) {
         val comic = comicLoading.comic
         currentComicLoadingCover = comicLoading
         var callbackResponse = ""

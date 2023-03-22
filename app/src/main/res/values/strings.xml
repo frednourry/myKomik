@@ -50,6 +50,12 @@
     <string name="settings_disable_rotation">Disable landscape mode</string>
     <string name="settings_disable_rotation_summary">Enabling this preference will prevent the device from rotating into landscape mode</string>
     <string name="settings_hide_page_number">Hide page number display</string>
+    <string name="by_author">by Frédéric Nourry</string>
+    <string name="menu_group_general">General</string>
+    <string name="menu_group_guest">Guest mode</string>
+    <string name="menu_guest_mode">Guest mode</string>
+    <string name="guest_mode_short_description">Progress not shown or saved</string>
+    <string name="guest_mode_long_description">Progress in comics will not be saved, and files can not be deleted or marked as read</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

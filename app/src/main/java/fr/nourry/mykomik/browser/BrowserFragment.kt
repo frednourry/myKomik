@@ -3,14 +3,12 @@ package fr.nourry.mykomik.browser
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.*
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.addCallback
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -18,8 +16,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.NavigationUI
 import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
@@ -29,17 +29,17 @@ import fr.nourry.mykomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.preference.PREF_ROOT_DIR
 import fr.nourry.mykomik.preference.SharedPref
+import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.clearFilesInDir
 import fr.nourry.mykomik.utils.getDefaultDirectory
 import fr.nourry.mykomik.utils.isDirExists
-import fr.nourry.mykomik.settings.UserPreferences
 import timber.log.Timber
 import java.io.File
 
 
 private const val TAG_DIALOG_CHOOSE_ROOT = "SelectDirectoryDialog"
 
-class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
+class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListener, BrowserAdapter.OnComicAdapterListener {
 
     companion object {
         fun newInstance() = BrowserFragment()
@@ -53,13 +53,18 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     private lateinit var supportActionBar:ActionBar
     private var comics = mutableListOf<ComicEntry>()
 
-    private var isFilteredMode = false          // Special mode too select items (to erase or somthing else...)
+    private var isFilteredMode = false          // Special mode too select items (to erase or something else...)
     private var selectedComicIndexes:ArrayList<Int> = ArrayList(0)
 
     // Test for View Binding (replace 'kotlin-android-extensions')
     private var _binding: FragmentBrowserBinding? = null
     // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
+
+
+    // Menu item from the side menu (to remind to inactive them)
+    private lateinit var sideMenuItemClearCache : MenuItem
+    private lateinit var sideMenuItemChangeRootDirectory : MenuItem
 
 
     private val confirmationChooseRootDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
@@ -96,6 +101,7 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         _binding = null
     }
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Timber.i("onViewCreated")
@@ -127,6 +133,14 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
                     requireActivity().menuInflater.inflate(R.menu.menu_browser_fragment, menu)
                 }
                 super.onPrepareMenu(menu)
+
+                    // Disable the menu items to hide in guest mode
+                if (!isFilteredMode) {
+                    val menuItemClearCache = menu.findItem(R.id.action_clear_cache)
+                    menuItemClearCache.isEnabled = !App.isGuestMode
+                    val menuItemChangeRootDirectory = menu.findItem(R.id.action_choose)
+                    menuItemChangeRootDirectory.isEnabled = !App.isGuestMode
+                }
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -198,13 +212,56 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
         // End LiveDatas
 
+        // Action bar
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.setDisplayHomeAsUpEnabled(false)
 /*        supportActionBar.setLogo(R.mipmap.ic_launcher)
         supportActionBar.setDisplayUseLogoEnabled(true)*/
 
+        // Side menubar (DrawerLayout and NavigationView)
+        NavigationUI.setupWithNavController(binding.navigationView,NavHostFragment.findNavController(thisFragment))
+        binding.navigationView.setNavigationItemSelectedListener(this)
+
+        val menuItemGuest = binding.navigationView.menu.findItem(R.id.action_nav_guest_switch)
+        val switchGuest = menuItemGuest.actionView as SwitchCompat
+        switchGuest.isChecked = switchGuest.isChecked
+        switchGuest.setOnClickListener(View.OnClickListener {
+            Timber.d("switchGuest.onClick :: ${switchGuest.isChecked}")
+            setGuestMode(switchGuest.isChecked)
+        })
+        sideMenuItemClearCache = binding.navigationView.menu.findItem(R.id.action_nav_clear_cache)
+        sideMenuItemChangeRootDirectory = binding.navigationView.menu.findItem(R.id.action_nav_choose)
+
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
         viewModel.init(skipReadComic)
+    }
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        Timber.d("onNavigationItemSelected $item")
+        return when (item.itemId) {
+            R.id.action_nav_guest_switch ->  {
+                val switchGuest = item.actionView as SwitchCompat
+                switchGuest.isChecked = !switchGuest.isChecked
+                setGuestMode(switchGuest.isChecked)
+                true
+            }
+            R.id.action_nav_choose -> {
+                askToChangeRootDirectory()
+                true
+            }
+            R.id.action_nav_clear_cache -> {
+                askToClearCache()
+                true
+            }
+            R.id.action_nav_about -> {
+                showAboutPopup()
+                true
+            }
+            R.id.action_nav_settings -> {
+                goSettings()
+                true
+            }
+            else -> false
+        }
     }
 
     private fun getNbColumns(columnWidth: Int): Int {
@@ -351,8 +408,12 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     override fun onComicEntryLongClicked(comic: ComicEntry, position:Int) {
         Timber.v("onComicEntryLongClicked "+comic.file.name)
 
-        // Show checkboxes and a new menu
-        setFilterMode(true, arrayListOf(position))
+        if (App.isGuestMode) {
+            Timber.i("onComicEntryLongClicked:: Guest Mode, so do nothing")
+        } else {
+            // Show checkboxes and a new menu
+            setFilterMode(true, arrayListOf(position))
+        }
     }
 
     override fun onComicEntrySelected(list:ArrayList<Int>) {
@@ -407,7 +468,33 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         updateNbItemsSelected(0)
     }
 
+    private fun setGuestMode(isGuest:Boolean) {
+        Timber.v("setGuestMode:: $isGuest")
+        App.isGuestMode = isGuest
+
+        // Refresh the browser
+        browserAdapter.selectNone()
+        disableMultiSelect()
+        browserAdapter.notifyDataSetChanged()
+
+
+        // Update menu option
+/*        if (menuItemClearCache == null) Timber.i("menuItemClearCache == null") else Timber.i("menuItemClearCache not null")
+        menuItemClearCache.isEnabled = !isGuest
+        menuItemChangeRootDirectory.isEnabled = !isGuest
+        requireActivity().invalidateOptionsMenu()
+*/
+        // Update side menu
+        Timber.w("menuItemClearCache is null ! $sideMenuItemClearCache")
+        sideMenuItemClearCache.isEnabled = !isGuest
+        sideMenuItemChangeRootDirectory.isEnabled = !isGuest
+    }
+
     private fun askToChangeRootDirectory() {
+        // Can't change root directory in guest mode !
+        if (App.isGuestMode)
+            return
+
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_change_root_directory)
             .setPositiveButton(R.string.ok) { _,_ -> showChooseDirectoryDialog(rootDirectory, true) }
@@ -417,6 +504,10 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     }
 
     private fun askToClearCache() {
+        // Can't clear cache in guest mode !
+        if (App.isGuestMode)
+            return
+
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_clear_cache)
             .setPositiveButton(R.string.ok) { _,_ ->
@@ -438,6 +529,10 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
     }
 
     private fun askToDeleteSelection() {
+        // Can't delete comics in guest mode !
+        if (App.isGuestMode)
+            return
+
         val alert: AlertDialog
         if (selectedComicIndexes.size == 0) {
             alert = AlertDialog.Builder(requireContext())
@@ -536,5 +631,4 @@ class BrowserFragment : Fragment(), BrowserAdapter.OnComicAdapterListener {
         }
         return result
     }
-
 }

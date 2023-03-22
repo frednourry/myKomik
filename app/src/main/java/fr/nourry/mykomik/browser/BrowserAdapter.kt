@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.ItemComicBinding
@@ -92,7 +93,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 checkBox.visibility = View.INVISIBLE
 
             if (!comic.isDirectory) {
-                if (comic.nbPages>0) {
+                if (comic.nbPages>0 && !App.isGuestMode) {
                     val percent = (comic.currentPage+1)*100/comic.nbPages
                     percentView.visibility = View.VISIBLE
                     imageIconView.visibility = View.VISIBLE

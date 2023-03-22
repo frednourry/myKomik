@@ -1,0 +1,48 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group>
+        <item android:title="@string/menu_group_guest">
+            <menu>
+                <item
+                    android:id="@+id/action_nav_guest_switch"
+                    android:icon="@drawable/ic_guest"
+                    android:title="@string/menu_guest_mode"
+                    app:actionLayout="@layout/switch_item"
+                    app:actionViewClass="androidx.appcompat.widget.SwitchCompat" />
+                <item
+                    android:enabled="false"
+                    android:title="@string/guest_mode_short_description" />
+            </menu>
+        </item>
+
+    </group>
+    <group>
+        <item
+            android:id="@+id/nav_subtitle2"
+            android:title="@string/menu_group_general">
+            <menu>
+                <item
+                    android:id="@+id/action_nav_choose"
+                    android:icon="@drawable/ic_photo_library"
+                    android:title="@string/change_root_directory" />
+                <item
+                    android:id="@+id/action_nav_clear_cache"
+                    android:icon="@drawable/ic_clear_cache"
+                    android:title="@string/empty_cache" />
+                <item
+                    android:id="@+id/action_nav_settings"
+                    android:icon="@drawable/ic_settings"
+                    android:title="@string/settings" />
+
+                <item
+                    android:id="@+id/action_nav_about"
+                    android:icon="@drawable/ic_help"
+                    android:title="@string/about" />
+
+            </menu>
+        </item>
+    </group>
+</menu>

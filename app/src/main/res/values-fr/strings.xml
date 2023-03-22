@@ -18,7 +18,7 @@
     <string name="page_number_info">Page %1$d sur %2$d</string>
     <string name="about">A propos</string>
     <string name="settings">Paramètres</string>
-    <string name="actionbar_text_items_selected">Fichier(s) choisis</string>
+    <string name="actionbar_text_items_selected">Fichier(s) choisi(s)</string>
     <string name="actionbar_button_done">X Fini</string>
     <string name="message_files_deleted">Fichier(s) supprimé(s)</string>
     <string name="message_undo">Annuler</string>
@@ -50,6 +50,12 @@
     <string name="settings_disable_rotation">Désactiver le mode paysage</string>
     <string name="settings_disable_rotation_summary">Activer cette option pour empêcher de passer en mode paysage</string>
     <string name="settings_hide_page_number">Cacher le numéro des pages</string>
+    <string name="by_author">de Frédéric Nourry</string>
+    <string name="menu_group_general">Général</string>
+    <string name="menu_group_guest">Mode invité</string>
+    <string name="menu_guest_mode">Mode invité</string>
+    <string name="guest_mode_short_description">Votre lecture est masquée</string>
+    <string name="guest_mode_long_description">La lecture n\'est plus enregistrée et les comics ne peuvent plus être supprimés ou marqués comme \'lu\' </string>
 
 
     <string-array name="settings_page_turn_direction_labels">
