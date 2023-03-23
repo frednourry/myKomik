@@ -54,16 +54,16 @@ class BitmapUtil {
             val trueBorderSize = (borderSize*pixelDxRatio).toInt()
             var trueThumbnailWidth = (thumbnailWidth*pixelDxRatio).toInt()
             val trueThumbnailHeight = (thumbnailHeight*pixelDxRatio).toInt()
-            var TrueInnerImageMaxWidth = (innerImageMaxWidth*pixelDxRatio).toInt()
+            var trueInnerImageMaxWidth = (innerImageMaxWidth*pixelDxRatio).toInt()
             var trueInnerImageMaxHeight = (innerImageMaxHeight*pixelDxRatio).toInt()
 
             // Check inputs
             if (trueThumbnailWidth < 0) trueThumbnailWidth = 150
             if (trueThumbnailHeight < 0) trueThumbnailWidth = 200
-            if (TrueInnerImageMaxWidth < 0) TrueInnerImageMaxWidth = 100
+            if (trueInnerImageMaxWidth < 0) trueInnerImageMaxWidth = 100
             if (trueInnerImageMaxHeight < 0) trueInnerImageMaxHeight = 150
 
-            Timber.v("trueFrameWidth=$trueThumbnailWidth trueThumbnailHeight=$trueThumbnailHeight TrueInnerImageMaxWidth=$TrueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
+            Timber.v("trueFrameWidth=$trueThumbnailWidth trueThumbnailHeight=$trueThumbnailHeight trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
 
             try {
                 // Transform the ByteArray in Bitmap
@@ -91,23 +91,23 @@ class BitmapUtil {
                 if (bitmap.width>bitmap.height) {
                     imageRatio = 1/imageRatio
                 }
-                if (imageRatio*trueInnerImageMaxHeight>TrueInnerImageMaxWidth) {
-                    trueInnerImageMaxHeight = (TrueInnerImageMaxWidth/imageRatio).toInt()
+                if (imageRatio*trueInnerImageMaxHeight>trueInnerImageMaxWidth) {
+                    trueInnerImageMaxHeight = (trueInnerImageMaxWidth/imageRatio).toInt()
                 }
-                Timber.v("imageRatio=$imageRatio  TrueInnerImageMaxWidth=$TrueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
+                Timber.v("imageRatio=$imageRatio  trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
 
                 // Rescale it
                 var desiredScale = 0f
                 val transformMatrix = Matrix()
 
                 if (!shouldRotate) {
-                    val scaleByWidth = TrueInnerImageMaxWidth.toFloat() / bitmap.width.toFloat()
+                    val scaleByWidth = trueInnerImageMaxWidth.toFloat() / bitmap.width.toFloat()
                     val scaleByHeight = trueInnerImageMaxHeight.toFloat() / bitmap.height.toFloat()
                     desiredScale = Math.min(scaleByWidth,scaleByHeight)
                     Timber.v("desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
                 } else {
                     val scaleByWidth = trueInnerImageMaxHeight.toFloat() / bitmap.width.toFloat()
-                    val scaleByHeight = TrueInnerImageMaxWidth.toFloat() / bitmap.height.toFloat()
+                    val scaleByHeight = trueInnerImageMaxWidth.toFloat() / bitmap.height.toFloat()
                     desiredScale = Math.min(scaleByWidth,scaleByHeight)
                     Timber.v("desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
 
