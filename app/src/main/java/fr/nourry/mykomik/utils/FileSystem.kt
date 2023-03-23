@@ -12,12 +12,14 @@ import fr.nourry.mykomik.database.ComicEntry
 import timber.log.Timber
 import java.io.File
 
+val comicExtensionList = listOf("cbr", "cbz", "pdf")
 
 data class VolumeLabel (val name: String, val path:String, val isPrimary:Boolean)
 
 fun initVolumeDetection(appContext: Context): ArrayList<VolumeLabel>? {
     return getSdCardPaths(appContext, true)
 }
+
 
 //////////////// https://stackoverflow.com/questions/11281010/how-can-i-get-the-external-sd-card-path-for-android-4-0/27197248#27197248
 /**
@@ -152,7 +154,7 @@ fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = f
         if (l != null) {
             val list = l.sortedWith(compareBy { it.name })
             val directory = if (bOnlyFile) emptyList() else list.filter { f -> (f.isDirectory) }
-            val comics = list.filter { f -> ((f.extension == "cbz" || f.extension == "cbr") && f.isFile) } //.sorted()
+            val comics = list.filter { f -> (f.extension in  comicExtensionList && f.isFile) } //.sorted()
             return directory.plus(comics)
         }
     } else {
@@ -161,7 +163,7 @@ fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = f
             l.add(it)
         }
         val list = l.sortedWith(compareBy { it.name })
-        val comics = list.filter { f -> ((f.extension == "cbz" || f.extension == "cbr") && f.isFile) } //.sorted()
+        val comics = list.filter { f -> (f.extension in  comicExtensionList && f.isFile) } //.sorted()
         comics.forEach {
             println(" rec ${it.isDirectory} ${it.name}")
         }

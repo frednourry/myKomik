@@ -267,13 +267,13 @@ class ComicLoadingManager private constructor() {
                 startLoadingPages(comicLoading)
             }
             else if (waitingCoversList.size > 0) {
-                Timber.w("waitingCoversList.size = "+waitingCoversList.size+ " $waitingCoversList")
+                Timber.i("waitingCoversList.size = "+waitingCoversList.size+ " $waitingCoversList")
                 isLoading = true
                 val comicLoading = waitingCoversList.removeAt(0)
                 Timber.d("loadNext() loading ${comicLoading.comic.file.absoluteFile}")
                 startLoadingCover(comicLoading)
             } else {
-                Timber.w("waitingCoversList.size = "+waitingCoversList.size)
+                Timber.i("waitingCoversList.size = "+waitingCoversList.size)
                 isLoading = false
 
                 // TODO if nothing left to load, check if we can load the rest of the comics !

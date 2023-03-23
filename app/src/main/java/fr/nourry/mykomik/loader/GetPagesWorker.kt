@@ -1,6 +1,11 @@
 package fr.nourry.mykomik.loader
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import androidx.work.Data
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -8,10 +13,9 @@ import androidx.work.workDataOf
 import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
 import com.github.junrar.rarfile.FileHeader
-import fr.nourry.mykomik.utils.RarUtil
-import fr.nourry.mykomik.utils.ZipUtil
-import fr.nourry.mykomik.utils.isFilePathAnImage
+import fr.nourry.mykomik.utils.*
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipEntry
@@ -53,6 +57,8 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 boolResult = unzipPages(archiveFile, destPath, pagesList)
             } else if (ext == "cbr" || ext == "rar") {
                 boolResult = unrarPages(archiveFile, destPath, pagesList)
+            } else if (ext == "pdf") {
+                boolResult = getPagesInPdfFile(archiveFile, destPath, pagesList)
             }
 
             if (!boolResult) {
@@ -202,5 +208,65 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         Timber.v("unrarPages ${comicFile.name}")
         return true
     }
+
+    private fun getPagesInPdfFile(comicFile: File, filePath:String, pages:List<Int>):Boolean {
+        Timber.v("getPagesInPdfFile ${comicFile.name} pages=$pages")
+
+        try {
+            val fileDescriptor: ParcelFileDescriptor = ParcelFileDescriptor.open(comicFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(fileDescriptor)
+            val pageCount: Int = renderer.pageCount
+
+            nbPages = pageCount
+
+            if (!isStopped && pageCount > 0) {
+                for (numPage in pages) {
+                    if (isStopped) {    // Check if the work was cancelled
+                        break
+                    }
+
+                    if (numPage >= nbPages) {
+                        Timber.w("  numPage is bigger than nbPages ! ($numPage>=$nbPages)")
+                        continue
+                    }
+
+                    val page: PdfRenderer.Page = renderer.openPage(numPage)
+                    val tempBitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+
+                    val tempCanvas = Canvas(tempBitmap)
+                    tempCanvas.drawColor(Color.WHITE)
+                    tempCanvas.drawBitmap(tempBitmap, 0f, 0f, null)
+                    page.render(tempBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.close()
+
+                    if (tempBitmap == null || PdfUtil.isBitmapBlankOrWhite(tempBitmap)) {
+                        // Not a valid image
+                        Timber.w("getPagesInPdfFile : image not valid !")
+//                        continue
+                    }
+
+                    val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+                    Timber.w("  getPagesInPdfFile page=$numPage in $pagePath")
+
+                    BitmapUtil.saveBitmapInFile(tempBitmap, pagePath)
+
+                    // Send a progress event
+                    setProgressAsync(Data.Builder().
+                    putInt(KEY_CURRENT_INDEX, numPage).
+                    putString(KEY_CURRENT_PATH, pagePath).
+                    putInt(KEY_NB_PAGES, nbPages).
+                    build())
+                }
+            }
+            fileDescriptor.close()
+        } catch (e: IOException) {
+            Timber.v("getPagesInPdfFile :: IOException $e")
+            return false
+        }
+
+        Timber.v("getPagesInPdfFile ${comicFile.name}")
+        return true
+    }
+
 }
 

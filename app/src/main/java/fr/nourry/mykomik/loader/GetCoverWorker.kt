@@ -2,17 +2,19 @@ package fr.nourry.mykomik.loader
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
 import com.github.junrar.rarfile.FileHeader
-import fr.nourry.mykomik.utils.BitmapUtil
-import fr.nourry.mykomik.utils.RarUtil
-import fr.nourry.mykomik.utils.ZipUtil
-import fr.nourry.mykomik.utils.isFilePathAnImage
+import fr.nourry.mykomik.utils.*
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.zip.ZipEntry
@@ -49,10 +51,16 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             val ext = archiveFile.extension.lowercase()
             var boolResult = false
 
-            if (ext == "cbz" || ext == "zip") {
-                boolResult = unzipCoverInFile(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-            } else if (ext == "cbr" || ext == "rar") {
-                boolResult = unrarCoverInFile(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+            when (ext) {
+                "cbz", "zip" -> {
+                    boolResult = unzipCoverInFile(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                }
+                "cbr", "rar" -> {
+                    boolResult = unrarCoverInFile(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                }
+                "pdf" -> {
+                    boolResult = getCoverInPdfFile(archiveFile, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                }
             }
 
             if (!boolResult)
@@ -174,6 +182,71 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             return false
         } catch (e: IOException) {
             Timber.v("unrarCoverInFile :: IOException $e")
+            return false
+        }
+
+        return (bitmap!=null)
+    }
+
+    private fun getCoverInPdfFile(
+        comicFile: File,
+        imagePath: String,
+        thumbnailWidth: Int,
+        thumbnailHeight: Int,
+        thumbnailInnerImageWidth: Int,
+        thumbnailInnerImageHeight: Int,
+        thumbnailFrameSize: Int
+    ): Boolean {
+        Timber.v("pdfCoverInFile")
+        var bitmap: Bitmap? = null
+
+        // Unrar
+        try {
+            val fileDescriptor: ParcelFileDescriptor = ParcelFileDescriptor.open(comicFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(fileDescriptor)
+            val pageCount: Int = renderer.pageCount
+            for (i in 0 until pageCount) {
+                val page: PdfRenderer.Page = renderer.openPage(i)
+                val tempBitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+
+                val tempCanvas = Canvas(tempBitmap)
+                tempCanvas.drawColor(Color.WHITE)
+                tempCanvas.drawBitmap(tempBitmap, 0f, 0f, null)
+                page.render(tempBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+
+                if (tempBitmap == null || PdfUtil.isBitmapBlankOrWhite(tempBitmap)) {
+                    // Not a valid image
+                    continue
+                }
+
+                // Transform tempBitmap in byteArray
+                val stream = ByteArrayOutputStream()
+                tempBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                val byteArray: ByteArray = stream.toByteArray()
+                tempBitmap.recycle()
+
+                // Reduce the bitmap if needed
+                bitmap = BitmapUtil.createFramedBitmap(byteArray, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                if (bitmap != null) {
+                    val bitmapToSave =
+                        Bitmap.createScaledBitmap(bitmap, bitmap.width, bitmap.height, false)
+
+                    // Save the bitmap in cache and return
+                    BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
+
+                    break;  // For(...)
+                }
+
+            }
+            fileDescriptor.close()
+
+            if (bitmap == null) {
+                Timber.w("pdfCoverInFile:: pdf without image ${comicFile.path}")
+            }
+
+        } catch (e: IOException) {
+            Timber.v("pdfCoverInFile :: IOException $e")
             return false
         }
 
