@@ -11,6 +11,14 @@ import androidx.core.os.EnvironmentCompat
 import fr.nourry.mykomik.database.ComicEntry
 import timber.log.Timber
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
+import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.*
+import kotlin.collections.ArrayList
 
 val comicExtensionList = listOf("cbr", "cbz", "pdf")
 
@@ -255,4 +263,24 @@ fun createDirectory(path:String) {
             Timber.w("createDirectory:: $path :: error while creating")
         }
     }
+}
+
+// Get a file size in Megabytes
+fun getFileSizeInMo(f:File): Float {
+    if (f.exists()) {
+        val size = f.length()
+        return size.toFloat()/1048576f     // NOTE: 1048576 = 1024 x 1024
+    }
+    else
+        return 0f
+}
+
+// Get the last modification date of a file
+fun getFileModificationDate(f:File): String {
+    if (f.exists()) {
+        val date = Date(f.lastModified())
+        return date.toString()
+    }
+    else
+        return "?"
 }

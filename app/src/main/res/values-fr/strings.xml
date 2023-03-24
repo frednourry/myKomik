@@ -18,6 +18,7 @@
     <string name="page_number_info">Page %1$d sur %2$d</string>
     <string name="about">A propos</string>
     <string name="settings">Paramètres</string>
+    <string name="comic_info">Information</string>
     <string name="actionbar_text_items_selected">Fichier(s) choisi(s)</string>
     <string name="actionbar_button_done">X Fini</string>
     <string name="message_files_deleted">Fichier(s) supprimé(s)</string>
@@ -38,6 +39,12 @@
     <string name="go_last_page">Aller à la dernière page</string>
     <string name="previous_comic">Comic précédent</string>
     <string name="next_comic">Prochain comic </string>
+    <string name="popup_info_title">Information sur le fichier</string>
+    <string name="popup_info_name">Nom</string>
+    <string name="popup_info_size">Taille</string>
+    <string name="popup_info_date">Date</string>
+    <string name="popup_info_path">Chemin</string>
+    <string name="unit_megabyte">Mo</string>
 
     <string name="settings_library">Paramètre de la librairie</string>
     <string name="settings_reader">Paramètre de lecture</string>

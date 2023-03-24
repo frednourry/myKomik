@@ -3,6 +3,7 @@ package fr.nourry.mykomik.pageslider
 import android.animation.ObjectAnimator
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.text.Html
 import android.view.*
 import android.widget.Toast
 import androidx.activity.addCallback
@@ -26,6 +27,8 @@ import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.settings.UserPreferences
+import fr.nourry.mykomik.utils.getFileModificationDate
+import fr.nourry.mykomik.utils.getFileSizeInMo
 import timber.log.Timber
 import java.io.File
 
@@ -123,6 +126,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                         if (newComic != null && newComic != currentComic) {
                             changeCurrentComic(newComic)
                         }
+                        true
+                    }
+                    R.id.action_information -> {
+                        showComicInformationPopup()
                         true
                     }
                     else -> false
@@ -646,5 +653,23 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             toast = Toast.makeText(requireContext(), text, Toast.LENGTH_SHORT)
         }
         toast.show()*/
+    }
+
+    private fun showComicInformationPopup() {
+        val title = getString(R.string.popup_info_title)
+        val message = Html.fromHtml(
+                        "<b>"+getString(R.string.popup_info_name)+" : </b>"+currentComic.file.name + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_path)+" : </b>"+currentComic.file.absolutePath.subSequence(0, currentComic.file.absolutePath.length-currentComic.file.name.length) + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_date) + " : </b>" + getFileModificationDate(currentComic.file) + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_size)+" : </b>%.2f".format(getFileSizeInMo(currentComic.file)) + getString(R.string.unit_megabyte)
+                        , 0)
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.ok) { _,_ ->
+            }
+            .create()
+            .show()
+
     }
 }
