@@ -33,15 +33,15 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 val holderInnerComic = cardView.tag as InnerComicEntry
                 val holderComic = holderInnerComic.comic
 
-                if (holderComic.file.absolutePath == comic.file.absolutePath) {
+                if (holderComic.uri == comic.uri) {
                     Glide.with(imageView.context)
                         .load(path)
                         .into(imageView)
                 } else {
-                    Timber.w("onRetrieved:: To late. This view no longer requires this image...")
+                    Timber.i("onRetrieved:: To late. This view no longer requires this image...")
                 }
             } else {
-                Timber.w("onRetrieved:: empty path ! (do nothing)")
+                Timber.i("onRetrieved:: empty path ! (do nothing)")
             }
         }
     }
@@ -85,7 +85,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
             cardView.tag = innerComic
             cardView.setOnClickListener(this@BrowserAdapter)
             cardView.setOnLongClickListener(this@BrowserAdapter)
-            textView.text = comic.file.name
+            textView.text = comic.name
             if (showFilterMode) {
                 checkBox.isChecked = arrCheckedItems.indexOf(position)>=0
                 checkBox.visibility = View.VISIBLE

@@ -1,5 +1,9 @@
 package fr.nourry.mykomik.pageslider
 
+import android.content.Context
+import android.media.MediaScannerConnection
+import android.net.Uri
+import android.os.Environment
 import androidx.lifecycle.*
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
@@ -8,16 +12,17 @@ import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.loader.ComicLoadingResult
 import fr.nourry.mykomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
-import fr.nourry.mykomik.preference.PREF_LAST_COMIC_PATH
+import fr.nourry.mykomik.preference.PREF_LAST_COMIC_URI
 import fr.nourry.mykomik.preference.SharedPref
-import fr.nourry.mykomik.utils.getComicEntriesFromDir
+import fr.nourry.mykomik.utils.*
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.Executors
 
 
 sealed class  PageSliderViewModelState(
-    val isInitialized: Boolean = false
+    val isInitialized: Boolean = false,
 ) {
     class Init : PageSliderViewModelState(
         isInitialized = false
@@ -51,10 +56,10 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     private var comicEntriesInCurrentDir: MutableList<ComicEntry> = mutableListOf()
     private var currentIndexInDir = -1
-    private var currentDirFile = MutableLiveData<File>()
-    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentDirFile.switchMap { file ->
-        Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
-        fr.nourry.mykomik.App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(file.absolutePath)
+    private var currentUri = MutableLiveData<Uri>()
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUri.switchMap { uri ->
+//        Timber.d("Transformations.switchMap(currentUri):: uri:$uri")
+        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(uri.toString())
     }.distinctUntilChanged()
 
     fun getCurrentPage():Int {
@@ -63,7 +68,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun initialize(comic: ComicEntry, pageToGo: Int/*, shouldUncompress:Boolean*/) {
-        Timber.d("initialize(${comic.file.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
+        Timber.d("initialize(${comic.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
         Timber.d("   comic = $comic")
 
         ComicLoadingManager.getInstance().clearComicDir()
@@ -73,7 +78,12 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
         currentComic!!.currentPage = pageToGo
 
-        currentDirFile.value = comic.file.parentFile
+//        currentDirFile.value = comic.file.parentFile
+        if (comic.uri != null) {
+            currentUri.value = comic.uri!!
+        } else {
+            Timber.w("initialize:: comic.uri is null !")
+        }
 
         // Determine the pages to ask
         val offset = 3
@@ -100,7 +110,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             Timber.w("  newComic not in comicEntriesInCurrentDir!!")
         }
 
-        setPrefLastComicPath(newComic.file.absolutePath)
+        setPrefLastComicPath(newComic.uri.toString())
 
         initialize(newComic, 0 /*newComic.currentPage*/)
         onSetCurrentPage(0, true)
@@ -148,22 +158,28 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         state.value = PageSliderViewModelState.Cleaned()
     }
 
-    fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
+    fun updateComicEntriesFromDAO(context: Context, comicEntriesFromDAO: List<ComicEntry>) {
         Timber.d("updateComicEntriesFromDAO")
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
-        val comicEntriesFromDisk = getComicEntriesFromDir(currentDirFile.value!!, true)
-//        Timber.w("    comicEntriesFromDisk = $comicEntriesFromDisk")
+        val docFile = getDocumentFileFromUri(context, App.uriList.last())
+        val comicEntriesFromDisk = if (docFile!= null)
+                                        getComicEntriesFromDocFile(docFile, true)
+                                    else
+                                        emptyList()
+
+//        Timber.w("    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesInCurrentDir.clear()
+
         comicEntriesInCurrentDir = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
         Timber.d("synchronizeDBWithDisk")
-//        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
-//        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
+        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
         for ((index, fe) in comicEntriesFromDisk.withIndex()) {
@@ -174,7 +190,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 //                Timber.v("  -- ${fe.dirPath}")
                 if (fe.hashkey == feDAO.hashkey) {
 //                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
-                    feDAO.file = fe.file
+                    feDAO.uri = fe.uri
+                    feDAO.docFile = fe.docFile
                     feDAO.fromDAO = true
                     result.add(feDAO)
                     found = true
@@ -191,7 +208,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             }
         }
 
-        Timber.d(" returns => $result")
+        Timber.d(" returns (${result.size}) => $result")
         return result
     }
 
@@ -221,7 +238,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     override fun onFinished(result: ComicLoadingResult, comic: ComicEntry) {
-        Timber.d("onFinished result=$result comic=${comic.file} comic.nbPages=${comic.nbPages}")
+        Timber.d("onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages}")
         if (result == ComicLoadingResult.SUCCESS) {
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
@@ -231,12 +248,12 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
                 // Update DB
                 Executors.newSingleThreadExecutor().execute {
                     if (comic.fromDAO) {
-                        Timber.d("  UPDATE in DAO")
+                        Timber.d("  UPDATE in DAO $comic")
                         App.db.comicEntryDao().updateComicEntry(comic)
                     } else {
-                        Timber.d("  INSERT in DAO")
+                        Timber.d("  INSERT in DAO $comic")
                         comic.fromDAO = true
-                        comic.id = fr.nourry.mykomik.App.db.comicEntryDao().insertComicEntry(comic)
+                        comic.id = App.db.comicEntryDao().insertComicEntry(comic)
                         Timber.d("  INSERT in DAO :: id = ${comic.id}")
                     }
                 }
@@ -264,6 +281,57 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     private fun setPrefLastComicPath(path: String) {
         if (!App.isGuestMode)
-            SharedPref.set(PREF_LAST_COMIC_PATH, path)
+            SharedPref.set(PREF_LAST_COMIC_URI, path)
     }
+
+    // Save a page in a file
+    // NOTE: the page should already be in cache !
+    @Throws(IOException::class)
+    fun saveCurrentPageInPictureDirectory(comic: ComicEntry, numPage: Int):String {
+        Timber.d("saveCurrentPageInPictureDirectory")
+        val dirImageFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        val saveDirectory = File(concatPath(dirImageFile.absolutePath, App.appName))
+        Timber.d("saveCurrentPageInPictureDirectory:: dirImageFile=$dirImageFile saveDirectory=$saveDirectory")
+
+        if (!saveDirectory.exists()) {
+/*            if (!saveDirectory.mkdir())
+                Timber.d("saveCurrentPage: 1")
+                // Exit
+                return ""*/
+            saveDirectory.mkdir()
+            if (!saveDirectory.exists()) {
+                Timber.d("saveCurrentPageInPictureDirectory: unable to create Picture directory")
+                return ""
+            }
+        }
+
+        // Get a path to save the image
+        var imageToSavePath: String = concatPath(saveDirectory.absolutePath,  deleteExtension(comic.name)+"_p"+(numPage+1)+".jpg")
+        var outputFile = File(imageToSavePath)
+        var tempCpt=0
+
+        // Check if already exists (if so, change the name)
+        while (outputFile.exists()) {
+            tempCpt++
+            imageToSavePath = concatPath(saveDirectory.absolutePath,  deleteExtension(comic.name)+"_p"+(numPage+1)+"_"+tempCpt+".jpg")
+            outputFile = File(imageToSavePath)
+        }
+
+        // Check if the source page is really in cache
+        val currentCachePagePath = ComicLoadingManager.getInstance().getComicEntryPageFilePath(comic, numPage)
+        val currentCachePageFile = File(currentCachePagePath)
+        if (currentCachePageFile.exists()) {
+            Timber.d("saveCurrentPage: 2")
+            // Copy this file in 'imageToSavePath'
+            currentCachePageFile.copyTo(outputFile)
+
+            // Tell the MediaScanner that there is a new image
+            MediaScannerConnection.scanFile(App.appContext, arrayOf<String>(outputFile.absolutePath),null, null)
+
+            // Return the file name, minus the stupid part (ie something like that /storage/emulated/0/)
+            return outputFile.absolutePath.substring(dirImageFile.absolutePath.lastIndexOf('/'))
+        } else
+            return ""
+    }
+
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="no_permission">Merci d\'autoriser cette applications à parcourir vos répertoires.</string>
     <string name="app_name">MyKomik</string>
+    <string name="no_permission">Merci d\'autoriser cette applications à parcourir vos répertoires.</string>
     <string name="choose_root_text">Choisissez le répertoire avec vos comics</string>
     <string name="empty_cache">Vider le cache</string>
     <string name="change_root_directory">Changer le répertoire racine</string>
@@ -63,6 +63,11 @@
     <string name="menu_guest_mode">Mode invité</string>
     <string name="guest_mode_short_description">Votre lecture est masquée</string>
     <string name="guest_mode_long_description">La lecture n\'est plus enregistrée et les comics ne peuvent plus être supprimés ou marqués comme \'lu\' </string>
+    <string name="save_page">Sauver cette page</string>
+    <string name="save_page_message">Sauver cette page sur le téléphone?</string>
+    <string name="save_page_message_unknown_error">Une erreur inconnue est survenue en sauvegardant</string>
+    <string name="save_page_message_ok">Page sauvée dans %s</string>
+    <string name="save_page_message_error_io">Une erreur d\'I/O est survenue en sauvegardant dans An I/O error occured while saving this page in %s (%s)</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

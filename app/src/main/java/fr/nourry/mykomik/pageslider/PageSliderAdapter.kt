@@ -54,7 +54,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
 
                 // Check if the target is still waiting this image
-                if (holderComic.file.absolutePath == comic.file.absolutePath && currentIndex == holderInnerComic.position) {
+                if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
                     image = holderInnerComic.imageView
                     Glide.with(image.context)

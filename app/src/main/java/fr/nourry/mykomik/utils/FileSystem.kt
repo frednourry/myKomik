@@ -1,197 +1,33 @@
 package fr.nourry.mykomik.utils
 
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
+import android.provider.DocumentsContract
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.os.EnvironmentCompat
+import androidx.documentfile.provider.DocumentFile
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
 import timber.log.Timber
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.attribute.FileTime
-import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.io.*
 import java.util.*
-import kotlin.collections.ArrayList
 
 val comicExtensionList = listOf("cbr", "cbz", "pdf")
 
-data class VolumeLabel (val name: String, val path:String, val isPrimary:Boolean)
-
-fun initVolumeDetection(appContext: Context): ArrayList<VolumeLabel>? {
-    return getSdCardPaths(appContext, true)
-}
-
-
-//////////////// https://stackoverflow.com/questions/11281010/how-can-i-get-the-external-sd-card-path-for-android-4-0/27197248#27197248
-/**
- * returns a list of all available sd cards paths, or null if not found.
- *
- * @param includePrimaryExternalStorage set to true if you wish to also include the path of the primary external storage
- */
-fun getSdCardPaths(context: Context, includePrimaryExternalStorage: Boolean): ArrayList<VolumeLabel>? {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        val storageVolumes = storageManager.storageVolumes
-        if (!storageVolumes.isNullOrEmpty()) {
-            val primaryVolume = storageManager.primaryStorageVolume
-            val result = ArrayList<VolumeLabel>(storageVolumes.size)
-            for (storageVolume in storageVolumes) {
-                val volumeName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                        storageVolume.mediaStoreVolumeName!!
-                    else
-                        storageVolume.getDescription(context)+if (storageVolume.uuid != null) ": ("+storageVolume.uuid.toString()+")" else ""
-                val volumePath = getVolumePath(storageVolume) ?: continue
-                if (storageVolume.uuid == primaryVolume.uuid || storageVolume.isPrimary) {
-                    if (includePrimaryExternalStorage)
-                        result.add(VolumeLabel(volumeName, volumePath, storageVolume.isPrimary))
-                    continue
-                }
-                result.add(VolumeLabel(volumeName, volumePath, storageVolume.isPrimary))
-            }
-            return if (result.isEmpty()) null else result
-        }
-    }
-    val externalCacheDirs = ContextCompat.getExternalCacheDirs(context)
-    if (externalCacheDirs.isEmpty())
-        return null
-    if (externalCacheDirs.size == 1) {
-        if (externalCacheDirs[0] == null)
-            return null
-        val storageState = EnvironmentCompat.getStorageState(externalCacheDirs[0])
-        if (Environment.MEDIA_MOUNTED != storageState)
-            return null
-        if (!includePrimaryExternalStorage && Environment.isExternalStorageEmulated())
-            return null
-    }
-    val result = ArrayList<VolumeLabel>()
-    if (externalCacheDirs[0] != null && (includePrimaryExternalStorage || externalCacheDirs.size == 1))
-        result.add(VolumeLabel("No Name", getRootOfInnerSdCardFolder(context, externalCacheDirs[0]).absolutePath, true))
-    for (i in 1 until externalCacheDirs.size) {
-        val file = externalCacheDirs[i] ?: continue
-        val dir = getRootOfInnerSdCardFolder(context, externalCacheDirs[i])
-        val name = dir.name
-        val storageState = EnvironmentCompat.getStorageState(file)
-        if (Environment.MEDIA_MOUNTED == storageState)
-            result.add(VolumeLabel(name, dir.absolutePath, false))
-    }
-    return if (result.isEmpty()) null else result
-}
-
-fun getRootOfInnerSdCardFolder(context: Context, inputFile: File): File {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        storageManager.getStorageVolume(inputFile)?.let {
-            val result = getVolumePath(it)
-            if (result != null)
-                return File(result)
-        }
-    }
-    var file: File = inputFile
-    val totalSpace = file.totalSpace
-    while (true) {
-        val parentFile = file.parentFile
-        if (parentFile == null || parentFile.totalSpace != totalSpace || !parentFile.canRead())
-            return file
-        file = parentFile
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.N)
-fun getVolumePath(storageVolume: StorageVolume): String? {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-        return storageVolume.directory?.absolutePath
-    try {
-        val storageVolumeClazz = StorageVolume::class.java
-        val getPath = storageVolumeClazz.getMethod("getPath")
-        return getPath.invoke(storageVolume) as String
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    return null
-}
-/////////////////////////////////////////////////////////////////
-
 fun concatPath(path1:String, path2:String):String {
     return path1+File.separator+path2
-}
-
-
-fun getDefaultDirectory(appContext: Context): File {
-    val storageDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-    return storageDir!!
 }
 
 fun isFileExists(path: String):Boolean {
     val f = File(path)
     return f.exists()
 }
-
-
-fun isDirExists(path: String):Boolean {
-    val dir = File(path)
-    return dir.isDirectory
-}
-
-fun isValidDir(file:File):Boolean {
-    return file.exists() && file.canRead()  // NOTE: /storage/emulated (and before) returns false
-}
-
-fun getDirectoriesList(dir: File): List<File> {
-    Timber.d("getDirectoriesList:: ${dir.absolutePath}")
-    val l = dir.listFiles()
-
-    if (l != null) {
-        val temp = l.sortedWith(compareBy{it.name}).filter { f-> (f.isDirectory) }
-        Timber.d(temp.toString())
-        return temp
-    }
-    return emptyList()
-}
-
-fun getComicsFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = false): List<File> {
-    Timber.d("getComicFilesFromDir:: ${dir.absolutePath}")
-    if (!recursive) {
-        val l = dir.listFiles()
-        if (l != null) {
-            val list = l.sortedWith(compareBy { it.name })
-            val directory = if (bOnlyFile) emptyList() else list.filter { f -> (f.isDirectory) }
-            val comics = list.filter { f -> (f.extension in  comicExtensionList && f.isFile) } //.sorted()
-            return directory.plus(comics)
-        }
-    } else {
-        val l : MutableList<File> = ArrayList()
-        dir.walkTopDown().forEach {
-            l.add(it)
-        }
-        val list = l.sortedWith(compareBy { it.name })
-        val comics = list.filter { f -> (f.extension in  comicExtensionList && f.isFile) } //.sorted()
-        comics.forEach {
-            println(" rec ${it.isDirectory} ${it.name}")
-        }
-        return comics
-    }
-    return emptyList()
-}
-
-fun getComicEntriesFromDir(dir: File, bOnlyFile:Boolean = false, recursive:Boolean = false): List<ComicEntry> {
-    Timber.d("getComicEntriesFromDir:: ${dir.absolutePath}")
-
-    val listFiles = getComicsFromDir(dir, bOnlyFile, recursive)
-    var resultList:List<ComicEntry> = emptyList()
-
-    for (file in listFiles) {
-        resultList = resultList.plusElement(ComicEntry(file))
-    }
-    return resultList
-}
-
 
 // Return true if and only if the extension is 'jpg', 'gif', 'png' or 'jpeg'
 fun isImageExtension(extension:String) : Boolean {
@@ -204,16 +40,6 @@ fun isFilePathAnImage(filename:String) : Boolean {
     return isImageExtension(ext)
 }
 
-// Return a file list from a given dir where all files are images
-fun getImageFilesFromDir(dir: File): List<File> {
-    Timber.d("getImageFilesFromDir:: ${dir.absolutePath}")
-    val l = dir.listFiles()
-    if (l != null) {
-        val list = l.sortedWith(compareBy { it.name })
-        return list.filter { f -> val ext = f.extension.lowercase(); ( f.isFile && isImageExtension (ext)) }.sorted()
-    }
-    return emptyList()
-}
 
 // Delete files in a directory
 fun clearFilesInDir(dir:File) {
@@ -250,6 +76,18 @@ fun deleteFile(f:File): Boolean {
     return true
 }
 
+fun deleteDocumentFile(docFile:DocumentFile?) {
+    if (docFile == null) {
+        Timber.v("deleteDocumentFile : docFile = null")
+    } else {
+        if (docFile.delete()) {
+            Timber.v("deleteDocumentFile OK : $docFile")
+        } else {
+            Timber.w("deleteDocumentFile not OK : $docFile")
+        }
+    }
+}
+
 // Create a directory if it's not exists
 fun createDirectory(path:String) {
     val dir = File(path)
@@ -265,22 +103,148 @@ fun createDirectory(path:String) {
     }
 }
 
-// Get a file size in Megabytes
-fun getFileSizeInMo(f:File): Float {
-    if (f.exists()) {
-        val size = f.length()
+fun getSizeInMo(size:Long): Float {
         return size.toFloat()/1048576f     // NOTE: 1048576 = 1024 x 1024
-    }
-    else
-        return 0f
 }
 
-// Get the last modification date of a file
-fun getFileModificationDate(f:File): String {
-    if (f.exists()) {
-        val date = Date(f.lastModified())
-        return date.toString()
+fun getLocalDirName(rootTreeUri:Uri?, currentUri:Uri?):String {
+    Timber.d("getLocalDirName rootTreeUri=$rootTreeUri currentUri=$currentUri")
+    if (currentUri != null && rootTreeUri != null) {
+        val rootLastSegment = rootTreeUri.lastPathSegment
+        val currentLastSegment = currentUri.lastPathSegment
+
+        if (rootLastSegment != null && currentLastSegment != null) {
+            val lastSlash = rootLastSegment.lastIndexOf('/')
+            return currentLastSegment.substring(lastSlash)
+        }
     }
+    return "--"
+}
+
+
+
+// Get the last modification date of a file
+fun getReadableDate(l:Long): String {
+    val date = Date(l)
+    return date.toString()
+}
+
+// Return the extension of a filename
+fun getExtension(filename:String): String {
+    val lastPointPos = filename.lastIndexOf('.')
+    return if (lastPointPos != -1 && filename.length > lastPointPos+1)
+        filename.substring(lastPointPos+1).lowercase()
     else
-        return "?"
+        ""
+}
+
+fun deleteExtension(filename:String): String = filename.substring(0, filename.lastIndexOf('.'))
+
+fun getComicEntriesFromDocFile(docFile: DocumentFile, bOnlyFile:Boolean = false): List<ComicEntry> {
+    Timber.d("getComicEntriesFromDocFile:: ${docFile.uri} bOnlyFile=$bOnlyFile")
+    var resultList:List<ComicEntry> = emptyList()
+
+    val childDocFiles = docFile.listFiles()
+
+    if (childDocFiles.isNotEmpty()) {
+        val comicsList:MutableList<ComicEntry> = mutableListOf()
+
+        // Convert DocumentFile in ComicEntry
+        for (file in childDocFiles) {
+            comicsList.add(ComicEntry.createFromDocFile(file))
+        }
+
+        // Filter directories and comics
+        val mDirectories:MutableList<ComicEntry> = mutableListOf()
+        val mComics : MutableList<ComicEntry> = mutableListOf()
+        for (comic in comicsList) {
+            if (comic.isDirectory) {
+                if (!bOnlyFile)
+                    mDirectories.add(comic)
+            } else {
+                // Test the extension
+                if (comic.extension in comicExtensionList)
+                    mComics.add(comic)
+            }
+
+        }
+
+        // Sort by name, both directories and comics
+        val directoryList:List<ComicEntry> = if (!bOnlyFile) {
+            mDirectories.sortedWith(compareBy { it.name })
+        } else {
+            emptyList()
+        }
+
+        val comicList = mComics.sortedWith(compareBy { it.name })
+
+        // Assemble result
+        resultList = directoryList.plus(comicList)
+    }
+
+    return resultList
+}
+
+fun getDocumentFileFromUri(context:Context, uri: Uri):DocumentFile? {
+    return DocumentFile.fromTreeUri(context, uri)
+}
+
+// Find a given uri in a DocumentFile (which is a directory)
+// Returns a list of Uri from 'uri' to 'docFile.uri'
+fun findUriInDocumentFile(rootDocFile:DocumentFile, uri:Uri):MutableList<Uri> {
+    var result = mutableListOf<Uri>()
+    if (rootDocFile.isDirectory) {
+        for (docFile in rootDocFile.listFiles()) {
+            if (docFile.uri.compareTo(uri) == 0) {
+                result.add(rootDocFile.uri)
+                break
+            } else if (docFile.isDirectory) {
+                val uriList = findUriInDocumentFile(docFile, uri)
+                if (uriList.isNotEmpty()) {
+                    uriList.add(rootDocFile.uri)
+                    return uriList
+                }
+            }
+        }
+    }
+    return result
+}
+
+// Get a temporary file that doesn't exist
+// tempDirectory should exist !
+fun getTempFile(tempDirectory:File, name:String, checkExist:Boolean):File {        // "current" = same temp dir than the ComicLoadingManager
+    var tempFile =  concatPath(tempDirectory.absolutePath, "$name.tmp")
+    var cpt = 0
+    var file = File(tempFile)
+    if (!checkExist)
+        return file
+
+    while (file.exists()) {
+        cpt++
+        tempFile =  concatPath(tempDirectory.absolutePath, "$name-$cpt.tmp")
+        file = File(tempFile)
+    }
+    return file
+}
+fun readTextFromUri(context:Context, uri: Uri, file:File): File? {
+    try {
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            file.outputStream().use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+    } catch (e:Exception) {
+        Timber.e(e.stackTraceToString())
+        return null
+    }
+    return file
+}
+
+@Throws(IOException::class)
+fun File.copyTo(file: File) {
+    inputStream().use { input ->
+        file.outputStream().use { output ->
+            input.copyTo(output)
+        }
+    }
 }

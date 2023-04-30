@@ -106,7 +106,7 @@ class UncompressAllComicWorker (context: Context, workerParams: WorkerParameters
                 Timber.w("unzipInDirectory:: error "+t.message)
             }
             finally {
-                Timber.w("unzipInDirectory :: finally...")
+                Timber.i("unzipInDirectory :: finally...")
             }
         }
         Timber.v("END unzipInDirectory ${comicFile.name}")

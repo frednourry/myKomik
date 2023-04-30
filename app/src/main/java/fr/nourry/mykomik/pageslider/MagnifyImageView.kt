@@ -28,7 +28,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         private const val defaultClickDelay = 200    // Delay between ACTION_DOWN and ACTION_UP to consider this as a click
 
         fun printFloatArray(f:FloatArray, label:String="printMatrix") {
-            Timber.e("$label${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
+            Timber.i("$label${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
         }
 
     }
@@ -284,7 +284,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
      * Reset the image to its initial state
      */
     fun resetImage() {
-        Timber.w("resetImage")
+        Timber.i("resetImage")
         if (isImageModified) {
             scaleType = oldScaleType
             currentScale = 1f
@@ -295,7 +295,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     }
 
     fun updateParameters(scale:Float = 1f, offsetX:Float = 0f, offsetY:Float = 0f, matrixValues:FloatArray = FloatArray(9)) {
-        Timber.w("updateParameters $scale $offsetX $offsetY")
+        Timber.i("updateParameters $scale $offsetX $offsetY")
 
         oldScaleType = scaleType
 

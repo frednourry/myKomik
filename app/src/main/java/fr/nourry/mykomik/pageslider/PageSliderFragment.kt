@@ -1,16 +1,23 @@
 package fr.nourry.mykomik.pageslider
 
+import android.Manifest
 import android.animation.ObjectAnimator
+import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.text.Html
 import android.view.*
 import android.widget.Toast
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
+import androidx.core.app.ActivityCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -27,20 +34,27 @@ import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.settings.UserPreferences
-import fr.nourry.mykomik.utils.getFileModificationDate
-import fr.nourry.mykomik.utils.getFileSizeInMo
+import fr.nourry.mykomik.utils.getDocumentFileFromUri
+import fr.nourry.mykomik.utils.getLocalDirName
+import fr.nourry.mykomik.utils.getReadableDate
+import fr.nourry.mykomik.utils.getSizeInMo
 import timber.log.Timber
-import java.io.File
+import java.io.IOException
 
 
 private const val TAG_DIALOG_COMIC_LOADING = "LoadingComicDialog"
 
 class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSliderAdapter.Listener  {
 
-    val PAGE_SELECTOR_ANIMATION_DURATION = 300L
+    val PAGE_SELECTOR_ANIMATION_DURATION = 300L         // in milliseconds
     val STATE_CURRENT_COMIC = "state:current_comic"
     val STATE_CURRENT_PAGE = "state:current_page"
 
+    companion object {
+        var PERMISSIONS_TO_WRITE = arrayOf(
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+    }
 
     private lateinit var pageSliderAdapter: PageSliderAdapter
     private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
@@ -121,6 +135,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                         }
                         true
                     }
+                    R.id.action_save -> {
+                        popupSaveCurrentPage(currentPage)
+                        true
+                    }
                     R.id.action_go_next -> {
                         val newComic = viewModel.getNextComic()
                         if (newComic != null && newComic != currentComic) {
@@ -158,7 +176,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             bRefreshSelectorSliderAdapter = true
             bRefreshSliderAdapter = true
         } else {
-            Timber.w("Using args to set currentComic and currentPage")
+            Timber.i("Using args to set currentComic and currentPage")
             val args = PageSliderFragmentArgs.fromBundle(requireArguments())
 
             // Check if a comic path was saved in savedInstanceState[STATE_CURRENT_COMIC] (when rotating for example)
@@ -166,9 +184,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             if (currentComicPath == "") {
                 currentComic = args.comic
             } else {
-                val f = File(currentComicPath)
-                currentComic = if (f.isFile && f.exists()) {
-                    ComicEntry(f)
+                val uri = Uri.parse(currentComicPath)
+                val docFile = getDocumentFileFromUri(App.appContext, uri)
+                currentComic = if (docFile != null && docFile.isFile) {
+                    ComicEntry.createFromDocFile(docFile)
                 } else {
                     args.comic
                 }
@@ -183,19 +202,20 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
+
         viewModel.initialize(currentComic, currentPage/*, savedInstanceState == null*/)
 
         // LiveData for the ViewModel :
         //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
         viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
-            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
-            viewModel.updateComicEntriesFromDAO(comicEntriesFromDAO)
+//            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
+            viewModel.updateComicEntriesFromDAO(App.appContext, comicEntriesFromDAO)
         }
         // End LiveDatas
 
         // Replace the title
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
-        supportActionBar.title = currentComic.file.name
+        supportActionBar.title = currentComic.name
         supportActionBar.setDisplayHomeAsUpEnabled(false)
 /*        supportActionBar.setLogo(R.mipmap.ic_launcher)
         supportActionBar.setDisplayUseLogoEnabled(true)*/
@@ -205,11 +225,17 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun changeCurrentComic(comic:ComicEntry) {
         Timber.i("changeCurrentComic")
         currentComic = comic
+        if (comic.docFile == null) {
+            Timber.w("docFile is null !!")
+        }
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
         pageSliderAdapter.setNewComic(comic)
         if (::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter.setNewComic(comic)
         }
+
+        // Update the bar
+        supportActionBar.title = currentComic.name
     }
 
     override fun onDestroyView() {
@@ -220,11 +246,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(STATE_CURRENT_COMIC, currentComic.file.absolutePath)
+        outState.putString(STATE_CURRENT_COMIC, currentComic.path)
         outState.putInt(STATE_CURRENT_PAGE, currentPage)
     }
 
     private fun resetLastImageParameters() {
+        Timber.d("resetLastImageParameters")
         lastImageScale = 1f
         lastImageOffsetX = 0f
         lastImageOffsetY = 0f
@@ -323,7 +350,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             }
 
 
-            Timber.e("PLOP ${binding.viewPager.currentItem} ${state.currentPage} $lastImageScale $lastImageOffsetX $lastImageOffsetY")
+            Timber.i("PLOP ${binding.viewPager.currentItem} ${state.currentPage} $lastImageScale $lastImageOffsetX $lastImageOffsetY")
             MagnifyImageView.printFloatArray(lastMatrixValues, "  PLOP :: ")
 //            if (lastImageScale != 1f && lastImageOffsetX != 0f && lastImageOffsetY != 0f) {
                 pageSliderAdapter.setImageToUpdateParameters(state.currentPage, lastImageScale, lastImageOffsetX, lastImageOffsetY, lastMatrixValues)
@@ -345,7 +372,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 pageSelectorSliderAdapter.notifyItemChanged(newPage)
             }
         }
-        if (::pageSelectorSliderAdapter.isInitialized && shouldUpdatePageSelectorSliderAdapter)  pageSelectorSliderAdapter.notifyDataSetChanged()
+        if (::pageSelectorSliderAdapter.isInitialized && shouldUpdatePageSelectorSliderAdapter)
+            pageSelectorSliderAdapter.notifyDataSetChanged()
 
         binding.viewPager.visibility = View.VISIBLE
     }
@@ -390,6 +418,22 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun showPageSelector() {
         Timber.d("showPageSelector")
 
+        // Hide/show buttons?
+        val measuredHeight = binding.recyclerViewPageSelector.measuredHeight    // Save measuredHeight before recompute it
+        binding.recyclerViewPageSelector.measure(View.MeasureSpec.makeMeasureSpec(binding.recyclerViewPageSelector.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+        val pageSelectorTotalHeight = binding.recyclerViewPageSelector.measuredHeight
+        Timber.v("   measuredHeight = $measuredHeight pageSelectorTotalHeight = $pageSelectorTotalHeight")
+        if (pageSelectorTotalHeight<measuredHeight) {
+            Timber.v("   showPageSelector :: hide buttons")
+            binding.buttonGoFirst.visibility = View.INVISIBLE
+            binding.buttonGoLast.visibility = View.INVISIBLE
+        } else {
+            Timber.v("   showPageSelector :: show buttons")
+            binding.buttonGoFirst.visibility = View.VISIBLE
+            binding.buttonGoLast.visibility = View.VISIBLE
+        }
+
+        // Animation
         binding.pageSelectorLayout.x = -(binding.pageSelectorLayout.width.toFloat())
         val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", 0f)
         animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION
@@ -655,13 +699,19 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         toast.show()*/
     }
 
+
     private fun showComicInformationPopup() {
+        Timber.v("showComicInformationPopup $currentComic")
+        if (currentComic.docFile == null && currentComic.uri!=null) {
+            currentComic.setDocumentFile(getDocumentFileFromUri(App.appContext, currentComic.uri!!))
+        }
+
         val title = getString(R.string.popup_info_title)
         val message = Html.fromHtml(
-                        "<b>"+getString(R.string.popup_info_name)+" : </b>"+currentComic.file.name + "<br/>\n" +
-                                "<b>"+getString(R.string.popup_info_path)+" : </b>"+currentComic.file.absolutePath.subSequence(0, currentComic.file.absolutePath.length-currentComic.file.name.length) + "<br/>\n" +
-                                "<b>"+getString(R.string.popup_info_date) + " : </b>" + getFileModificationDate(currentComic.file) + "<br/>\n" +
-                                "<b>"+getString(R.string.popup_info_size)+" : </b>%.2f".format(getFileSizeInMo(currentComic.file)) + getString(R.string.unit_megabyte)
+                        "<b>"+getString(R.string.popup_info_name)+" : </b>"+currentComic.name + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_path)+" : </b>"+getLocalDirName(App.currentTreeUri, currentComic.uri) + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_date) + " : </b>" + getReadableDate(currentComic.lastModified) + "<br/>\n" +
+                                "<b>"+getString(R.string.popup_info_size)+" : </b>%.2f".format(getSizeInMo(currentComic.size)) + getString(R.string.unit_megabyte)
                         , 0)
         AlertDialog.Builder(requireContext())
             .setTitle(title)
@@ -670,6 +720,80 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             }
             .create()
             .show()
+    }
 
+    // Popup to ask if the user want to save this page
+    private fun simplePopup(title:String, message:String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.ok) { _,_ ->
+            }
+            .create()
+            .show()
+    }
+
+    // Ask the viewModel to save the current page AFTER the authorization are checked !
+    private fun saveCurrentPageInPictureDirectory(numPage:Int) {
+        val title = getString(R.string.save_page)
+        var imageSavedPath = ""
+        var message2 = ""
+        try {
+            imageSavedPath = viewModel.saveCurrentPageInPictureDirectory(currentComic, numPage)
+            message2 = if (imageSavedPath == "") {
+                getString(R.string.save_page_message_unknown_error)
+            } else {
+                getString(R.string.save_page_message_ok, imageSavedPath)
+            }
+        } catch (e:IOException) {
+            message2 = getString(R.string.save_page_message_error_io, imageSavedPath, e.message)
+            e.printStackTrace()
+        }
+        simplePopup(title, message2)
+    }
+
+    // Register permission callback
+    var pageToSaveAfterRequest = 0  // To remember which page to save after asking permissions
+    private val writingPermissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all {
+            it.value == true
+        }
+        Timber.v("writingPermissionRequestLauncher: granted = $granted")
+        if (granted) {
+            saveCurrentPageInPictureDirectory(pageToSaveAfterRequest)
+        } else {
+            //display error dialog
+            simplePopup(getString(R.string.save_page), "Error: You should give the authorization to write on your device if you want to save a page")
+        }
+    }
+
+    // Popup to ask if the user want to save this page
+    private fun popupSaveCurrentPage(numPage: Int) {
+        val title = getString(R.string.save_page)
+        val message = getString(R.string.save_page_message)
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.ok) { _,_ ->
+                if (checkPermissionToSave()) {
+                    saveCurrentPageInPictureDirectory(numPage)
+                } else {
+                    pageToSaveAfterRequest = numPage
+                    writingPermissionRequestLauncher.launch(PERMISSIONS_TO_WRITE)
+                }
+            }
+            .create()
+            .show()
+    }
+
+    // Check if the permissions defined in PERMISSIONS_TO_WRITE are GRANTED
+    private fun checkPermissionToSave() : Boolean {
+        return if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q)
+            // After Q, no need to ask permission to write in PICTURES directory
+            true
+        else
+            PERMISSIONS_TO_WRITE.all {
+                ActivityCompat.checkSelfPermission(activity as Context, it) == PackageManager.PERMISSION_GRANTED
+            }
     }
 }

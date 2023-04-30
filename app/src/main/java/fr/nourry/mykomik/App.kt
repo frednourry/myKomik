@@ -2,8 +2,10 @@ package fr.nourry.mykomik
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.room.Room
 import fr.nourry.mykomik.database.AppDatabase
@@ -19,10 +21,15 @@ class App: Application() {
         lateinit var physicalConstants: PhysicalConstants
         lateinit var db : AppDatabase
         lateinit var packageInfo: PackageInfo
+        lateinit var appName : String
+
+        lateinit var pageCacheDirectory : File
+        lateinit var thumbnailCacheDirectory : File
 
         var isGuestMode = false
 
-        var currentDir: File? = null
+        var currentTreeUri: Uri? = null
+        var uriList: MutableList<Uri> = mutableListOf()    // To remember the uris
     }
 
     override fun onCreate() {
@@ -35,6 +42,17 @@ class App: Application() {
             packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
         } else {
             packageManager.getPackageInfo(packageName, 0)
+        }
+
+        val applicationInfo: ApplicationInfo = applicationInfo
+        val stringId = applicationInfo.labelRes
+        appName = if (stringId == 0) applicationInfo.nonLocalizedLabel.toString() else getString(stringId)
+
+        // Define a local temp directories to work on images (to unarchive comics)
+        thumbnailCacheDirectory = File(cacheDir.absolutePath)
+        pageCacheDirectory = File(cacheDir.absolutePath + File.separator + "current")
+        if (!pageCacheDirectory.exists()) {
+            pageCacheDirectory.mkdirs()
         }
 
         db = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME)

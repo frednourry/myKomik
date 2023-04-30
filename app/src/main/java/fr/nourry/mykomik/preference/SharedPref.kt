@@ -7,8 +7,8 @@ import timber.log.Timber
 
 // Load preferences (https://developer.android.com/training/data-storage/shared-preferences)
 
-const val PREF_ROOT_DIR                 = "comics_dir"
-const val PREF_LAST_COMIC_PATH          = "comics_last_comic"
+const val PREF_ROOT_TREE_URI            = "comics_tree_uri"
+const val PREF_LAST_COMIC_URI           = "comics_last_comic_uri"
 const val PREF_CURRENT_PAGE_LAST_COMIC  = "comics_current_page_last_comic"
 
 object SharedPref {

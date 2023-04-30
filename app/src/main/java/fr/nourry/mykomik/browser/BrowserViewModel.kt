@@ -1,30 +1,32 @@
 package fr.nourry.mykomik.browser
 
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.*
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.preference.*
-import fr.nourry.mykomik.utils.deleteFile
-import fr.nourry.mykomik.utils.getComicEntriesFromDir
+import fr.nourry.mykomik.utils.deleteDocumentFile
+import fr.nourry.mykomik.utils.getComicEntriesFromDocFile
 import kotlinx.coroutines.*
 import timber.log.Timber
-import java.io.File
 import java.util.concurrent.Executors
 
-sealed class BrowserViewModelState(val isInit: Boolean = false, val currentDir: File? = null) {
-    class Init(val directoryPath: String, val lastComicPath: String, val prefCurrentPage: String) : BrowserViewModelState (
+sealed class BrowserViewModelState(val currentTreeUri:Uri? = null, val isInit: Boolean = false) {
+    class Init(private val uri: Uri?, val rootUriPath: Uri?, val lastComicUri: Uri?, val prefCurrentPage: String) : BrowserViewModelState (
+        currentTreeUri = uri,
         isInit = false
     )
 
-    class ComicLoading(dir:File) : BrowserViewModelState (
+    class ComicLoading(treeUri:Uri) : BrowserViewModelState (
         isInit = true,
-        currentDir = dir
+        currentTreeUri = treeUri
     )
 
-    data class ComicReady(val dir:File, val comics: List<ComicEntry>) : BrowserViewModelState(
+    data class ComicReady(val treeUri:Uri, val comics: List<ComicEntry>) : BrowserViewModelState(
         isInit = true,
-        currentDir = dir
+        currentTreeUri = treeUri
     )
 
     class Error(val errorMessage:String, isInit:Boolean): BrowserViewModelState (
@@ -34,7 +36,7 @@ sealed class BrowserViewModelState(val isInit: Boolean = false, val currentDir: 
 
 
 class BrowserViewModel : ViewModel() {
-    private var currentDir:File? = null
+    private var currentTreeUri:Uri? = null
     private var comicEntriesToShow: MutableList<ComicEntry> = mutableListOf()
     private var comicEntriesToDelete = mutableListOf<ComicEntry>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
     private var deletionJob: Any? = null                // Job to delete all the files in 'comicEntriesToDelete'
@@ -45,15 +47,15 @@ class BrowserViewModel : ViewModel() {
     fun getState(): LiveData<BrowserViewModelState> = state
     private fun isInitialized(): Boolean = if (state.value != null) state.value!!.isInit else false
 
-    private var currentDirFile = MutableLiveData<File>()
+    private var currentUriTreeMutableLiveData = MutableLiveData<Uri>()
 
-    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentDirFile.switchMap { file ->
-        Timber.d("Transformations.switchMap(currentDirFile):: file:$file")
-        App.db.comicEntryDao().getComicEntriesByDirPath(file.absolutePath)
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUriTreeMutableLiveData.switchMap { treeUri ->
+//        Timber.d("Transformations.switchMap(currentDirFile):: treeUri=$treeUri")
+        App.db.comicEntryDao().getComicEntriesByDirPath(treeUri.toString())
     }/*.distinctUntilChanged() */   // Important or else the livedata will send a changed signal even if nothing change...
 
 
-    val TIME_BEFORE_DELETION = 4000 // in milliseconds
+    val TIME_BEFORE_DELETION = 5000 // in milliseconds
 
 
     fun errorPermissionDenied() {
@@ -64,27 +66,39 @@ class BrowserViewModel : ViewModel() {
         )
     }
 
-    fun init(skipReadComic:Boolean) {
-        Timber.d("init")
-        val directoryPath = SharedPref.get(PREF_ROOT_DIR, "")
-        val lastComicPath = SharedPref.get(PREF_LAST_COMIC_PATH, "")
+    fun init(treeUri: Uri?, skipReadComic:Boolean=false) {
+        Timber.d("init treeUri=$treeUri")
+        val rootTreeUriString = SharedPref.get(PREF_ROOT_TREE_URI, "")
+        val lastComicUriString = SharedPref.get(PREF_LAST_COMIC_URI, "")
         val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
-        state.value = BrowserViewModelState.Init(directoryPath!!, lastComicPath!!, prefCurrentPage!!)
+        Timber.i("rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString prefCurrentPage=$prefCurrentPage")
+
+        val rootTreeUri:Uri? = if (rootTreeUriString == "") null else Uri.parse(rootTreeUriString)
+        val lastComicUri:Uri? = if (lastComicUriString == "") null else Uri.parse(lastComicUriString)
+
+        Timber.i("treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri prefCurrentPage=$prefCurrentPage")
+        state.value = BrowserViewModelState.Init(treeUri, rootTreeUri, lastComicUri, prefCurrentPage!!)
 
         bSkipReadComic = skipReadComic
     }
 
     // Load informations about a directory (comics and directories list)
-    fun loadComics(dir: File) {
-        Timber.d("----- loadComics(" + dir.absolutePath + ") -----")
+    fun loadComics(treeUri: Uri) {
+        Timber.d("----- loadComics($treeUri) -----")
         Timber.v("  comicEntriesToDelete = $comicEntriesToDelete")
 
-        currentDirFile.value = dir
+        if (App.uriList.isEmpty() || App.uriList.last() != treeUri) {
+            App.uriList.add(treeUri)
+            Timber.v("App.uriList = ${App.uriList}")
+        }
 
-        currentDir = dir
-        setAppCurrentDir(dir)
+        currentUriTreeMutableLiveData.value = treeUri
 
-        state.value = BrowserViewModelState.ComicLoading(dir)
+        currentTreeUri = treeUri
+
+        setAppCurrentTreeUri(treeUri)
+
+        state.value = BrowserViewModelState.ComicLoading(treeUri)
     }
 
     // Prepare to delete files (or directory) and start a timer that will really delete those files
@@ -108,7 +122,7 @@ class BrowserViewModel : ViewModel() {
         }
 
         // Refresh view
-        loadComics(App.currentDir!!)
+        loadComics(App.currentTreeUri!!)
     }
 
     // Stop the timer that should delete the files in 'comicEntriesToDelete'
@@ -139,41 +153,50 @@ class BrowserViewModel : ViewModel() {
                 }
             }
 
-            deleteFile(comicEntry.file)
+            deleteDocumentFile(comicEntry.docFile)
             ComicLoadingManager.deleteComicEntryInCache(comicEntry)
         }
         comicEntriesToDelete.clear()
     }
 
-    fun setAppCurrentDir(dir:File) {
-        App.currentDir = dir
+    fun setAppCurrentTreeUri(treeUri:Uri) {
+        App.currentTreeUri = treeUri
     }
 
-    fun setPrefLastComicPath(path: String) {
-        SharedPref.set(PREF_LAST_COMIC_PATH, path)
+    fun setPrefLastComicUri(uri: Uri?) {
+        if (uri == null)
+            SharedPref.set(PREF_LAST_COMIC_URI, "")
+        else
+            SharedPref.set(PREF_LAST_COMIC_URI, uri.toString())
     }
-    fun setPrefRootDir(absolutePath: String) {
-        SharedPref.set(PREF_ROOT_DIR, absolutePath)
+    fun setPrefRootTreeUri(treeUri: Uri) {
+        SharedPref.set(PREF_ROOT_TREE_URI, treeUri.toString())
     }
 
     fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
         Timber.d("updateComicEntriesFromDAO")
-        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+//        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+//        Timber.d("    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
 
-        val comicEntriesFromDisk = getComicEntriesFromDir(currentDir!!)
-        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
+        // NOTE : if currentTreeUri is a child of the rootTreeUri, DocumentFile.fromTreeUri(App.appContext, currentTreeUri!!) will return the rootTreeUri
+        //  should use this : implementation 'androidx.documentfile:documentfile:1.0.1'
+        // See: https://stackoverflow.com/questions/62375696/unexpected-behavior-when-documentfile-fromtreeuri-is-called-on-uri-of-subdirec
+        val currentTreeDocFile:DocumentFile? = DocumentFile.fromTreeUri(App.appContext, currentTreeUri!!)
+
+        val comicEntriesFromDisk = getComicEntriesFromDocFile(currentTreeDocFile!!)
+//        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesToShow.clear()
         comicEntriesToShow = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
 
-        state.value = BrowserViewModelState.ComicReady(currentDir!!, comicEntriesToShow)
+        state.value = BrowserViewModelState.ComicReady(currentTreeUri!!, comicEntriesToShow)
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
         Timber.d("synchronizeDBWithDisk")
-        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
-        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+//        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
+//        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
         val hashkeyToIgnore: MutableList<String> = mutableListOf()
         var result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
@@ -192,10 +215,10 @@ class BrowserViewModel : ViewModel() {
             if (!found) {
                 // Search in comicEntriesFromDAO
                 for (feDAO in comicEntriesFromDAO) {
-                    Timber.v("  -- ${fe.dirPath}")
+                    Timber.v("  -- ${fe.parentTreeUriPath}")
                     if (fe.hashkey == feDAO.hashkey) {
                         Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
-                        feDAO.file = fe.file
+                        feDAO.uri = fe.uri
                         feDAO.fromDAO = true
                         result.add(feDAO)
                         found = true
@@ -217,7 +240,7 @@ class BrowserViewModel : ViewModel() {
         for (feDAO in comicEntriesFromDAO) {
             if (!feDAO.fromDAO && hashkeyToIgnore.indexOf(feDAO.hashkey)==-1) {
                 // Not in the disk anymore, so delete it
-                Timber.d("  Should be delete : ${feDAO.file.absolutePath}")
+                Timber.d("  Should be delete : ${feDAO.uri}")
                 comicEntriesToDelete.add(feDAO)
                 ComicLoadingManager.deleteComicEntryInCache(feDAO)
             }

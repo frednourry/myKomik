@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="no_permission">Please, permit this application to browse your folders.</string>
     <string name="app_name">MyKomik</string>
+    <string name="no_permission">Please, permit this application to browse your folders.</string>
     <string name="choose_root_text">Choose your comics root directory</string>
     <string name="empty_cache">Empty cache</string>
     <string name="change_root_directory">Change root directory</string>
@@ -63,6 +63,11 @@
     <string name="menu_guest_mode">Guest mode</string>
     <string name="guest_mode_short_description">Progress not shown or saved</string>
     <string name="guest_mode_long_description">Progress in comics will not be saved, and files can not be deleted or marked as read</string>
+    <string name="save_page">Save page</string>
+    <string name="save_page_message">Save this page ?</string>
+    <string name="save_page_message_unknown_error">An error occurred while saving this page</string>
+    <string name="save_page_message_ok">Page saved in %s</string>
+    <string name="save_page_message_error_io">An I/O error occurred while saving this page in %s (%s)</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

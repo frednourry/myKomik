@@ -19,6 +19,8 @@ import timber.log.Timber
 // To work with a viewPager2
 class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: ComicEntry): RecyclerView.Adapter<PageSelectorSliderAdapter.MyViewHolder>(), View.OnClickListener {
 
+    public var distanceBetweenCarView = 0
+
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:ImageView, val textView:TextView)
 
     inner class MyCardView(private val cardView:CardView):ComicLoadingProgressListener {
@@ -33,7 +35,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
                 Timber.d("     cardView=${cardView.width} ${cardView.height}")
 
                 // Check if the target is still waiting this image
-                if (holderComic.file.absolutePath == comic.file.absolutePath && currentIndex == holderInnerComic.position) {
+                if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
 
                     val image = holderInnerComic.imageView
@@ -55,6 +57,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_page_selector, parent, false)
+
         return MyViewHolder(view)
     }
 
@@ -75,7 +78,6 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
         cardView.setOnClickListener(this@PageSelectorSliderAdapter)
 
         val myCardView = MyCardView(cardView)
-
         Glide.with(imageView)
             .load(R.drawable.ic_launcher_foreground)
             .diskCacheStrategy(DiskCacheStrategy.NONE)

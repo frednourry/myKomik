@@ -48,6 +48,8 @@ class BitmapUtil {
         // innerImageMaxHeight: maximum height of the resize image
         // borderSize: size (thickness) of the frame
         fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
+            Timber.v("createFramedBitmap")
+
             var bitmapToReturn:Bitmap? = null
 
             val pixelDxRatio = App.physicalConstants.pixelDxRatio

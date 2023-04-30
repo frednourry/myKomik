@@ -106,7 +106,7 @@ dependencies {
 //    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
     // Junrar
-    def junrar_version = "7.5.0"
+    def junrar_version = "7.5.4"
     implementation "com.github.junrar:junrar:$junrar_version"
 
     // Room (database)
@@ -118,4 +118,7 @@ dependencies {
     // Navigation drawers
     implementation 'com.google.android.material:material:1.8.0'
 
+    // IMPORTANT : use this to solve a bug with DocumentFile.fromTreeUri() with children...
+    //   https://stackoverflow.com/questions/62375696/unexpected-behavior-when-documentfile-fromtreeuri-is-called-on-uri-of-subdirec
+    implementation 'androidx.documentfile:documentfile:1.0.1'
 }

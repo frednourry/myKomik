@@ -1,16 +1,23 @@
 package fr.nourry.mykomik.browser
 
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.view.*
 import android.widget.*
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -25,29 +32,21 @@ import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
-import fr.nourry.mykomik.dialog.DialogChooseRootDirectory
 import fr.nourry.mykomik.loader.ComicLoadingManager
-import fr.nourry.mykomik.preference.PREF_ROOT_DIR
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.clearFilesInDir
-import fr.nourry.mykomik.utils.getDefaultDirectory
-import fr.nourry.mykomik.utils.isDirExists
+import fr.nourry.mykomik.utils.findUriInDocumentFile
+import fr.nourry.mykomik.utils.getDocumentFileFromUri
+import fr.nourry.mykomik.utils.getLocalDirName
 import timber.log.Timber
-import java.io.File
-
-
-private const val TAG_DIALOG_CHOOSE_ROOT = "SelectDirectoryDialog"
+import kotlin.collections.ArrayList
 
 class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListener, BrowserAdapter.OnComicAdapterListener {
 
-    companion object {
-        fun newInstance() = BrowserFragment()
-    }
-
     private lateinit var viewModel: BrowserViewModel
-    private lateinit var rootDirectory : File
-    private var lastComic : File? = null
+    private lateinit var rootTreeUri : Uri
+    private var lastComicUri : Uri? = null
 
     private lateinit var browserAdapter: BrowserAdapter
     private lateinit var supportActionBar:ActionBar
@@ -67,30 +66,11 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     private lateinit var sideMenuItemChangeRootDirectory : MenuItem
 
 
-    private val confirmationChooseRootDialogListener = object: DialogChooseRootDirectory.ConfirmationDialogListener {
-        override fun onChooseDirectory(file:File) {
-            Timber.d("onChooseDirectory :: ${file.absolutePath}")
-
-            // Save
-            viewModel.setPrefRootDir(file.absolutePath)
-
-            rootDirectory = file
-            loadComics(rootDirectory)
-        }
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         Timber.i("onCreateView")
 
-        ComicLoadingManager.getInstance()
-            .initialize(requireContext(), requireActivity().cacheDir.absolutePath)
+        ComicLoadingManager.getInstance().initialize(requireContext(), App.thumbnailCacheDirectory, App.pageCacheDirectory)
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
-
-        // Re-associate the DialogChooseRootDirectory listener if necessary
-        val dialogChooseRootDirectory = parentFragmentManager.findFragmentByTag(TAG_DIALOG_CHOOSE_ROOT)
-        if (dialogChooseRootDirectory != null) {
-            (dialogChooseRootDirectory as DialogChooseRootDirectory).listener = confirmationChooseRootDialogListener
-        }
 
         _binding = FragmentBrowserBinding.inflate(inflater, container, false)
         return binding.root
@@ -105,6 +85,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Timber.i("onViewCreated")
+
+        activity?.let { SharedPref.init(it) }
 
         //// MENU
         // The usage of an interface lets you inject your own implementation
@@ -207,7 +189,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         // LiveData for the ViewModel :
         //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
         viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
-            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
+//            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
             viewModel.updateComicEntriesFromDAO(comicEntriesFromDAO)
         }
         // End LiveDatas
@@ -232,9 +214,116 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         sideMenuItemClearCache = binding.navigationView.menu.findItem(R.id.action_nav_clear_cache)
         sideMenuItemChangeRootDirectory = binding.navigationView.menu.findItem(R.id.action_nav_choose)
 
+        // Check the Shared Storage for a tree uri
+        var uriInStorage = treeUriInSharedStorage()
+        if (uriInStorage != null) {
+            val documentsTree = DocumentFile.fromTreeUri(App.appContext, uriInStorage)
+            documentsTree?.let {
+                uriInStorage = documentsTree.uri
+                rootTreeUri = documentsTree.uri
+            }
+        }
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
-        viewModel.init(skipReadComic)
+
+        // Define the current URI
+        viewModel.init(App.currentTreeUri?: uriInStorage, skipReadComic)
     }
+
+    // Permissions
+
+    // Return the first tree uri un the Shared Storage
+    private fun treeUriInSharedStorage() : Uri? {
+        for (perm in requireContext().contentResolver.persistedUriPermissions) {
+            if (DocumentsContract.isTreeUri(perm.uri)) {
+                return perm.uri
+            }
+        }
+        return null
+    }
+
+
+    private fun askTreeUriPermission() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            if (::rootTreeUri.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Optionally, specify a URI for the directory that should be opened in
+                // the system file picker when it loads.
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootTreeUri)
+            }
+        }
+        intent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+        )
+        permissionIntentLauncher.launch(intent)
+    }
+
+    private var permissionIntentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        Timber.i("result=$result")
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.let{ intent->
+
+                var flags: Int = intent.flags
+                flags = flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+
+                intent.data?.let { treeUri ->
+                    Timber.i("treeUri=$treeUri")
+                    // treeUri is the Uri
+
+                    rootTreeUri = treeUri
+                    viewModel.setPrefRootTreeUri(treeUri)
+
+                    val documentsTree = DocumentFile.fromTreeUri(App.appContext, treeUri)
+                    documentsTree?.let {
+
+                        // TO DELETE : Show contents
+/*                        Timber.i( "documentsTree.uri=${documentsTree.uri}")
+                        Timber.i( "documentsTree=$documentsTree name:${documentsTree.name} type:${documentsTree.type} isDirectory:${documentsTree.isDirectory}")
+                        val childDocuments = documentsTree.listFiles()
+                        for (docFile in childDocuments) {
+                            Timber.i( "   => docFile = $docFile name:${docFile.name} type:${docFile.type} isDirectory:${docFile.isDirectory} uri:${docFile.uri}")
+                        }*/
+                        // END TO DELETE
+
+                        if (documentsTree.isDirectory) {
+                            Timber.i("  remplacing rootTreeUri=$rootTreeUri by documentsTree.uri (${documentsTree.uri})")
+                            rootTreeUri = documentsTree.uri                     // Important !
+                            viewModel.setPrefRootTreeUri(documentsTree.uri)
+
+                            // Save this uri in PersistableUriPermission (keep only one, so delete the other ones)
+                            releasePermissionsInSharedStorage()
+
+                            requireContext().contentResolver.takePersistableUriPermission(
+                                treeUri,
+                                flags //Intent.FLAG_GRANT_READ_URI_PERMISSION //or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            )
+
+                            // Update the view model
+                            viewModel.init(documentsTree.uri)
+
+                        }
+                    }
+                }
+            }
+        } else {
+            Timber.w("registerForActivityResult NOT OK !")
+        }
+    }
+
+    private fun releasePermissionsInSharedStorage() {
+        val perms = requireContext().contentResolver.persistedUriPermissions
+        for (perm in perms) {
+            Timber.i("releaseOnePermission -> releasing ${perm.uri.path}}")
+            requireContext().contentResolver.releasePersistableUriPermission(perm.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            break
+        }
+    }
+
+
+    // End permissions
+
+
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         Timber.d("onNavigationItemSelected $item")
         return when (item.itemId) {
@@ -275,7 +364,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         when(state) {
             is BrowserViewModelState.Error -> handleStateError(state)
             is BrowserViewModelState.Init -> handleStateInit(state)
-            is BrowserViewModelState.ComicLoading -> handleStateLoading(state.currentDir)
+            is BrowserViewModelState.ComicLoading -> handleStateLoading(state.currentTreeUri)
             is BrowserViewModelState.ComicReady -> handleStateReady(state)
         }
     }
@@ -290,15 +379,25 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun handleStateInit(state:BrowserViewModelState.Init) {
-        Timber.i("handleStateInit")
-        initBrowser(state.directoryPath, state.lastComicPath, state.prefCurrentPage)
+        Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri}")
+
+/*        if (state.rootUriPath != null) {
+            rootTreeUri = state.rootUriPath
+        }
+*/
+        if (state.currentTreeUri == null) {
+            askTreeUriPermission()
+        } else {
+            Timber.i("     state.lastComicUri=${state.lastComicUri}")
+            initBrowser(state.currentTreeUri, state.lastComicUri, state.prefCurrentPage)
+        }
     }
 
-    private fun handleStateLoading(dir: File?) {
+    private fun handleStateLoading(treeUri: Uri?) {
         Timber.i("handleStateLoading")
-        if (dir != null) {
-            Timber.i("handleStateLoading "+dir.name)
-            viewModel.setAppCurrentDir(dir)
+        if (treeUri != null) {
+            Timber.i("handleStateLoading "+treeUri)
+            viewModel.setAppCurrentTreeUri(treeUri)
 
             // Stop all loading...
             ComicLoadingManager.getInstance().clean()
@@ -309,9 +408,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         Timber.i("handleStateReady")
         Timber.i("  state.comics=${state.comics}")
 
-        supportActionBar.title = getLocalDirName(App.currentDir?.canonicalPath)
+        supportActionBar.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
 
-        viewModel.setPrefLastComicPath("")      // Forget the last comic...
+        viewModel.setPrefLastComicUri(null)      // Forget the last comic...
 
         disableMultiSelect()
 
@@ -321,92 +420,86 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         binding.recyclerView.scrollToPosition(0)
     }
 
-
-    // Show a dialog to ask where is the root comics directory
-    private fun showChooseDirectoryDialog(rootFile: File?, isCancelable:Boolean) {
-        Timber.w("showChooseDirectoryDialog:: rootFile = $rootFile")
-        val root:File = rootFile ?: getDefaultDirectory(requireContext())
-
-        val dialog = DialogChooseRootDirectory.newInstance(root)
-        dialog.isCancelable = isCancelable
-        dialog.listener = confirmationChooseRootDialogListener
-
-        dialog.show(parentFragmentManager, TAG_DIALOG_CHOOSE_ROOT)
-    }
-
-    private fun initBrowser(directoryPath:String, lastComicPath:String, prefCurrentPage:String) {
-        Timber.d("initBrowser directoryPath=$directoryPath lastComicPath=$lastComicPath prefCurrentPage=$prefCurrentPage")
+    private fun initBrowser(treeUri: Uri, lastComic:Uri?, prefCurrentPage:String) {
+        Timber.d("initBrowser treeUri=$treeUri lastComic=$lastComic prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
-        if (directoryPath == "" || !isDirExists(directoryPath)) {
-            showChooseDirectoryDialog(null, false)
-        } else {
-            rootDirectory = File(directoryPath)
+        if (App.currentTreeUri == null) {
+            // It's the first time we come in this fragment
+            var lastComicDocFile: DocumentFile? = null
 
-            if (App.currentDir == null) {
-                // It's the first time we come in this fragment
-
-                // Ask if we should use the last comic
-                if (lastComicPath != "") {
-                    lastComic = File(lastComicPath)
-                    if (!lastComic!!.exists() || !lastComic!!.isFile) {
-                        lastComic = null
-                    }
+            // Ask if we should use the last comic
+            lastComicUri = lastComic
+            if (lastComic != null) {
+                lastComicDocFile = getDocumentFileFromUri(App.appContext, lastComic)
+                if (lastComicDocFile == null || !lastComicDocFile.exists() || !lastComicDocFile.isFile) {
+                    lastComicDocFile = null
+                    lastComicUri = null
                 }
-                if (lastComic != null && lastComic!!.isFile) {
-                    // Continue reading from where you last left off "....." ?
-                    val alert = AlertDialog.Builder(requireContext())
-                        .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic!!.name+")")
-                        .setPositiveButton(R.string.ok) { _,_ ->
-                            App.currentDir = File(lastComic!!.parent!!) // Set the last comic path as the current directory
-
-                            // Call the fragment to view the last comic
-                            var currentPage = 0
-                            if (prefCurrentPage != "") {
-                                currentPage = prefCurrentPage.toInt()
-                            }
-                            val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(ComicEntry(lastComic!!), currentPage)
-                            findNavController().navigate(action)
-                        }
-                        .setNegativeButton(android.R.string.cancel) { _,_ ->
-                            viewModel.setPrefLastComicPath("")      // Forget the last comic...
-                            loadComics(rootDirectory)
-                        }
-                        .setCancelable(false)
-                        .create()
-                    alert.show()
-                } else {
-                    loadComics(rootDirectory)
-                }
-
-            } else {
-                //
-                loadComics(App.currentDir!!)
             }
+
+            if (lastComicDocFile != null) {
+                // Continue reading from where you last left off "....." ?
+                val alert = AlertDialog.Builder(requireContext())
+                    .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComicDocFile.name+")")
+                    .setPositiveButton(R.string.ok) { _,_ ->
+                        Timber.e("lastComicDocFile.parentFile = ${lastComicDocFile.parentFile}")
+
+                        rebuildUriList(lastComic!!)
+
+                        App.currentTreeUri = if (App.uriList.size>0)
+                                                App.uriList.last()
+                                            else
+                                                treeUri
+
+                        // Call the fragment to view the last comic
+                        var currentPage = 0
+                        if (prefCurrentPage != "") {
+                            currentPage = prefCurrentPage.toInt()
+                        }
+                        val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(ComicEntry.createFromDocFile(lastComicDocFile), currentPage)
+                        findNavController().navigate(action)
+                    }
+                    .setNegativeButton(android.R.string.cancel) { _,_ ->
+                        viewModel.setPrefLastComicUri(lastComic)      // Forget the last comic...
+                        loadComics(rootTreeUri)
+                    }
+                    .setCancelable(false)
+                    .create()
+                alert.show()
+            } else {
+                loadComics(rootTreeUri)
+            }
+
+        } else {
+            //
+            loadComics(App.currentTreeUri!!)
         }
     }
 
     // Ask the viewModel to load comics informations in a given directory
-    fun loadComics(dir:File) {
-        viewModel.loadComics(dir)
+    private fun loadComics(treeUri:Uri) {
+        Timber.v("loadComics "+treeUri)
+        viewModel.loadComics(treeUri)
     }
 
     override fun onComicEntryClicked(comic: ComicEntry, position:Int) {
-        Timber.v("onComicEntryClicked "+comic.file.name)
+        Timber.v("onComicEntryClicked "+comic.uri)
         if (comic.isDirectory) {
             Timber.i("Directory !")
-            loadComics(comic.file)
+
+            loadComics(comic.uri!!)
         } else {
-            Timber.i("File ${comic.file.name} !")
-            lastComic= comic.file
-            viewModel.setPrefLastComicPath(comic.file.absolutePath)
+            Timber.i("File ${comic.uri} !")
+            lastComicUri= comic.uri
+            viewModel.setPrefLastComicUri(comic.uri)
             val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, comic.currentPage)
             findNavController().navigate(action)
         }
     }
 
     override fun onComicEntryLongClicked(comic: ComicEntry, position:Int) {
-        Timber.v("onComicEntryLongClicked "+comic.file.name)
+        Timber.v("onComicEntryLongClicked "+comic.uri)
 
         if (App.isGuestMode) {
             Timber.i("onComicEntryLongClicked:: Guest Mode, so do nothing")
@@ -497,7 +590,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_change_root_directory)
-            .setPositiveButton(R.string.ok) { _,_ -> showChooseDirectoryDialog(rootDirectory, true) }
+            .setPositiveButton(R.string.ok) { _,_ -> askTreeUriPermission() }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()
         alert.show()
@@ -549,7 +642,10 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             val deleteList: MutableList<ComicEntry> = arrayListOf()
             for (cpt in selectedComicIndexes) {
                 deleteList.add(comics[cpt])
-                message += "\n - "+comics[cpt].file.name
+                val docFile = getComicDocFile(comics[cpt])
+                docFile?.let {
+                    message += "\n - "+comics[cpt].docFile!!.name
+                }
             }
 
             alert = AlertDialog.Builder(requireContext())
@@ -576,7 +672,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun showAboutPopup() {
-        val title = getString(R.string.app_name)+" "+ App.packageInfo.versionName
+        val title = App.appName+" "+ App.packageInfo.versionName
         val message = getString(R.string.about_description)
         AlertDialog.Builder(requireContext())
             .setTitle(title)
@@ -594,7 +690,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             .setAction(R.string.message_undo) {
                 if (viewModel.undoDeleteComicEntries()) {
                     Timber.d("Deleting undone, so need to refresh dir...")
-                    loadComics(App.currentDir!!)
+                    loadComics(App.currentTreeUri!!)
                 }
             }
             .show()
@@ -604,31 +700,52 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     // The button back is pressed, so can we move to the parent directory?
     // Returns true if and only if we can
     private fun handleBackPressedToChangeDirectory():Boolean {
-        Timber.d("handleBackPressedToChangeDirectory - current=${App.currentDir} (root=$rootDirectory)")
+        if (::rootTreeUri.isInitialized)
+            Timber.d("handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=$rootTreeUri)")
+        else
+            Timber.d("handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=uninitialized)")
+
         return if (isFilteredMode) {
             setFilterMode(false)
             true
-        } else if (App.currentDir?.parentFile == null || App.currentDir?.absolutePath == rootDirectory.absolutePath) {
+//        } else if (App.currentTreeUri?.parentFile == null || App.currentTreeUri?.absolutePath == rootDirectory.absolutePath) {
+        } else if (!::rootTreeUri.isInitialized) {
+            false
+        } else if(App.currentTreeUri == rootTreeUri) {
             false
         } else {
-            loadComics(App.currentDir?.parentFile!!)
-            true
+            // Find the parent uri, if any
+            var answer = false
+            if (App.uriList.size>1) {
+                App.uriList.removeLast()
+                loadComics(App.uriList.last())
+                answer = true
+            }
+            answer
         }
     }
 
-    // Strip 'dirPath' of the root directory path (except the last dir name)
-    private fun getLocalDirName(dirPath:String?):String {
-        var result = dirPath ?: ""
-        var rootPath = SharedPref.get(PREF_ROOT_DIR, "")
-        if (rootPath != null && rootPath != "") {
-            rootPath = rootPath.substring(0, rootPath.lastIndexOf("/"))
-            if (rootPath.isNotEmpty()) {
-                val i = result.indexOf(rootPath)
-                if (i >= 0) {
-                    result = result.substring(rootPath.length)+"/"
-                }
-            }
+    // Get the DocumentFile of a comic, if possible
+    private fun getComicDocFile(comic:ComicEntry): DocumentFile? {
+        if (comic.docFile != null)
+            return comic.docFile
+        else if (comic.uri != null) {
+            val docFile = getDocumentFileFromUri(App.appContext, comic.uri!!)
+            comic.setDocumentFile(getDocumentFileFromUri(App.appContext, comic.uri!!))
+            return docFile
         }
-        return result
+        return null
     }
+
+    // Rebuild the App.uriList by searching from rootTreeUri to the given uri
+    private fun rebuildUriList(uri:Uri) {
+        val rootDocFile = DocumentFile.fromTreeUri(App.appContext, rootTreeUri)
+        val uriList = findUriInDocumentFile(rootDocFile!!, uri)
+        if (uriList.size>0) {
+            uriList.reverse()
+            App.uriList.clear()
+            App.uriList.addAll(uriList)
+        }
+    }
+
 }
