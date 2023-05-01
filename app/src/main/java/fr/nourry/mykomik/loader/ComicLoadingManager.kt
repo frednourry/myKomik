@@ -156,22 +156,20 @@ class ComicLoadingManager private constructor() {
                 loadNext()
             } else {
                 // Add some comics in the cache
-                if (dirComic.docFile != null) {
-                    val nbComicsInThumbnail = GetImageDirWorker.MAX_COVER_IN_THUMBNAIL  // Get some comics to build the thumbnail
-                    val comicsList = getComicEntriesFromDocFile(dirComic.docFile!!)
-                    val fileList = comicsList.subList(0, Math.min(comicsList.size, nbComicsInThumbnail))
-                    for (i in fileList.indices) {
-                        val f = fileList[i]
-                        if (!f.isDirectory) {
-                            addInWaitingCoverList(ComicEntryLoadingCover(f, null, null))
-                        }
+                val nbComicsInThumbnail = GetImageDirWorker.MAX_COVER_IN_THUMBNAIL  // Get some comics to build the thumbnail
+                val comicsList = getComicEntriesFromUri(context, dirComic.uri)
+                val fileList = comicsList.subList(0, Math.min(comicsList.size, nbComicsInThumbnail))
+                for (i in fileList.indices) {
+                    val f = fileList[i]
+                    if (!f.isDirectory) {
+                        addInWaitingCoverList(ComicEntryLoadingCover(f, null, null))
                     }
+                }
 //                    Timber.i("loadComicDirectoryCoverInImageView :: $fileList")
-                    if (fileList.isNotEmpty()) {
-                        // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
-                        addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, fileList))
-                        loadNext()
-                    }
+                if (fileList.isNotEmpty()) {
+                    // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
+                    addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, fileList))
+                    loadNext()
                 }
             }
         }

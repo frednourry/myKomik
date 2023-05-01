@@ -29,7 +29,6 @@ class App: Application() {
         var isGuestMode = false
 
         var currentTreeUri: Uri? = null
-        var uriList: MutableList<Uri> = mutableListOf()    // To remember the uris
     }
 
     override fun onCreate() {

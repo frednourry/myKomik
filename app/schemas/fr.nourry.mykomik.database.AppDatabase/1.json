@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "d715c6479dcd9cfa4efc6886545ccb26",
+    "identityHash": "738bbab4228ef3e70bc439b3e6a7d3d2",
     "entities": [
       {
         "tableName": "comic_entry",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tree_uri` TEXT NOT NULL, `name` TEXT NOT NULL, `extension` TEXT NOT NULL, `is_directory` INTEGER NOT NULL, `hashkey` TEXT NOT NULL, `nb_pages` INTEGER NOT NULL, `current_page` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `parent_uri_path` TEXT NOT NULL, `name` TEXT NOT NULL, `extension` TEXT NOT NULL, `lastModified` INTEGER NOT NULL, `size` INTEGER NOT NULL, `is_directory` INTEGER NOT NULL, `hashkey` TEXT NOT NULL, `nb_pages` INTEGER NOT NULL, `current_page` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -15,8 +15,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "parentTreeUriPath",
-            "columnName": "tree_uri",
+            "fieldPath": "parentUriPath",
+            "columnName": "parent_uri_path",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -30,6 +30,18 @@
             "fieldPath": "extension",
             "columnName": "extension",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastModified",
+            "columnName": "lastModified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "size",
+            "columnName": "size",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -65,13 +77,13 @@
         },
         "indices": [
           {
-            "name": "index_comic_entry_tree_uri",
+            "name": "index_comic_entry_parent_uri_path",
             "unique": false,
             "columnNames": [
-              "tree_uri"
+              "parent_uri_path"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_comic_entry_tree_uri` ON `${TABLE_NAME}` (`tree_uri`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_comic_entry_parent_uri_path` ON `${TABLE_NAME}` (`parent_uri_path`)"
           }
         ],
         "foreignKeys": []
@@ -80,7 +92,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd715c6479dcd9cfa4efc6886545ccb26')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '738bbab4228ef3e70bc439b3e6a7d3d2')"
     ]
   }
 }

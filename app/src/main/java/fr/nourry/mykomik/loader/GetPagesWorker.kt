@@ -152,7 +152,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 Timber.w("unzipPages:: error "+t.message)
             }
             finally {
-                Timber.i("unzipPages :: finally...")
+                Timber.v("unzipPages :: finally...")
             }
         }
         Timber.v("END unzipPages ${tmpFile.name}")
@@ -392,7 +392,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         }
 
                         val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
-                        Timber.w("  getPagesInPdfFile page=$numPage in $pagePath")
+                        Timber.i("  getPagesInPdfFile page=$numPage in $pagePath")
 
                         BitmapUtil.saveBitmapInFile(tempBitmap, pagePath)
 

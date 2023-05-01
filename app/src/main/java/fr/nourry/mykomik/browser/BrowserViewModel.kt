@@ -1,14 +1,13 @@
 package fr.nourry.mykomik.browser
 
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.*
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.preference.*
-import fr.nourry.mykomik.utils.deleteDocumentFile
-import fr.nourry.mykomik.utils.getComicEntriesFromDocFile
+import fr.nourry.mykomik.utils.deleteComic
+import fr.nourry.mykomik.utils.getComicEntriesFromUri
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.util.concurrent.Executors
@@ -87,11 +86,6 @@ class BrowserViewModel : ViewModel() {
         Timber.d("----- loadComics($treeUri) -----")
         Timber.v("  comicEntriesToDelete = $comicEntriesToDelete")
 
-        if (App.uriList.isEmpty() || App.uriList.last() != treeUri) {
-            App.uriList.add(treeUri)
-            Timber.v("App.uriList = ${App.uriList}")
-        }
-
         currentUriTreeMutableLiveData.value = treeUri
 
         currentTreeUri = treeUri
@@ -153,7 +147,7 @@ class BrowserViewModel : ViewModel() {
                 }
             }
 
-            deleteDocumentFile(comicEntry.docFile)
+            deleteComic(App.appContext, comicEntry)
             ComicLoadingManager.deleteComicEntryInCache(comicEntry)
         }
         comicEntriesToDelete.clear()
@@ -178,13 +172,8 @@ class BrowserViewModel : ViewModel() {
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 //        Timber.d("    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
 
-        // NOTE : if currentTreeUri is a child of the rootTreeUri, DocumentFile.fromTreeUri(App.appContext, currentTreeUri!!) will return the rootTreeUri
-        //  should use this : implementation 'androidx.documentfile:documentfile:1.0.1'
-        // See: https://stackoverflow.com/questions/62375696/unexpected-behavior-when-documentfile-fromtreeuri-is-called-on-uri-of-subdirec
-        val currentTreeDocFile:DocumentFile? = DocumentFile.fromTreeUri(App.appContext, currentTreeUri!!)
-
-        val comicEntriesFromDisk = getComicEntriesFromDocFile(currentTreeDocFile!!)
-//        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
+        val comicEntriesFromDisk = getComicEntriesFromUri(App.appContext, currentTreeUri!!)
+        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesToShow.clear()
@@ -215,7 +204,7 @@ class BrowserViewModel : ViewModel() {
             if (!found) {
                 // Search in comicEntriesFromDAO
                 for (feDAO in comicEntriesFromDAO) {
-                    Timber.v("  -- ${fe.parentTreeUriPath}")
+                    Timber.v("  -- ${fe.parentUriPath}")
                     if (fe.hashkey == feDAO.hashkey) {
                         Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
                         feDAO.uri = fe.uri

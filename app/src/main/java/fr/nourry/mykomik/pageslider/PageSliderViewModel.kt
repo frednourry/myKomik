@@ -162,11 +162,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         Timber.d("updateComicEntriesFromDAO")
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
-        val docFile = getDocumentFileFromUri(context, App.uriList.last())
-        val comicEntriesFromDisk = if (docFile!= null)
-                                        getComicEntriesFromDocFile(docFile, true)
-                                    else
-                                        emptyList()
+        val comicEntriesFromDisk = getComicEntriesFromUri(context, App.currentTreeUri!!, true)
 
 //        Timber.w("    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
 
@@ -191,7 +187,6 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
                 if (fe.hashkey == feDAO.hashkey) {
 //                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
                     feDAO.uri = fe.uri
-                    feDAO.docFile = fe.docFile
                     feDAO.fromDAO = true
                     result.add(feDAO)
                     found = true
@@ -306,14 +301,14 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         }
 
         // Get a path to save the image
-        var imageToSavePath: String = concatPath(saveDirectory.absolutePath,  deleteExtension(comic.name)+"_p"+(numPage+1)+".jpg")
+        var imageToSavePath: String = concatPath(saveDirectory.absolutePath,  stripExtension(comic.name)+"_p"+(numPage+1)+".jpg")
         var outputFile = File(imageToSavePath)
         var tempCpt=0
 
         // Check if already exists (if so, change the name)
         while (outputFile.exists()) {
             tempCpt++
-            imageToSavePath = concatPath(saveDirectory.absolutePath,  deleteExtension(comic.name)+"_p"+(numPage+1)+"_"+tempCpt+".jpg")
+            imageToSavePath = concatPath(saveDirectory.absolutePath,  stripExtension(comic.name)+"_p"+(numPage+1)+"_"+tempCpt+".jpg")
             outputFile = File(imageToSavePath)
         }
 

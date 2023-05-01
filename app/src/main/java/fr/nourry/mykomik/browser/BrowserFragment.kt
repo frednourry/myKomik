@@ -35,10 +35,7 @@ import fr.nourry.mykomik.databinding.FragmentBrowserBinding
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.settings.UserPreferences
-import fr.nourry.mykomik.utils.clearFilesInDir
-import fr.nourry.mykomik.utils.findUriInDocumentFile
-import fr.nourry.mykomik.utils.getDocumentFileFromUri
-import fr.nourry.mykomik.utils.getLocalDirName
+import fr.nourry.mykomik.utils.*
 import timber.log.Timber
 import kotlin.collections.ArrayList
 
@@ -217,11 +214,12 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         // Check the Shared Storage for a tree uri
         var uriInStorage = treeUriInSharedStorage()
         if (uriInStorage != null) {
-            val documentsTree = DocumentFile.fromTreeUri(App.appContext, uriInStorage)
-            documentsTree?.let {
-                uriInStorage = documentsTree.uri
-                rootTreeUri = documentsTree.uri
-            }
+            // Convert uriInStorage in a usable one
+            val id = DocumentsContract.getTreeDocumentId(uriInStorage)
+            val trueUriInStorage = DocumentsContract.buildDocumentUriUsingTree(uriInStorage, id)
+
+            uriInStorage = trueUriInStorage
+            rootTreeUri = trueUriInStorage
         }
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
 
@@ -271,10 +269,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                     Timber.i("treeUri=$treeUri")
                     // treeUri is the Uri
 
-                    rootTreeUri = treeUri
-                    viewModel.setPrefRootTreeUri(treeUri)
-
-                    val documentsTree = DocumentFile.fromTreeUri(App.appContext, treeUri)
+                    val documentsTree = DocumentFile.fromTreeUri(requireContext(), treeUri)
                     documentsTree?.let {
 
                         // TO DELETE : Show contents
@@ -286,11 +281,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                         }*/
                         // END TO DELETE
 
+                        // Check if it's a directory (should be...)
                         if (documentsTree.isDirectory) {
-                            Timber.i("  remplacing rootTreeUri=$rootTreeUri by documentsTree.uri (${documentsTree.uri})")
-                            rootTreeUri = documentsTree.uri                     // Important !
-                            viewModel.setPrefRootTreeUri(documentsTree.uri)
-
                             // Save this uri in PersistableUriPermission (keep only one, so delete the other ones)
                             releasePermissionsInSharedStorage()
 
@@ -299,8 +291,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                                 flags //Intent.FLAG_GRANT_READ_URI_PERMISSION //or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                             )
 
+                            // Convert treeUri in a usable one
+                            val id = DocumentsContract.getTreeDocumentId(treeUri)
+                            val trueUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
+
+                            rootTreeUri = trueUri
+                            viewModel.setPrefRootTreeUri(trueUri)
+
                             // Update the view model
-                            viewModel.init(documentsTree.uri)
+                            viewModel.init(trueUri)
 
                         }
                     }
@@ -420,48 +419,38 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         binding.recyclerView.scrollToPosition(0)
     }
 
-    private fun initBrowser(treeUri: Uri, lastComic:Uri?, prefCurrentPage:String) {
-        Timber.d("initBrowser treeUri=$treeUri lastComic=$lastComic prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
+    private fun initBrowser(treeUri: Uri, lastUri:Uri?, prefCurrentPage:String) {
+        Timber.d("initBrowser treeUri=$treeUri lastComic=$lastUri prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
         if (App.currentTreeUri == null) {
             // It's the first time we come in this fragment
-            var lastComicDocFile: DocumentFile? = null
 
             // Ask if we should use the last comic
-            lastComicUri = lastComic
+            val lastComic = getComicFromUri(requireContext(), lastUri, true)
             if (lastComic != null) {
-                lastComicDocFile = getDocumentFileFromUri(App.appContext, lastComic)
-                if (lastComicDocFile == null || !lastComicDocFile.exists() || !lastComicDocFile.isFile) {
-                    lastComicDocFile = null
-                    lastComicUri = null
-                }
+                lastComicUri = lastUri
             }
 
-            if (lastComicDocFile != null) {
+            if (lastComic != null) {
+
                 // Continue reading from where you last left off "....." ?
                 val alert = AlertDialog.Builder(requireContext())
-                    .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComicDocFile.name+")")
+                    .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic.name+")")
                     .setPositiveButton(R.string.ok) { _,_ ->
-                        Timber.e("lastComicDocFile.parentFile = ${lastComicDocFile.parentFile}")
-
-                        rebuildUriList(lastComic!!)
-
-                        App.currentTreeUri = if (App.uriList.size>0)
-                                                App.uriList.last()
-                                            else
-                                                treeUri
+                        Timber.i("comic.parentTreeUriPath = ${lastComic.parentUriPath}")
+                        App.currentTreeUri = Uri.parse(lastComic.parentUriPath)
 
                         // Call the fragment to view the last comic
                         var currentPage = 0
                         if (prefCurrentPage != "") {
                             currentPage = prefCurrentPage.toInt()
                         }
-                        val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(ComicEntry.createFromDocFile(lastComicDocFile), currentPage)
+                        val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(lastComic, currentPage)
                         findNavController().navigate(action)
                     }
                     .setNegativeButton(android.R.string.cancel) { _,_ ->
-                        viewModel.setPrefLastComicUri(lastComic)      // Forget the last comic...
+                        viewModel.setPrefLastComicUri(lastUri)      // Forget the last comic...
                         loadComics(rootTreeUri)
                     }
                     .setCancelable(false)
@@ -642,10 +631,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             val deleteList: MutableList<ComicEntry> = arrayListOf()
             for (cpt in selectedComicIndexes) {
                 deleteList.add(comics[cpt])
-                val docFile = getComicDocFile(comics[cpt])
-                docFile?.let {
-                    message += "\n - "+comics[cpt].docFile!!.name
-                }
+                message += "\n - "+comics[cpt].name
             }
 
             alert = AlertDialog.Builder(requireContext())
@@ -715,37 +701,13 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             false
         } else {
             // Find the parent uri, if any
-            var answer = false
-            if (App.uriList.size>1) {
-                App.uriList.removeLast()
-                loadComics(App.uriList.last())
-                answer = true
-            }
-            answer
+            val parentPath = getParentUriPath(App.currentTreeUri!!)
+            if (parentPath != "") {
+                val parentUri = Uri.parse(parentPath)
+                loadComics(parentUri)
+                true
+            } else
+                false
         }
     }
-
-    // Get the DocumentFile of a comic, if possible
-    private fun getComicDocFile(comic:ComicEntry): DocumentFile? {
-        if (comic.docFile != null)
-            return comic.docFile
-        else if (comic.uri != null) {
-            val docFile = getDocumentFileFromUri(App.appContext, comic.uri!!)
-            comic.setDocumentFile(getDocumentFileFromUri(App.appContext, comic.uri!!))
-            return docFile
-        }
-        return null
-    }
-
-    // Rebuild the App.uriList by searching from rootTreeUri to the given uri
-    private fun rebuildUriList(uri:Uri) {
-        val rootDocFile = DocumentFile.fromTreeUri(App.appContext, rootTreeUri)
-        val uriList = findUriInDocumentFile(rootDocFile!!, uri)
-        if (uriList.size>0) {
-            uriList.reverse()
-            App.uriList.clear()
-            App.uriList.addAll(uriList)
-        }
-    }
-
 }

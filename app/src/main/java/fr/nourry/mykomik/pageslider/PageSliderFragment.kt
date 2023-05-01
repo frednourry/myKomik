@@ -34,10 +34,7 @@ import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.settings.UserPreferences
-import fr.nourry.mykomik.utils.getDocumentFileFromUri
-import fr.nourry.mykomik.utils.getLocalDirName
-import fr.nourry.mykomik.utils.getReadableDate
-import fr.nourry.mykomik.utils.getSizeInMo
+import fr.nourry.mykomik.utils.*
 import timber.log.Timber
 import java.io.IOException
 
@@ -185,12 +182,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 currentComic = args.comic
             } else {
                 val uri = Uri.parse(currentComicPath)
-                val docFile = getDocumentFileFromUri(App.appContext, uri)
-                currentComic = if (docFile != null && docFile.isFile) {
-                    ComicEntry.createFromDocFile(docFile)
-                } else {
-                    args.comic
-                }
+                val comic = getComicFromUri(requireContext(), uri)
+                currentComic = comic ?: args.comic
             }
             currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
             bRefreshSelectorSliderAdapter = false
@@ -209,7 +202,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
         viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
 //            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
-            viewModel.updateComicEntriesFromDAO(App.appContext, comicEntriesFromDAO)
+            viewModel.updateComicEntriesFromDAO(requireContext(), comicEntriesFromDAO)
         }
         // End LiveDatas
 
@@ -225,9 +218,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun changeCurrentComic(comic:ComicEntry) {
         Timber.i("changeCurrentComic")
         currentComic = comic
-        if (comic.docFile == null) {
-            Timber.w("docFile is null !!")
-        }
+
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
         pageSliderAdapter.setNewComic(comic)
         if (::pageSelectorSliderAdapter.isInitialized) {
@@ -702,10 +693,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     private fun showComicInformationPopup() {
         Timber.v("showComicInformationPopup $currentComic")
-        if (currentComic.docFile == null && currentComic.uri!=null) {
-            currentComic.setDocumentFile(getDocumentFileFromUri(App.appContext, currentComic.uri!!))
-        }
-
         val title = getString(R.string.popup_info_title)
         val message = Html.fromHtml(
                         "<b>"+getString(R.string.popup_info_name)+" : </b>"+currentComic.name + "<br/>\n" +
