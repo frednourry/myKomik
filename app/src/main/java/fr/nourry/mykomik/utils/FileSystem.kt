@@ -5,10 +5,10 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
-import androidx.documentfile.provider.DocumentFile
 import fr.nourry.mykomik.database.ComicEntry
 import timber.log.Timber
 import java.io.*
+import java.net.URLDecoder
 import java.util.*
 
 val comicExtensionList = listOf("cbr", "cbz", "pdf")
@@ -133,7 +133,7 @@ fun getExtension(filename:String): String {
 fun stripExtension(filename:String): String = filename.substring(0, filename.lastIndexOf('.'))
 
 fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = true):ComicEntry? {
-        Log.v("getComicFromUri", "uri = $uri")
+        Timber.v("getComicFromUri uri = $uri")
 
         if (uri == null)
             return null
@@ -151,7 +151,7 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = true):ComicE
             c = context.contentResolver.query(uri, projection, null, null, null)
             if (c != null) {
                 while (c.moveToNext()) {
-                    val name = c.getString(1)
+                    val name = URLDecoder.decode(c.getString(1), "utf-8")
                     val mime = c.getString(2)
                     val size = c.getString(3)
                     val lastModified = c.getString(4)
@@ -176,6 +176,9 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = true):ComicE
         Timber.w("getComicFromUri COMIC NOT FOUND ! $uri ")
         return null
     }
+
+// Retrieves a list of comics uri order by its type and name
+// Precond: the given uri is a directory
 fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false): List<ComicEntry> {
     Timber.v("getComicEntriesFromDocFile uri = $uri bOnlyFile=$bOnlyFile")
 
@@ -191,7 +194,9 @@ fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false)
     val docId = DocumentsContract.getDocumentId(uri)
     val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, docId)
 //    Timber.v("getComicEntriesFromDocFile :: childrenUri = $childrenUri")
-    val results: MutableList<ComicEntry> = mutableListOf()
+    var results: List<ComicEntry> = emptyList()
+    val resultDirs: MutableList<ComicEntry> = mutableListOf()
+    val resultComics: MutableList<ComicEntry> = mutableListOf()
 
     val projection = arrayOf(
         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -205,33 +210,34 @@ fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false)
     try {
         c = context.applicationContext.contentResolver.query(childrenUri, projection, null, null, null)
         if (c != null) {
+            // Get the URIs
             while (c.moveToNext()) {
                 val documentId: String = c.getString(0)
-                val name = c.getString(1)
+                val name = URLDecoder.decode(c.getString(1), "utf-8")
                 val mime = c.getString(2)
                 val size = c.getString(3)
                 val lastModified = c.getString(4)
-
-                var extension = ""
-                var isDirectory = false
 
                 val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
                 Timber.v("getComicEntriesFromDocFile :: documentUri = $documentUri")
 
                 if (DocumentsContract.Document.MIME_TYPE_DIR == mime) {
-                    isDirectory = true
+                    resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified.toLong(), 0, true))
                 } else {
-                    extension = getExtension(name)
-                }
-                if (bOnlyFile && !isDirectory) {
-                    // Do nothing
-                    Timber.v("getComicEntriesFromDocFile ::      isDirectory so skip it")
-                } else {
-                    val comic = ComicEntry(documentUri, uri.toString(), name, extension, lastModified.toLong(), size.toLong(), isDirectory)
-                    results.add(comic)
-
+                    // Filter by file type
+                    val extension = getExtension(name)
+                    if (extension in comicExtensionList) {
+                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified.toLong(), size.toLong(), false))
+                    }
                 }
             }
+
+            // Order each list
+            val tempResultDirs = resultDirs.sortedBy { it.name }
+            val tempResultComics = resultComics.sortedBy { it.name }
+
+            // Concat
+            results = tempResultDirs.plus(tempResultComics)
         }
     } catch (e: java.lang.Exception) {
         Timber.w("getComicEntriesFromDocFile :: Failed query: $e")
