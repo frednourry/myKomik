@@ -20,7 +20,6 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
 
-
 sealed class  PageSliderViewModelState(
     val isInitialized: Boolean = false,
 ) {
@@ -51,6 +50,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     var currentComic : ComicEntry? = null
     private var currentPage = 0
     private var nbExpectedPages = 0
+    private var zoomOption = DisplayOption.FULL
+    private var zoomLocked = false
 
     fun getState(): LiveData<PageSliderViewModelState> = state
 
@@ -329,4 +330,13 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             return ""
     }
 
+    fun setDisplayOption(zo : DisplayOption, lock:Boolean=false) {
+        Timber.d("setZoomOption($zo)")
+        zoomOption = zo
+        zoomLocked = lock
+
+        // TODO refresh image?
+    }
+
+    fun isZoomOptionLocked() = zoomLocked
 }

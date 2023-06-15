@@ -83,6 +83,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         super.onViewCreated(view, savedInstanceState)
         Timber.i("onViewCreated")
 
+        // Update metrics
+        App.physicalConstants.updateMetrics(requireContext())
+
         activity?.let { SharedPref.init(it) }
 
         //// MENU
@@ -194,8 +197,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         // Action bar
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.setDisplayHomeAsUpEnabled(false)
-/*        supportActionBar.setLogo(R.mipmap.ic_launcher)
-        supportActionBar.setDisplayUseLogoEnabled(true)*/
+/*        supportActionBar.setIcon(R.mipmap.ic_launcher)
+        supportActionBar.setDisplayUseLogoEnabled(true)
+        supportActionBar.setDisplayShowHomeEnabled(true)*/
 
         // Side menubar (DrawerLayout and NavigationView)
         NavigationUI.setupWithNavController(binding.navigationView,NavHostFragment.findNavController(thisFragment))
@@ -482,6 +486,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             Timber.i("File ${comic.uri} !")
             lastComicUri= comic.uri
             viewModel.setPrefLastComicUri(comic.uri)
+
             val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, comic.currentPage)
             findNavController().navigate(action)
         }

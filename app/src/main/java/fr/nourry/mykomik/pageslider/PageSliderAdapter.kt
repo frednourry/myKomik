@@ -29,22 +29,19 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
     }
 
-
     private var imageViewModified: MagnifyImageView? = null
     private var pageSliderAdapterListener:Listener? = null
 
-    private var numPageToUpdate = -1
-    private var scalePageToUpdate = 1f
-    private var offsetXPageToUpdate = 0f
-    private var offsetYPageToUpdate = 0f
-    private var matrixValuesToUpdate = FloatArray(9)
-
+    private var displayOption = DisplayOption.FULL
+    private var oldDisplayOptionLocked: Boolean = false
+    private var oldDisplayOption = displayOption
 
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:MagnifyImageView)
 
     inner class MyCardView(private val cardView:CardView):ComicLoadingProgressListener {
 
+        // Called when the  ComicLoadingManager has an image ready (an image path) for this CardView
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
             Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
             if ((path != "")) {
@@ -53,30 +50,42 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
                 val holderComic = holderInnerComic.comic
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
 
+
                 // Check if the target is still waiting this image
                 if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
                     image = holderInnerComic.imageView
-                    Glide.with(image.context)
+                    image.imagePath = path
+                    image.setDisplayOption(displayOption)
+                    Glide.with(image)
                         .load(path)
                         .into(image)
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
                 }
-
-                // Update parameters ?
-                if (currentIndex == numPageToUpdate && image != null) {
-                    Timber.v("  onRetrieved:: update parameters ($scalePageToUpdate, $offsetXPageToUpdate, $offsetYPageToUpdate)")
-                    image.updateParameters(scalePageToUpdate, offsetXPageToUpdate, offsetYPageToUpdate, matrixValuesToUpdate)
-
-                    resetImageToUpdateParameters()
-                }
-
             }
         }
     }
 
     private val inflater = LayoutInflater.from(context)
+
+    fun setDisplayOption(d:DisplayOption, isLocked:Boolean) {
+        Timber.i("setDisplayOption($d)")
+//        if (d != displayOption) {
+            displayOption = d
+
+        if (isLocked || oldDisplayOptionLocked!= isLocked || oldDisplayOption != displayOption) {
+            // Update every images already loaded
+            Timber.i("  setDisplayOption($d) => notifyDataSetChanged()")
+            notifyDataSetChanged()
+        } else {
+            // Update only this image
+            imageViewModified?.setDisplayOption(d)
+        }
+        oldDisplayOptionLocked = isLocked
+        oldDisplayOption = displayOption
+//        }
+    }
 
     fun setNewComic(newComic:ComicEntry) {
         Timber.d("setNewComic :: newComic=$newComic nbPage=${newComic.nbPages}")
@@ -106,6 +115,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         }
 
         magnifyImageView.setMagnifyImageViewListener(this, cardView)
+        magnifyImageView.resetImage()
 
         Glide.with(magnifyImageView)
             .load(R.drawable.ic_launcher_foreground)
@@ -113,6 +123,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
             .skipMemoryCache(true)
             .into(magnifyImageView)
         container.addView(view, 0)
+
 
         // Ask the ComicLoadingManager to find this page path
         ComicLoadingManager.getInstance().loadComicPages(comic, myCardView, position, 1)
@@ -140,6 +151,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         return try {
             val cardView:CardView = view as CardView
             val imageView = cardView.findViewById<MagnifyImageView>(R.id.imageView)
+            // TODO use ZoomOption?
             imageView.onTouchImageView(event)
         } catch(e:Exception) {
             Timber.d("onTouch::  error = ${e.printStackTrace()}")
@@ -148,27 +160,9 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
     }
 
     fun onPageChanged() {
-        imageViewModified?.resetImage()
-        imageViewModified = null
+//        imageViewModified?.resetImage()
+//        imageViewModified = null
     }
-
-    private fun resetImageToUpdateParameters()  {
-        numPageToUpdate = -1
-        scalePageToUpdate = 1f
-        offsetXPageToUpdate = 0f
-        offsetYPageToUpdate = 0f
-    }
-
-    fun setImageToUpdateParameters(numPage:Int, scale:Float = 1f, offsetX:Float = 0f, offsetY:Float = 0f, matrixValues:FloatArray = FloatArray(9)) {
-        Timber.v("setImageParameters numPage=$numPage $scale $offsetX $offsetY")
-        MagnifyImageView.printFloatArray(matrixValues, "  setImageParameters :: ")
-        numPageToUpdate = numPage
-        scalePageToUpdate = scale
-        offsetXPageToUpdate = offsetX
-        offsetYPageToUpdate = offsetY
-        matrixValuesToUpdate = matrixValues
-    }
-
     override fun onMagnifyImageViewClick(param: Any?, x:Float, y:Float) {
         try {
             val cardView = param as CardView

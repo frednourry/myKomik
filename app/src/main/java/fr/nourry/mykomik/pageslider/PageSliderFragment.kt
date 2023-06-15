@@ -10,6 +10,8 @@ import android.os.Build
 import android.os.Bundle
 import android.text.Html
 import android.view.*
+import android.view.animation.ScaleAnimation
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,8 +20,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.core.view.marginRight
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -34,7 +38,10 @@ import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.settings.UserPreferences
-import fr.nourry.mykomik.utils.*
+import fr.nourry.mykomik.utils.getComicFromUri
+import fr.nourry.mykomik.utils.getLocalDirName
+import fr.nourry.mykomik.utils.getReadableDate
+import fr.nourry.mykomik.utils.getSizeInMo
 import timber.log.Timber
 import java.io.IOException
 
@@ -46,6 +53,13 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     val PAGE_SELECTOR_ANIMATION_DURATION = 300L         // in milliseconds
     val STATE_CURRENT_COMIC = "state:current_comic"
     val STATE_CURRENT_PAGE = "state:current_page"
+
+    val NEXT_PAGE_BORDER_ZONE = 0.2                     // Define the zone to tap to change page (if the option is selected by the user)
+
+    // Button animation when a button is clicked in the PageSelector (change its scale)
+    private val buttonClickAnimationFromScale = 0.7f
+    private val buttonClickAnimationToScale = 1f
+    private val buttonClickAnimationDuration = 200L
 
     companion object {
         var PERMISSIONS_TO_WRITE = arrayOf(
@@ -74,14 +88,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private var lastPositionOffsetPixel = -1
     private var scrollingDirection = 0
 
-    // Information on the last current image information
-    private var lastImageScale = 1f
-    private var lastImageOffsetX = 0f
-    private var lastImageOffsetY = 0f
-    private var lastMatrixValues : FloatArray = FloatArray(9)
-
     private var bRefreshSliderAdapter = false
     private var bRefreshSelectorSliderAdapter = false
+
+    private var displayOption: DisplayOption = DisplayOption.FULL
+    private var displayOptionLocked : Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         activity?.actionBar?.hide()
@@ -93,6 +104,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Update metrics
+        App.physicalConstants.updateMetrics(requireContext())
 
         //// MENU
         // The usage of an interface lets you inject your own implementation
@@ -210,8 +223,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.title = currentComic.name
         supportActionBar.setDisplayHomeAsUpEnabled(false)
-/*        supportActionBar.setLogo(R.mipmap.ic_launcher)
-        supportActionBar.setDisplayUseLogoEnabled(true)*/
     }
 
 
@@ -241,13 +252,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         outState.putInt(STATE_CURRENT_PAGE, currentPage)
     }
 
-    private fun resetLastImageParameters() {
-        Timber.d("resetLastImageParameters")
-        lastImageScale = 1f
-        lastImageOffsetX = 0f
-        lastImageOffsetY = 0f
-    }
-
     // Update UI according to the model state events
     private fun updateUI(state: PageSliderViewModelState) {
         Timber.i("Calling updateUI, switch state=${state::class}")
@@ -269,6 +273,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("handleStateLoading")
 
         binding.viewPager.visibility = View.INVISIBLE
+        binding.zoomOptionLayout.visibility = View.INVISIBLE
 
         dialogComicLoading.isCancelable = false
         if (!dialogComicLoading.isAdded) {
@@ -335,19 +340,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             pageSliderAdapter.notifyDataSetChanged()
             bRefreshSliderAdapter = false
         } else {
+            // Back from pageSelector
+
             if (binding.viewPager.currentItem != state.currentPage) {
                 pageSliderAdapter.onPageChanged()
                 shouldUpdatePageSliderAdapter = true
             }
-
-
-            Timber.i("PLOP ${binding.viewPager.currentItem} ${state.currentPage} $lastImageScale $lastImageOffsetX $lastImageOffsetY")
-            MagnifyImageView.printFloatArray(lastMatrixValues, "  PLOP :: ")
-//            if (lastImageScale != 1f && lastImageOffsetX != 0f && lastImageOffsetY != 0f) {
-                pageSliderAdapter.setImageToUpdateParameters(state.currentPage, lastImageScale, lastImageOffsetX, lastImageOffsetY, lastMatrixValues)
-                resetLastImageParameters()
-//            }
-
         }
 
         if (shouldUpdatePageSliderAdapter) {
@@ -391,19 +389,113 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 viewModel.cancelPageSelector()
             }
             binding.buttonGoFirst.setOnClickListener {
-                Timber.d("onClick buttonGoFirst")
+                Timber.d("onClick buttonGoFirst ${it.width} ${it.height}")
+                it.startAnimation(getButtonAnimation(it))
+
                 binding.recyclerViewPageSelector.scrollToPosition(0)
             }
             binding.buttonGoLast.setOnClickListener {
-                Timber.d("onClick buttonGoLast")
+                Timber.d("onClick buttonGoLast ${it.width} ${it.height}")
+                it.startAnimation(getButtonAnimation(it))
+
                 binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
             }
+            binding.buttonFull.setOnClickListener {
+                Timber.d("onClick buttonFull ${it.width} ${it.height}")
+                it.startAnimation(getButtonAnimation(it))
+
+                displayOptionLocked = false
+                displayOption = DisplayOption.FULL
+
+                viewModel.setDisplayOption(displayOption)
+                resetZoomButtons()
+
+                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+            }
+            binding.buttonMaximizeWidth.setOnClickListener {
+                Timber.d("onClick buttonMaximizeWidth ${it.width} ${it.height}")
+                it.startAnimation(getButtonAnimation(it))
+
+                displayOptionLocked = false
+                displayOption = DisplayOption.MAXIMIZE_WIDTH
+
+                viewModel.setDisplayOption(displayOption)
+                resetZoomButtons()
+
+                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+            }
+            binding.buttonMaximizeHeight.setOnClickListener {
+                Timber.d("onClick buttonMaximizeHeight ${it.width} ${it.height}")
+                it.startAnimation(getButtonAnimation(it))
+
+                displayOptionLocked = false
+                displayOption = DisplayOption.MAXIMIZE_HEIGHT
+
+                viewModel.setDisplayOption(displayOption)
+                resetZoomButtons()
+
+                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+            }
+            binding.buttonFull.setOnLongClickListener{
+                Timber.d("onLongClick buttonFull")
+                it.startAnimation(getButtonAnimation(it))
+
+
+                displayOptionLocked = true
+                displayOption = DisplayOption.FULL
+
+                viewModel.setDisplayOption(displayOption, displayOptionLocked)
+                resetZoomButtons()
+                negateZoomButton(binding.buttonFull)
+
+                pageSliderAdapter.setDisplayOption(DisplayOption.FULL, displayOptionLocked)
+                true
+            }
+            binding.buttonMaximizeWidth.setOnLongClickListener{
+                Timber.d("onLongClick buttonMaximizeWidth")
+                it.startAnimation(getButtonAnimation(it))
+
+                displayOptionLocked = true
+                displayOption = DisplayOption.MAXIMIZE_WIDTH
+
+                viewModel.setDisplayOption(displayOption, displayOptionLocked)
+                resetZoomButtons()
+                negateZoomButton(binding.buttonMaximizeWidth)
+
+                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                true
+            }
+            binding.buttonMaximizeHeight.setOnLongClickListener{
+                Timber.d("onLongClick buttonMaximizeHeight")
+                it.startAnimation(getButtonAnimation(it))
+
+                displayOptionLocked = true
+                displayOption = DisplayOption.MAXIMIZE_HEIGHT
+
+                viewModel.setDisplayOption(displayOption, displayOptionLocked)
+                resetZoomButtons()
+                negateZoomButton(binding.buttonMaximizeHeight)
+
+                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                true
+            }
+
             bRefreshSelectorSliderAdapter = false
         }
 
         binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
 
         showPageSelector()
+    }
+
+    private fun getButtonAnimation(it: View) : ScaleAnimation{
+        val anim = ScaleAnimation(
+                      buttonClickAnimationFromScale, buttonClickAnimationToScale,
+                      buttonClickAnimationFromScale, buttonClickAnimationToScale, it.width.toFloat()/2,
+                it.height.toFloat()/2)
+        anim.duration = buttonClickAnimationDuration
+
+        return anim
     }
 
     private fun showPageSelector() {
@@ -424,7 +516,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             binding.buttonGoLast.visibility = View.VISIBLE
         }
 
-        // Animation
+        // pageSelectorLayout animation
         binding.pageSelectorLayout.x = -(binding.pageSelectorLayout.width.toFloat())
         val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", 0f)
         animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION
@@ -433,10 +525,24 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val animAlpha = ObjectAnimator.ofFloat(binding.cachePageSelectorLayout, "alpha", 100f)
         animAlpha.duration = PAGE_SELECTOR_ANIMATION_DURATION
 
+        // zoomOptionLayout animation
+        binding.zoomOptionLayout.x = App.physicalConstants.metrics.widthPixels.toFloat()
+        val targetZoomOptionLayout = App.physicalConstants.metrics.widthPixels - (binding.zoomOptionLayout.width+ binding.zoomOptionLayout.marginRight)
+        val animMove2 = ObjectAnimator.ofFloat(binding.zoomOptionLayout, "x", targetZoomOptionLayout.toFloat())
+        animMove2.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        binding.zoomOptionLayout.alpha = 0F
+        val animAlpha2 = ObjectAnimator.ofFloat(binding.zoomOptionLayout, "alpha", 100f)
+
+        // Start animations
         animMove.start()
         animAlpha.start()
+        animMove2.start()
+        animAlpha2.start()
+
 
         binding.cachePageSelectorLayout.visibility = View.VISIBLE
+        binding.zoomOptionLayout.visibility = View.VISIBLE
         supportActionBar.show()
     }
 
@@ -444,6 +550,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.d("hidePageSelector")
         supportActionBar.hide()
 
+        // pageSelectorLayout animation
         val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", -binding.pageSelectorLayout.width.toFloat())
         animMove.duration = PAGE_SELECTOR_ANIMATION_DURATION
         animMove.doOnEnd {
@@ -453,8 +560,21 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val animAlpha = ObjectAnimator.ofFloat(binding.cachePageSelectorLayout, "alpha", 0f)
         animAlpha.duration = PAGE_SELECTOR_ANIMATION_DURATION
 
+        // zoomOptionLayout animation
+        val animMove2 = ObjectAnimator.ofFloat(binding.zoomOptionLayout, "x", App.physicalConstants.metrics.widthPixels.toFloat())
+        animMove2.duration = PAGE_SELECTOR_ANIMATION_DURATION
+        animMove2.doOnEnd {
+            binding.zoomOptionLayout.visibility = View.INVISIBLE
+        }
+
+        val animAlpha2 = ObjectAnimator.ofFloat(binding.zoomOptionLayout, "alpha", 0f)
+        animAlpha2.duration = PAGE_SELECTOR_ANIMATION_DURATION
+
+        // Start animations
         animMove.start()
+        animMove2.start()
         animAlpha.start()
+        animAlpha2.start()
     }
 
     private fun handleStateInit(state: PageSliderViewModelState.Init) {
@@ -499,7 +619,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                                 val newComic = viewModel.getNextComic()
                                 Timber.d("    newComic=$newComic")
                                 if (newComic != null && newComic != currentComic) {
-                                    resetLastImageParameters()
+//                                    resetLastImageParameters()
                                     changeCurrentComic(newComic)
                                 }
                             }
@@ -527,7 +647,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                     val newComic = viewModel.getPreviousComic()
                     Timber.d("    newComic=$newComic")
                     if (newComic != null && newComic != currentComic) {
-                        resetLastImageParameters()
+//                        resetLastImageParameters()
                         changeCurrentComic(newComic)
                     }
                 }
@@ -551,16 +671,16 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             // Check if the tap is near the border
             val width = App.physicalConstants.metrics.widthPixels
             val directionLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
-            Timber.i("   onPageTap "+(width*0.1)+" < $x < "+(width*0.9))
+            Timber.i("   onPageTap "+(width*NEXT_PAGE_BORDER_ZONE)+" < $x < "+(width*(1-NEXT_PAGE_BORDER_ZONE)))
 
-            if (x<width*0.1) {
+            if (x<width*NEXT_PAGE_BORDER_ZONE) {
                 if (directionLTR)
                     scrollToPreviousPage()
                 else
                     scrollToNextPage()
                 return
             }
-            if (x>width*0.9) {
+            if (x>width*(1-NEXT_PAGE_BORDER_ZONE)) {
                 if (directionLTR)
                     scrollToNextPage()
                 else
@@ -570,21 +690,34 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             }
         }
 
-        // Save current image informations
-        Timber.v("currentMagnifyImageView:: scale=${currentMagnifyImageView.getCurrentScale()} offsetx=${currentMagnifyImageView.getOffsetX()} offsety=${currentMagnifyImageView.getOffsetY()}")
-        lastImageScale = currentMagnifyImageView.getCurrentScale()
-        lastImageOffsetX = currentMagnifyImageView.getOffsetX()
-        lastImageOffsetY = currentMagnifyImageView.getOffsetY()
-        lastMatrixValues = currentMagnifyImageView.getMatrixValues()
-
         viewModel.showPageSelector(currentPage)
+    }
+
+
+    private fun positiveZoomButton(btn: ImageButton) {
+        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.white))
+        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button)
+    }
+    private fun negateZoomButton(btn: ImageButton) {
+        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.lightgrey))
+        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button_wb)
+    }
+    private fun resetZoomButtons() {
+        Timber.i("resetZoomButtons")
+        positiveZoomButton(binding.buttonFull)
+        positiveZoomButton(binding.buttonMaximizeWidth)
+        positiveZoomButton(binding.buttonMaximizeHeight)
+
+/*        if (!viewModel.isZoomOptionLocked()) {
+            pageSliderAdapter.setDisplayOption(DisplayOption.FULL)
+        }*/
     }
 
     private fun scrollToNextPage() {
         Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-            resetLastImageParameters()
+//            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage+1, true)
         } else {
             askNextComic()
@@ -595,7 +728,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
         if (currentPage-1>=0) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-            resetLastImageParameters()
+//            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage-1, true)
         } else {
             askPreviousComic()
@@ -664,12 +797,17 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             showOrUpdateToast(resources.getString(R.string.page_number_info, (position+1), currentComic.nbPages))
         }
 
+        if (!viewModel.isZoomOptionLocked()) {
+            resetZoomButtons()
+        }
+
+        if (!displayOptionLocked) {
+            displayOption = DisplayOption.FULL
+            viewModel.setDisplayOption(displayOption, false)
+            pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+        }
+
         viewModel.onSetCurrentPage(position)
-
-        lastImageScale = 1f
-        lastImageOffsetX = 0f
-        lastImageOffsetY = 0f
-
     }
 
     private fun showOrUpdateToast(text:String) {
