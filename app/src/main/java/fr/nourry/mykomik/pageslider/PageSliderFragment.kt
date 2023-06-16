@@ -91,8 +91,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private var bRefreshSliderAdapter = false
     private var bRefreshSelectorSliderAdapter = false
 
-    private var displayOption: DisplayOption = DisplayOption.FULL
-    private var displayOptionLocked : Boolean = false
+    private var defaultDisplayOption: DisplayOption = DisplayOption.FULL
+    private var currentDisplayOption: DisplayOption = defaultDisplayOption
+    private var displayOptionLocked: DisplayOption = defaultDisplayOption
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         activity?.actionBar?.hide()
@@ -402,81 +403,29 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             }
             binding.buttonFull.setOnClickListener {
                 Timber.d("onClick buttonFull ${it.width} ${it.height}")
-                it.startAnimation(getButtonAnimation(it))
-
-                displayOptionLocked = false
-                displayOption = DisplayOption.FULL
-
-                viewModel.setDisplayOption(displayOption)
-                resetZoomButtons()
-
-                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.FULL, false)
             }
             binding.buttonMaximizeWidth.setOnClickListener {
                 Timber.d("onClick buttonMaximizeWidth ${it.width} ${it.height}")
-                it.startAnimation(getButtonAnimation(it))
-
-                displayOptionLocked = false
-                displayOption = DisplayOption.MAXIMIZE_WIDTH
-
-                viewModel.setDisplayOption(displayOption)
-                resetZoomButtons()
-
-                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.MAXIMIZE_WIDTH, false)
             }
             binding.buttonMaximizeHeight.setOnClickListener {
                 Timber.d("onClick buttonMaximizeHeight ${it.width} ${it.height}")
-                it.startAnimation(getButtonAnimation(it))
-
-                displayOptionLocked = false
-                displayOption = DisplayOption.MAXIMIZE_HEIGHT
-
-                viewModel.setDisplayOption(displayOption)
-                resetZoomButtons()
-
-                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.MAXIMIZE_HEIGHT, false)
             }
             binding.buttonFull.setOnLongClickListener{
                 Timber.d("onLongClick buttonFull")
-                it.startAnimation(getButtonAnimation(it))
-
-
-                displayOptionLocked = true
-                displayOption = DisplayOption.FULL
-
-                viewModel.setDisplayOption(displayOption, displayOptionLocked)
-                resetZoomButtons()
-                negateZoomButton(binding.buttonFull)
-
-                pageSliderAdapter.setDisplayOption(DisplayOption.FULL, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.FULL, true)
                 true
             }
             binding.buttonMaximizeWidth.setOnLongClickListener{
                 Timber.d("onLongClick buttonMaximizeWidth")
-                it.startAnimation(getButtonAnimation(it))
-
-                displayOptionLocked = true
-                displayOption = DisplayOption.MAXIMIZE_WIDTH
-
-                viewModel.setDisplayOption(displayOption, displayOptionLocked)
-                resetZoomButtons()
-                negateZoomButton(binding.buttonMaximizeWidth)
-
-                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.MAXIMIZE_WIDTH, true)
                 true
             }
             binding.buttonMaximizeHeight.setOnLongClickListener{
                 Timber.d("onLongClick buttonMaximizeHeight")
-                it.startAnimation(getButtonAnimation(it))
-
-                displayOptionLocked = true
-                displayOption = DisplayOption.MAXIMIZE_HEIGHT
-
-                viewModel.setDisplayOption(displayOption, displayOptionLocked)
-                resetZoomButtons()
-                negateZoomButton(binding.buttonMaximizeHeight)
-
-                pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
+                onClickDisplayButton(it, DisplayOption.MAXIMIZE_HEIGHT, true)
                 true
             }
 
@@ -486,6 +435,78 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         binding.recyclerViewPageSelector.scrollToPosition(state.currentPage)
 
         showPageSelector()
+    }
+
+    private fun onClickDisplayButton(btnView: View, dOption: DisplayOption, isLocked: Boolean) {
+        Timber.d("onClickDisplayButton dOption=$dOption isLocked=$isLocked")
+        val oldDisplayOptionLocked = displayOptionLocked
+
+        // Update internal variable
+        currentDisplayOption = dOption
+        if (isLocked)
+            displayOptionLocked = dOption
+
+        // Update ViewModel
+        viewModel.setDisplayOption(dOption, isLocked)
+
+        // Update buttons
+        updateDisplayButtons(isLocked)
+
+        // Button animation
+        btnView.startAnimation(getButtonAnimation(btnView))
+
+        // Informs the pageSliderAdapter
+        val shouldUpdateAllPages =
+            if (isLocked)
+                // The option is locked
+                true
+            else
+                displayOptionLocked != oldDisplayOptionLocked
+        pageSliderAdapter.setDisplayOption(dOption, isLocked, shouldUpdateAllPages)
+    }
+
+    private fun positiveZoomButton(btn: ImageButton) {
+        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.white))
+        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button)
+    }
+    private fun negateZoomButton(btn: ImageButton) {
+        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.lightgrey))
+        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button_wb)
+    }
+    private fun updateDisplayButtons(useLock:Boolean = true) {
+        Timber.i("updateDisplayButtons")
+        val otherButton1 : ImageButton
+        val otherButton2 : ImageButton
+        val selectedButton : ImageButton
+        when (currentDisplayOption) {
+            DisplayOption.FULL -> {
+                selectedButton = binding.buttonFull
+                otherButton1 = binding.buttonMaximizeWidth
+                otherButton2 = binding.buttonMaximizeHeight
+            }
+            DisplayOption.MAXIMIZE_WIDTH -> {
+                otherButton1 = binding.buttonFull
+                selectedButton = binding.buttonMaximizeWidth
+                otherButton2 = binding.buttonMaximizeHeight
+            }
+            DisplayOption.MAXIMIZE_HEIGHT -> {
+                otherButton1 = binding.buttonFull
+                otherButton2= binding.buttonMaximizeWidth
+                selectedButton = binding.buttonMaximizeHeight
+            }
+        }
+
+        if (useLock && displayOptionLocked != null) {
+            negateZoomButton(selectedButton)
+        } else {
+            positiveZoomButton(selectedButton)
+        }
+        positiveZoomButton(otherButton1)
+        positiveZoomButton(otherButton2)
+
+        selectedButton.alpha = 1.0f
+        otherButton1.alpha = 0.5f
+        otherButton2.alpha = 0.5f
     }
 
     private fun getButtonAnimation(it: View) : ScaleAnimation{
@@ -693,26 +714,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         viewModel.showPageSelector(currentPage)
     }
 
-
-    private fun positiveZoomButton(btn: ImageButton) {
-        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.white))
-        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button)
-    }
-    private fun negateZoomButton(btn: ImageButton) {
-        btn.setColorFilter(ContextCompat.getColor(requireContext(), R.color.lightgrey))
-        btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button_wb)
-    }
-    private fun resetZoomButtons() {
-        Timber.i("resetZoomButtons")
-        positiveZoomButton(binding.buttonFull)
-        positiveZoomButton(binding.buttonMaximizeWidth)
-        positiveZoomButton(binding.buttonMaximizeHeight)
-
-/*        if (!viewModel.isZoomOptionLocked()) {
-            pageSliderAdapter.setDisplayOption(DisplayOption.FULL)
-        }*/
-    }
-
     private fun scrollToNextPage() {
         Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
@@ -797,15 +798,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             showOrUpdateToast(resources.getString(R.string.page_number_info, (position+1), currentComic.nbPages))
         }
 
-        if (!viewModel.isZoomOptionLocked()) {
-            resetZoomButtons()
-        }
-
-        if (!displayOptionLocked) {
-            displayOption = DisplayOption.FULL
-            viewModel.setDisplayOption(displayOption, false)
-            pageSliderAdapter.setDisplayOption(displayOption, displayOptionLocked)
-        }
+        currentDisplayOption = displayOptionLocked  // Set the displayOption to the locked one
+        updateDisplayButtons()
 
         viewModel.onSetCurrentPage(position)
     }
@@ -878,7 +872,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     // Register permission callback
-    var pageToSaveAfterRequest = 0  // To remember which page to save after asking permissions
+    private var pageToSaveAfterRequest = 0  // To remember which page to save after asking permissions
     private val writingPermissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         val granted = permissions.entries.all {
             it.value == true

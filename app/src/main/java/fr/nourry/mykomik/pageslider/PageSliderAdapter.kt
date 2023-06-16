@@ -33,9 +33,6 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
     private var pageSliderAdapterListener:Listener? = null
 
     private var displayOption = DisplayOption.FULL
-    private var oldDisplayOptionLocked: Boolean = false
-    private var oldDisplayOption = displayOption
-
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:MagnifyImageView)
 
@@ -69,22 +66,18 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
 
     private val inflater = LayoutInflater.from(context)
 
-    fun setDisplayOption(d:DisplayOption, isLocked:Boolean) {
-        Timber.i("setDisplayOption($d)")
-//        if (d != displayOption) {
-            displayOption = d
+    fun setDisplayOption(d:DisplayOption, isLocked:Boolean, updateAll:Boolean) {
+        Timber.i("setDisplayOption($d, $isLocked, $updateAll)")
 
-        if (isLocked || oldDisplayOptionLocked!= isLocked || oldDisplayOption != displayOption) {
+        if (updateAll) {
             // Update every images already loaded
             Timber.i("  setDisplayOption($d) => notifyDataSetChanged()")
+            displayOption = d
             notifyDataSetChanged()
         } else {
             // Update only this image
             imageViewModified?.setDisplayOption(d)
         }
-        oldDisplayOptionLocked = isLocked
-        oldDisplayOption = displayOption
-//        }
     }
 
     fun setNewComic(newComic:ComicEntry) {

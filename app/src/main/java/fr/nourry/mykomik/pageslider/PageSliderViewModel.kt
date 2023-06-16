@@ -334,8 +334,6 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         Timber.d("setZoomOption($zo)")
         zoomOption = zo
         zoomLocked = lock
-
-        // TODO refresh image?
     }
 
     fun isZoomOptionLocked() = zoomLocked
