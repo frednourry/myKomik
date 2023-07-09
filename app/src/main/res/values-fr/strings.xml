@@ -68,6 +68,7 @@
     <string name="save_page_message_unknown_error">Une erreur inconnue est survenue en sauvegardant</string>
     <string name="save_page_message_ok">Page sauvée dans %s</string>
     <string name="save_page_message_error_io">Une erreur d\'I/O est survenue en sauvegardant dans An I/O error occured while saving this page in %s (%s)</string>
+    <string name="loading_image">Image en cours de chargement</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

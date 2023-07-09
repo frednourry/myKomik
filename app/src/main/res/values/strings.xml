@@ -68,6 +68,7 @@
     <string name="save_page_message_unknown_error">An error occurred while saving this page</string>
     <string name="save_page_message_ok">Page saved in %s</string>
     <string name="save_page_message_error_io">An I/O error occurred while saving this page in %s (%s)</string>
+    <string name="loading_image">Loading image</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

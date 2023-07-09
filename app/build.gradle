@@ -70,7 +70,7 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
     implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
     implementation "androidx.navigation:navigation-dynamic-features-fragment:$nav_version"
-    // Safeargs (pour la navigation entre fragments)  !! Ne nas oublier de modifier aussi le build.gradle du projet ET de faire un 'make project' A CHAQUE AJOUT DE TRANSITION/ACTION
+    // Safeargs (pour la navigation entre fragments)  !! Ne pas oublier de modifier aussi le build.gradle du projet ET de faire un 'make project' A CHAQUE AJOUT DE TRANSITION/ACTION
 //    implementation "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
 
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'

@@ -867,7 +867,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun saveCurrentPageInPictureDirectory(numPage:Int) {
         val title = getString(R.string.save_page)
         var imageSavedPath = ""
-        var message2 = ""
+        var message2 : String
         try {
             imageSavedPath = viewModel.saveCurrentPageInPictureDirectory(currentComic, numPage)
             message2 = if (imageSavedPath == "") {

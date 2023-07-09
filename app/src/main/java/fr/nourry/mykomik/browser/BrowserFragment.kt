@@ -450,8 +450,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                         if (prefCurrentPage != "") {
                             currentPage = prefCurrentPage.toInt()
                         }
-                        val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(lastComic, currentPage)
-                        findNavController().navigate(action)
+
+                        goPageSliderFragment(lastComic, currentPage)
                     }
                     .setNegativeButton(android.R.string.cancel) { _,_ ->
                         viewModel.setPrefLastComicUri(lastUri)      // Forget the last comic...
@@ -487,8 +487,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             lastComicUri= comic.uri
             viewModel.setPrefLastComicUri(comic.uri)
 
-            val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, comic.currentPage)
-            findNavController().navigate(action)
+            goPageSliderFragment(comic, comic.currentPage)
         }
     }
 
@@ -655,6 +654,12 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }
 
         alert.show()
+    }
+
+    private fun goPageSliderFragment(comic:ComicEntry, page:Int) {
+//        supportActionBar.hide() // Do this or else the image height will be detected with the supportActionBar height !!
+        val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, page)
+        findNavController().navigate(action)
     }
 
     private fun goSettings() {
