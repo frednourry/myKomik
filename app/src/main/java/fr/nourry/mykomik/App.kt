@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.room.Room
 import fr.nourry.mykomik.database.AppDatabase
 import fr.nourry.mykomik.database.DATABASE_NAME
+import fr.nourry.mykomik.pageslider.DisplayOption
 import fr.nourry.mykomik.utils.PhysicalConstants
 import timber.log.Timber
 import java.io.File
@@ -27,6 +28,8 @@ class App: Application() {
         lateinit var thumbnailCacheDirectory : File
 
         var isGuestMode = false
+        var pageSliderCurrentDisplayOption = DisplayOption.FULL
+        var pageSliderDisplayOptionLocked = pageSliderCurrentDisplayOption
 
         var currentTreeUri: Uri? = null
     }

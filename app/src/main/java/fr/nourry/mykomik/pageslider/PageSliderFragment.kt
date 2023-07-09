@@ -202,6 +202,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
             bRefreshSelectorSliderAdapter = false
             bRefreshSliderAdapter = true
+
+            currentDisplayOption = App.pageSliderCurrentDisplayOption
+            displayOptionLocked = App.pageSliderDisplayOptionLocked
         }
 
         viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
@@ -209,7 +212,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             Timber.i("BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
-
         viewModel.initialize(currentComic, currentPage/*, savedInstanceState == null*/)
 
         // LiveData for the ViewModel :
@@ -220,10 +222,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         }
         // End LiveDatas
 
-        // Replace the title
+        // Replace the title and hide actionbar
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
-        supportActionBar.title = currentComic.name
         supportActionBar.setDisplayHomeAsUpEnabled(false)
+        supportActionBar.title = currentComic.name
+//        MagnifyImageView.setSupportActionBarHeight(supportActionBar.height)
+        supportActionBar.hide()
     }
 
 
@@ -336,13 +340,15 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             else
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
+            // Set displayOption
+            pageSliderAdapter.setDisplayOption(currentDisplayOption, currentDisplayOption==displayOptionLocked, currentDisplayOption==displayOptionLocked)
+
             binding.viewPager.addOnPageChangeListener(this)
             shouldUpdatePageSliderAdapter = true
             pageSliderAdapter.notifyDataSetChanged()
             bRefreshSliderAdapter = false
         } else {
             // Back from pageSelector
-
             if (binding.viewPager.currentItem != state.currentPage) {
                 pageSliderAdapter.onPageChanged()
                 shouldUpdatePageSliderAdapter = true
@@ -366,6 +372,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             pageSelectorSliderAdapter.notifyDataSetChanged()
 
         binding.viewPager.visibility = View.VISIBLE
+
+        updateDisplayButtons(currentDisplayOption == displayOptionLocked)
     }
 
     private fun handleStatePageSelection(state: PageSliderViewModelState.PageSelection) {
@@ -443,8 +451,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         // Update internal variable
         currentDisplayOption = dOption
-        if (isLocked)
+        App.pageSliderCurrentDisplayOption = currentDisplayOption   // Save value in App
+        if (isLocked) {
             displayOptionLocked = dOption
+            App.pageSliderDisplayOptionLocked = displayOptionLocked // Save value in App
+        }
 
         // Update ViewModel
         viewModel.setDisplayOption(dOption, isLocked)
