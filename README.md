@@ -15,6 +15,8 @@ Frederic Nourry - [@frednourry][2] on GitHub
 
 -----------------------------------
 
+Screenshots
+------
 
 #### Komik
 ![](static/screenshots/Browser_Komik.jpg "Komik browser") ![](static/screenshots/SelectFiles_Komik.jpg "Komik browser with file selection") ![](static/screenshots/PageSelector_Komik.jpg "Komik page selector") ![](static/screenshots/PageZoom_Komik.jpg "Komik zoomed page")
