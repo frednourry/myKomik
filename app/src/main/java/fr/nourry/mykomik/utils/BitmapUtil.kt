@@ -1,17 +1,113 @@
 package fr.nourry.mykomik.utils
 
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
 import fr.nourry.mykomik.App
 import timber.log.Timber
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.*
+import java.util.Locale
 
 
 class BitmapUtil {
     companion object {
-        // Juxtapose bitmap with some rotation
+
+        /**
+         * Like BitmapFactory.decodeStream but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
+         */
+        fun decodeStream(f: File?, width: Int=-1, height: Int=-1): Bitmap? {
+            if (f == null) {
+                Timber.w("decodeStream :: File null ! Returns null")
+                return null
+            }
+            if (!f.exists()) {
+                Timber.w("decodeStream :: File doesn't exist ! Returns null (${f.absolutePath})")
+                return null
+            }
+
+            // Set the maximum width and height (if given)
+            val maxWidth = if (width == -1) App.physicalConstants.metrics.widthPixels else width
+            val maxHeight = if (height == -1) App.physicalConstants.metrics.widthPixels else height
+
+            try {
+                // Get the image size
+                val optionTest = BitmapFactory.Options()
+                optionTest.inJustDecodeBounds = true
+                BitmapFactory.decodeStream(FileInputStream(f), null, optionTest)
+
+                val halfOutWidth: Int = optionTest.outWidth / 2
+                val halfOutHeight: Int = optionTest.outHeight / 2
+                var inSampleSize = 1
+
+                // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+                // height and width larger than the requested height and width.
+                while (halfOutHeight / inSampleSize >= maxHeight && halfOutWidth / inSampleSize >= maxWidth) {
+                    inSampleSize *= 2
+                }
+
+                // Decode bitmap with inSampleSize set
+                val option = BitmapFactory.Options()
+                option.inJustDecodeBounds = false
+                option.inSampleSize = inSampleSize
+                return BitmapFactory.decodeStream(FileInputStream(f), null, option)
+            } catch (e: OutOfMemoryError) {
+                Timber.w("decodeStream :: OutOfMemoryError ! f=${f.absolutePath}")
+            } catch (e: Error) {
+                Timber.w("decodeStream :: error ! f=${f.absolutePath}")
+                e.printStackTrace()
+            }
+            return null
+        }
+
+        /**
+         * Like BitmapFactory.decodeByteArray but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
+         */
+        private fun decodeByteArray(data: ByteArray?, offset:Int, length:Int, width: Int=-1, height: Int=-1):Bitmap? {
+            // Set the maximum width and height (if given)
+            val maxWidth = if (width == -1) App.physicalConstants.metrics.widthPixels else width
+            val maxHeight = if (height == -1) App.physicalConstants.metrics.widthPixels else height
+
+            try {
+                // Get the image size
+                val optionTest = BitmapFactory.Options()
+                optionTest.inJustDecodeBounds = true
+                BitmapFactory.decodeByteArray(data, offset, length, optionTest)
+
+                val halfOutWidth: Int = optionTest.outWidth / 2
+                val halfOutHeight: Int = optionTest.outHeight / 2
+                var inSampleSize = 1
+
+                // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+                // height and width larger than the requested height and width.
+                while (halfOutHeight / inSampleSize >= maxHeight && halfOutWidth / inSampleSize >= maxWidth) {
+                    inSampleSize *= 2
+                }
+
+                // Decode bitmap with inSampleSize set
+                val option = BitmapFactory.Options()
+                option.inJustDecodeBounds = false
+                option.inSampleSize = inSampleSize
+                return BitmapFactory.decodeByteArray(data, offset, length, option)
+            } catch (e: OutOfMemoryError) {
+                Timber.w("decodeStream :: OutOfMemoryError !")
+            } catch (e: Error) {
+                Timber.w("decodeStream :: error !")
+                e.printStackTrace()
+            }
+            return null
+        }
+
+
+        /**
+         * Juxtapose bitmap with some rotation
+         */
         fun createDirectoryThumbnailBitmap(bitmapCovers:List<Bitmap>, frameMaxWidth:Int, frameMaxHeight:Int):Bitmap {
             val pixelDxRatio = App.physicalConstants.pixelDxRatio
             val bitmapToReturn:Bitmap = Bitmap.createBitmap( (frameMaxWidth * pixelDxRatio).toInt(), (frameMaxHeight * pixelDxRatio).toInt(),Bitmap.Config.ARGB_8888)
@@ -23,8 +119,6 @@ class BitmapUtil {
             val paint = Paint(Paint.ANTI_ALIAS_FLAG/* and Paint.DITHER_FLAG and Paint.FILTER_BITMAP_FLAG*/)
             for (i in bitmapCovers.indices.reversed()) {
                 val comicCover = bitmapCovers[i]
-//                val comicXCenter = (comicCover.width / 2).toFloat()
-//                val comicYCenter = (comicCover.height / 2).toFloat()
                 val deltaDegrees = i * degrees
 
                 val mRotate = Matrix()
@@ -40,13 +134,15 @@ class BitmapUtil {
             return bitmapToReturn
         }
 
-        // Resize an image and add a little frame around
-        // byteArray: byte array of the image that will be resized (with ratio respect) and framed
-        // thumbnailMaxWidth: width of the return image
-        // thumbnailMaxHeight: height of the return image
-        // innerImageMaxWidth: maximum width of the resize image
-        // innerImageMaxHeight: maximum height of the resize image
-        // borderSize: size (thickness) of the frame
+        /**
+         * Resize an image and add a little frame around
+         *  byteArray: byte array of the image that will be resized (with ratio respect) and framed
+         *  thumbnailMaxWidth: width of the return image
+         *  thumbnailMaxHeight: height of the return image
+         *  innerImageMaxWidth: maximum width of the resize image
+         *  innerImageMaxHeight: maximum height of the resize image
+         *  borderSize: size (thickness) of the frame
+         */
         fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
             Timber.v("createFramedBitmap")
 
@@ -69,7 +165,7 @@ class BitmapUtil {
 
             try {
                 // Transform the ByteArray in Bitmap
-                val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+                val bitmap = decodeByteArray(byteArray, 0, byteArray.size)
                 if (bitmap == null) return bitmap
                 Timber.v("bitmap.width=${bitmap.width} bitmap.height=${bitmap.height}")
                 val shouldRotate = bitmap.width>bitmap.height
@@ -156,11 +252,14 @@ class BitmapUtil {
         }
 
 
-        // Create a bitmap from bytes
+        /**
+         * Create a bitmap from bytes
+         */
         fun createBitmap(byteArray:ByteArray, maxWidth:Int=0, maxHeight:Int=0) : Bitmap?{
-            var bitmap: Bitmap? = null
+            var bitmap: Bitmap? = decodeByteArray(byteArray, 0, byteArray.size)
+            if (bitmap == null) return null
+
             try {
-                bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
                 val ratioWidth:Float = if (maxWidth != 0) (bitmap.width.toFloat()/maxWidth.toFloat()) else 1.0f
                 val ratioHeight:Float = if (maxHeight != 0) (bitmap.height.toFloat()/maxHeight.toFloat()) else 1.0f
                 val ratio = if (ratioWidth>ratioHeight) ratioWidth else ratioHeight
@@ -169,7 +268,7 @@ class BitmapUtil {
                 Timber.v("createBitmap maxWidth=$maxWidth maxHeight=$maxHeight   bitmap.width=${bitmap.width} bitmap.height=${bitmap.height} width=$width height=$height")
                 bitmap = Bitmap.createScaledBitmap(bitmap, width, height,false)
             } catch (e: IllegalArgumentException) {
-                Timber.e("Error creating bitmap")
+                Timber.e("createBitmap: Error creating bitmap")
                 e.printStackTrace()
             }
             return bitmap

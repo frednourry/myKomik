@@ -1,7 +1,6 @@
 package fr.nourry.mykomik.pageslider
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -9,12 +8,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.cardview.widget.CardView
 import androidx.viewpager.widget.PagerAdapter
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
+import fr.nourry.mykomik.utils.BitmapUtil
 import timber.log.Timber
-
+import java.io.File
 
 enum class MovementType {
     NONE,
@@ -53,19 +54,19 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
                     Timber.d("     UPDATING IMAGEVIEW... $path")
 
                     // Load the image
-                    magnifyImageView = holderInnerComic.imageView
-                    magnifyImageView.imagePath = path
-                    magnifyImageView.setDisplayOption(displayOption)
-                    magnifyImageView.setImageBitmap(BitmapFactory.decodeFile(path))
-/*                    Glide.with(magnifyImageView)
-                        .load(path)
-                        .into(magnifyImageView)*/
+                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels)
+                    if (bitmap != null) {
+                        magnifyImageView = holderInnerComic.imageView
+                        magnifyImageView.imagePath = path
+                        magnifyImageView.setDisplayOption(displayOption)
+                        magnifyImageView.setImageBitmap(bitmap)
 
-                    magnifyImageView.visibility = View.VISIBLE
+                        magnifyImageView.visibility = View.VISIBLE
 
-                    // Hide the placeHolder
-                    val placeHolder = holderInnerComic.placeHolderView
-                    placeHolder.visibility = View.INVISIBLE
+                        // Hide the placeHolder
+                        val placeHolder = holderInnerComic.placeHolderView
+                        placeHolder.visibility = View.INVISIBLE
+                    }
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
                 }
@@ -122,12 +123,6 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
 
         placeHolderView.visibility = View.VISIBLE
         magnifyImageView.visibility = View.INVISIBLE
-
-/*        Glide.with(magnifyImageView)
-            .load(R.drawable.ic_launcher_foreground)
-            .diskCacheStrategy(DiskCacheStrategy.NONE)
-            .skipMemoryCache(true)
-            .into(magnifyImageView)*/
 
         container.addView(view, 0)
 

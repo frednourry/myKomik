@@ -7,13 +7,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
+import fr.nourry.mykomik.utils.BitmapUtil
 import timber.log.Timber
+import java.io.File
 
 
 // To work with a viewPager2
@@ -39,10 +40,10 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
                     Timber.d("     UPDATING IMAGEVIEW... $path")
 
                     val image = holderInnerComic.imageView
-                    Glide.with(image.context)
-                        .load(path)
-                        .fitCenter()
-                        .into(image)
+                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels)
+                    if (bitmap != null) {
+                        image.setImageBitmap(bitmap)
+                    }
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
                 }
@@ -78,11 +79,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
         cardView.setOnClickListener(this@PageSelectorSliderAdapter)
 
         val myCardView = MyCardView(cardView)
-        Glide.with(imageView)
-            .load(R.drawable.ic_launcher_foreground)
-            .diskCacheStrategy(DiskCacheStrategy.NONE)
-            .skipMemoryCache(true)
-            .into(imageView)
+        imageView.setImageResource(R.drawable.ic_launcher_foreground)
 
         // Ask the ComicLoadingManager to find this page path
         ComicLoadingManager.getInstance().loadComicPages(comic, myCardView, position, 1)

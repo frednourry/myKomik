@@ -5,13 +5,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.ItemComicBinding
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
+import fr.nourry.mykomik.utils.BitmapUtil
 import timber.log.Timber
 import java.io.File
 
@@ -34,9 +34,10 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 val holderComic = holderInnerComic.comic
 
                 if (holderComic.uri == comic.uri) {
-                    Glide.with(imageView.context)
-                        .load(path)
-                        .into(imageView)
+                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels)
+                    if (bitmap != null) {
+                        imageView.setImageBitmap(bitmap)
+                    }
                 } else {
                     Timber.i("onRetrieved:: To late. This view no longer requires this image...")
                 }
@@ -108,9 +109,8 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 imageIconView.visibility = View.INVISIBLE
             }
 
-            Glide.with(imageView.context)
-                .load(R.drawable.ic_launcher_foreground)
-                .into(imageView)
+            imageView.setImageResource(R.drawable.ic_launcher_foreground)
+
             ComicLoadingManager.getInstance().loadComicEntryCoverInImageView(comic, holder)
         }
     }

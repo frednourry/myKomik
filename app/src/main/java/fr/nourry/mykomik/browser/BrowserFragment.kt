@@ -25,7 +25,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.recyclerview.widget.GridLayoutManager
-import com.bumptech.glide.Glide
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mykomik.App
@@ -601,12 +600,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 if (cacheDir.exists() && cacheDir.isDirectory) {
                     Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
                     clearFilesInDir(cacheDir)
-
-                    // Glide...
-                    Glide.get(requireContext()).clearMemory()
-                    Thread {
-                        Glide.get(requireContext()).clearDiskCache()
-                    }.start()
                 }
             }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
