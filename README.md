@@ -21,7 +21,7 @@ Frederic Nourry - [@frednourry][2] on GitHub
 
 
 #### myKomik
-![](static/screenshots/Browser_MyKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_MyKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_MyKomik "myKomik page selector") ![](static/screenshots/PageZoom_MyKomik.jpg "Komik zoomed page")
+![](static/screenshots/Browser_MyKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_MyKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_MyKomik.jpg "myKomik page selector") ![](static/screenshots/PageZoom_MyKomik.jpg "Komik zoomed page")
 
 
 #### myKomik (added features)
