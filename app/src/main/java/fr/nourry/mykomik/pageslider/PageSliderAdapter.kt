@@ -145,9 +145,10 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     override fun isViewFromObject(view: View, `object`: Any): Boolean {
         return view == `object`
     }
+
     override fun getItemPosition(`object`: Any): Int {
 //        return super.getItemPosition(`object`)
-        return POSITION_NONE        // TODO : to adapt when changing the comic, because the loaded items are not updated (https://stackoverflow.com/questions/7263291/why-pageradapternotifydatasetchanged-is-not-updating-the-view)
+        return POSITION_NONE        // TODO? To adapt when changing the comic, because the loaded items are not updated (https://stackoverflow.com/questions/7263291/why-pageradapternotifydatasetchanged-is-not-updating-the-view)
     }
 
     private fun onTouch(view: View, event: MotionEvent): Boolean {
@@ -165,6 +166,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
         // Reset this an image when quitting
         imageViewModified?.resetDisplayOption()
     }
+
     override fun onMagnifyImageViewClick(param: Any?, x:Float, y:Float) {
         try {
             val cardView = param as CardView

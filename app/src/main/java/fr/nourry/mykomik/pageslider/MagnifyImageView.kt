@@ -103,13 +103,13 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
      *  (deltaX,deltaY): Translation
      *  (deltaScale, centerX, centerY): Zoom on the point defined by (centerX, centerY)
      */
-    private fun checkAndUpdateImageByDelta(deltaX:Float, deltaY:Float, deltaScale:Float, centerX: Float, centerY: Float, alignTop:Boolean = false, alignLeft:Boolean = false) {
+    private fun checkAndUpdateImageByDelta(deltaX:Float, deltaY:Float, deltaScale:Float, centerX: Float, centerY: Float) {
         Timber.w("checkAndUpdateImageByDelta deltaX=$deltaX deltaY=$deltaY deltaScale=$deltaScale centerX=$centerX centerY=$centerY")
         Timber.w("    imagePath=$imagePath")
         var dx = deltaX
         var dy = deltaY
 
-        var f = FloatArray(9)
+        val f = FloatArray(9)
         imageMatrix.getValues(f)
 
         val currentWidth = initialWidth*f[Matrix.MSCALE_X]
@@ -117,46 +117,50 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         val marginX = width - currentWidth
         val marginY = height - currentHeight
 
-//        Timber.e("    IMAGEVIEW::${imageView.width}x${imageView.height}  imageWidth=imageWidth imageHeight=imageHeight")
-
-//            Timber.d("     marginX=$marginX  marginY=$marginY currentWidth=$currentWidth currentHeight=$currentHeight")
+//        Timber.d("     width=${width} height=${height} currentWidth=${currentWidth} currentScale=${currentScale}     cas")
+//        Timber.d("     initialWidth=${initialWidth} initialHeight=${initialHeight} currentWidth=${currentWidth}(${currentScale*initialWidth}) currentHeight=${currentHeight}(${currentScale*initialHeight})      cas")
+//        Timber.d("     dx=$dx dy=$dy deltaScale=$deltaScale    marginX=$marginX marginY=$marginY    currentWidth=$currentWidth currentHeight=$currentHeight     cas")
 
         // Check Y borders
-        if (f[Matrix.MTRANS_Y] > 0) {
+        if (f[Matrix.MTRANS_Y]>0 && height>currentHeight) {
+            // Center vertically
             val halfMarginY = marginY / 2
+            val oldDy = dy
             dy = halfMarginY - f[Matrix.MTRANS_Y]
-            Timber.v("     => cas 1")
+//            Timber.v("     => cas 1")
         } else if (f[Matrix.MTRANS_Y] + dy > 0) {
             // Check if the top side is really visible
             dy = -f[Matrix.MTRANS_Y]
-            Timber.v("     => cas 2")
+//            Timber.v("     => cas 2")
         } else if (f[Matrix.MTRANS_Y] + dy < marginY) {
             dy = marginY - f[Matrix.MTRANS_Y]
-            Timber.v("     => cas 3")
+//            Timber.v("     => cas 3")
         }
 
         // Check X borders
-        if (f[Matrix.MTRANS_X] > 0) {
+        if (f[Matrix.MTRANS_X]>0 && width>currentWidth) {
+            // Center horizontally
             val halfMarginX = marginX / 2
+            val oldDx = dx
             dx = halfMarginX - f[Matrix.MTRANS_X]
-            Timber.v("     => cas 4 f[Matrix.MTRANS_X]=${f[Matrix.MTRANS_X]}")
+//            Timber.v("     => cas 4")
         } else if (f[Matrix.MTRANS_X] + dx > 0) {
             // Check if the top side is really visible
             dx = -f[Matrix.MTRANS_X]
-            Timber.v("     => cas 5")
+//            Timber.v("     => cas 5")
         } else if (f[Matrix.MTRANS_X] + dx < marginX) {
             dx = marginX - f[Matrix.MTRANS_X]
-            Timber.v("     => cas 6")
+//            Timber.v("     => cas 6")
         }
-        Timber.v("     => dx=$dx dy=$dy deltaScale=$deltaScale <=")
 
-        if (dx != 0f || dy != 0f || deltaScale!= 0f) {
+        if (dx != 0f || dy != 0f || deltaScale!= 1f) {
             Timber.v("     => dx=$dx dy=$dy deltaScale=$deltaScale <==")
             scaleType = ScaleType.MATRIX
             imageMatrix = Matrix().apply {
                 // Scale
-                if (deltaScale != 0f) {
+                if (deltaScale != 1f) {
                     postScale(deltaScale, deltaScale, centerX, centerY)
+                    currentScale = currentScale*deltaScale
                 }
 
                 // Translate
@@ -167,28 +171,9 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
             }
 
-            // TEST
-            if (alignTop || alignLeft) {
-                f = FloatArray(9)
-                imageMatrix.getValues(f)
-                dx = if (alignLeft && f[Matrix.MTRANS_X] != 0f) -f[Matrix.MTRANS_X] else 0f
-                dy = if (alignTop && f[Matrix.MTRANS_Y] != 0f) -f[Matrix.MTRANS_Y] else 0f
-                Timber.d("   dx=$dx dy=$dy")
-
-                if (dx != 0f || dy != 0f) {
-                    Timber.w("      DO TRANSLATE !")
-                    imageMatrix = Matrix().apply {
-                        // Translate
-                        preTranslate(dx, dy)
-                        preConcat(imageMatrix)
-                    }
-                }
-            }
-
             invalidate()
         }
-
-        printMatrix("checkAndUpdateImageByDelta :: ")
+//        printMatrix("checkAndUpdateImageByDelta :: ")
 
         hasDisplayOptionChanged = false
     }
@@ -303,7 +288,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
                     if (movementMode == MovementType.DRAG) {
                         if (currentScale >= minZoom) {
-                            checkAndUpdateImageByDelta(dx, dy, 0f, 0f, 0f)
+                            checkAndUpdateImageByDelta(dx, dy, 1f, 0f, 0f)
                         }
                     }
                     lastEventX = event.x
@@ -319,20 +304,17 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     var ratio = if (fingersDistance0 != 0f) fingersDistance1/fingersDistance0 else 0f
 
                     var newScale = currentScale*ratio
-//                    Timber.d("       ratio=$ratio  newScale=$newScale  currentScale=$currentScale fingersDistance1=$fingersDistance1   fingerDist0=$fingersDistance0")
+                    Timber.d("       ratio=$ratio  newScale=$newScale  currentScale=$currentScale fingersDistance1=$fingersDistance1")
                     if (newScale>maxZoom) {
                         ratio = maxZoom/currentScale
-                        newScale = maxZoom
                     }
 
                     if (newScale<minZoom) {
                         ratio = minZoom/currentScale
-                        newScale = minZoom
                     }
 
                     if (ratio != 1f) {
                         checkAndUpdateImageByDelta(0f, 0f, ratio, event.getX(0) + dx / 2, event.getY(0) + dy / 2)
-                        currentScale = newScale
                         fingersDistance0 = fingersDistance1
                     }
 
@@ -451,7 +433,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     DisplayOption.FULL -> {
                         if (posX == 0f) {
                             // Translate the view down
-                            checkAndUpdateImageByDelta(0f, deltaHeight, 0f, 0f, 0f)
+                            checkAndUpdateImageByDelta(0f, deltaHeight, 1f, 0f, 0f)
                         } else {
                             checkAndUpdateImageByDelta(0f, 0f, deltaScale, widthF/2, heightF)
                         }
@@ -460,7 +442,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     DisplayOption.MAXIMIZE_WIDTH -> {
                         if (posX == 0f) {
                             // Translate the view down
-                            checkAndUpdateImageByDelta(0f, deltaHeight, 0f, 0f, 0f)
+                            checkAndUpdateImageByDelta(0f, deltaHeight, 1f, 0f, 0f)
                         } else {
                             checkAndUpdateImageByDelta(0f, 0f, deltaScale, widthF/2, heightF)
                         }
@@ -496,16 +478,17 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             currentScale = f[Matrix.MSCALE_X]
 
             // Update minZoom and maxZoom (to be able to return to its values if asked)
-            if (minZoom > currentScale)
+            if (minZoom > currentScale) {
                 minZoom = currentScale
+            }
 
             if (maxZoom < currentScale)
                 maxZoom = currentScale
 
-            Timber.e("f[Matrix.MTRANS_X]=${f[Matrix.MTRANS_X]} f[Matrix.MTRANS_Y]=${f[Matrix.MTRANS_Y]}")
+/*            Timber.e("f[Matrix.MTRANS_X]=${f[Matrix.MTRANS_X]} f[Matrix.MTRANS_Y]=${f[Matrix.MTRANS_Y]}")
             Timber.e("f[Matrix.MSCALE_X]=${f[Matrix.MSCALE_X]} f[Matrix.MSCALE_Y]=${f[Matrix.MSCALE_Y]}")
             Timber.e("initialWidth=$initialWidth initialHeight=$initialHeight")
-
+*/
             firstDrawDone = true
 
             // Apply the displayOption
