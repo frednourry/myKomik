@@ -36,14 +36,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         private const val defaultMaxZoom = 3f        // Max total zoom in
         private const val defaultClickDelay = 200    // Delay between ACTION_DOWN and ACTION_UP to consider this as a click
 
-/*        private var supportActionBarHeight:Int = 0
-        fun setSupportActionBarHeight(h:Int) {
-            if (supportActionBarHeight == 0 && h != 0) {
-                supportActionBarHeight = h
-                Timber.v("supportActionBarHeight = ${supportActionBarHeight}")
-            }
-        }
-*/
+        // For debug purpose
         fun printFloatArray(f:FloatArray, label:String="printMatrix") {
             Timber.v("$label${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
         }
@@ -80,20 +73,17 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     private var magnifyImageViewListener:Listener? = null
     private var magnifyImageViewListenerParam:Any? = null
 
-    private var isImageModified = false
-
     private var lastEventX:Float = 0f                   // To remember the last event.x
     private var lastEventY:Float = 0f                   // To remember the last event.y
     private var initialWidth = 0f                       // To remember the real width of the image before any modification
     private var initialHeight = 0f                      // To remember the real height of the image before any modification
-    private var initialScale = 0f                       // To remember the initial scale of the image before any modification
-    private var initialViewWidth = 0                    // To remember the real width of this imageView (to detect when this changes)
-    private var initialViewHeight = 0                   // To remember the real height of this imageView  (to detect when this changes)
 
     private var fingersDistance0 = 0f                   // To remember the initial distance between the fingers when zooming
     private var oldScaleType = ScaleType.FIT_CENTER     // To remember the initial scaleType
     private var currentScale = 1f                       // The current zoom level
     private var lastActionDownDate = SystemClock.elapsedRealtime()  // To remember when was the last MotionEvent.ACTION_DOWN
+
+    private var isLTR = true                            // To know if we reading Left-To-Right or Right-To-Left
 
     private var movementMode:MovementType = MovementType.NONE
 
@@ -199,8 +189,8 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         hasDisplayOptionChanged = false
     }
 
-    private fun checkAndUpdateImageByValues(posX:Float, posY:Float, scale:Float, centerX: Float, centerY: Float, alignTop:Boolean = false, alignLeft:Boolean = false) {
-        Timber.d("checkAndUpdateImageByValues posX=$posX posY=$posY scale=$scale centerX=$centerX centerY=$centerY alignTop=$alignTop alignLeft=$alignLeft")
+    private fun checkAndUpdateImageByValues(posX:Float, posY:Float, scale:Float, centerX: Float, centerY: Float, alignVertically:Boolean = false, alignHorizontally:Boolean = false) {
+        Timber.d("checkAndUpdateImageByValues posX=$posX posY=$posY scale=$scale centerX=$centerX centerY=$centerY alignVertically=$alignVertically alignHorizontally=$alignHorizontally")
 
 
         scaleType = ScaleType.MATRIX
@@ -210,12 +200,13 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             preTranslate(posX, posY)
         }
 
-        // TEST
-        if (alignTop || alignLeft) {
+        if (alignVertically || alignHorizontally) {
             val f = FloatArray(9)
             imageMatrix.getValues(f)
-            val dx = if (alignLeft && f[Matrix.MTRANS_X] != 0f) -f[Matrix.MTRANS_X] else 0f
-            val dy = if (alignTop && f[Matrix.MTRANS_Y] != 0f) -f[Matrix.MTRANS_Y] else 0f
+            val dy = if (alignVertically && f[Matrix.MTRANS_Y] != 0f) -f[Matrix.MTRANS_Y] else 0f
+            var dx = if (alignHorizontally && f[Matrix.MTRANS_X] != 0f) -f[Matrix.MTRANS_X] else 0f
+            if (!isLTR) dx = -dx // Reverse if reading Right-To-Left
+
             Timber.d("   dx=$dx dy=$dy")
 
             if (dx != 0f || dy != 0f) {
@@ -230,8 +221,6 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
         invalidate()
 
-        isImageModified = true
-
         printMatrix("checkAndUpdateImageByValues :: ")
     }
 
@@ -244,7 +233,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         Timber.v("onTouchImageView current width=$width height=$height")
         Timber.v("onTouchImageView imagePath=$imagePath")
         Timber.v("onTouchImageView drawable:: ${drawable.dirtyBounds} ${drawable.intrinsicWidth} ${drawable.intrinsicHeight} ${drawable.minimumWidth} ${drawable.minimumHeight}")
-        Timber.v("onTouchImageView :: ${measuredWidth} ${measuredHeight}")
+        Timber.v("onTouchImageView :: $measuredWidth $measuredHeight")
         Timber.v("onTouchImageView :: App.physicalConstants.metrics :: ${App.physicalConstants.metrics.widthPixels} ${App.physicalConstants.metrics.heightPixels}")
         printMatrix("onTouchImageView :: ")
 
@@ -350,6 +339,10 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         }
     }
 
+    fun setLTR(b:Boolean) {
+        isLTR = b
+    }
+
     fun setDisplayOption(d:DisplayOption) {
         Timber.v("setDisplayOption($d)")
 
@@ -371,7 +364,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     private fun applyDisplayOption() {
         Timber.v("applyDisplayOption $displayOption :: ")
         Timber.v("    imagePath=$imagePath")
-        Timber.v("    initialWidth=$initialWidth initialHeight=${initialHeight} initialScale=$initialScale")
+        Timber.v("    initialWidth=$initialWidth initialHeight=${initialHeight}")
         Timber.v("    width=$width height=${height} currentScale=$currentScale")
         Timber.v("    App.physicalConstants.metrics.widthPixels=${App.physicalConstants.metrics.widthPixels} App.physicalConstants.metrics.heightPixels=${App.physicalConstants.metrics.heightPixels}")
 
@@ -411,8 +404,6 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
         currentScale = ratio
         fingersDistance0 = 0f
-
-        isImageModified = true
 
         // Will the new image height be taller than height?
         val isImageTallerThanHeight = (initialHeight*ratio)>height
@@ -484,10 +475,8 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
         // Apply the DisplayOption the first time this image is drawn
         if (!firstDrawDone) {
-            // Pass here the first time this view is drawn this view or when it's rescaled
+            // Pass here the first time this view is drawn this view
             Timber.v("onDraw:: 1st width=$width height=$height $imagePath ")
-            initialViewWidth = width
-            initialViewHeight = height
 
             // Save values
             oldScaleType = scaleType
@@ -499,36 +488,28 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
             initialWidth = (width - (2 * f[Matrix.MTRANS_X])) / f[Matrix.MSCALE_X]
             initialHeight = (height - (2 * f[Matrix.MTRANS_Y])) / f[Matrix.MSCALE_Y]
-            initialScale = f[Matrix.MSCALE_X]
             currentScale = f[Matrix.MSCALE_X]
 
             // Update minZoom and maxZoom (to be able to return to its values if asked)
-            if (minZoom > initialScale)
-                minZoom = initialScale
+            if (minZoom > currentScale)
+                minZoom = currentScale
 
-            if (maxZoom < initialScale)
-                maxZoom = initialScale
+            if (maxZoom < currentScale)
+                maxZoom = currentScale
 
             Timber.e("f[Matrix.MTRANS_X]=${f[Matrix.MTRANS_X]} f[Matrix.MTRANS_Y]=${f[Matrix.MTRANS_Y]}")
             Timber.e("f[Matrix.MSCALE_X]=${f[Matrix.MSCALE_X]} f[Matrix.MSCALE_Y]=${f[Matrix.MSCALE_Y]}")
-            Timber.e("initialWidth=$initialWidth initialHeight=$initialHeight initialScale=$initialScale")
-
-            isImageModified = true
+            Timber.e("initialWidth=$initialWidth initialHeight=$initialHeight")
 
             firstDrawDone = true
 
             // Apply the displayOption
             setDisplayOption(displayOption)
-        } /*else {
-            Timber.v("onDraw:: !1st width=$width height=$height $imagePath")
-            printMatrix("onDraw:: !1st ")
-//            setDisplayOption(displayOption)   <=== ici ça part en boucle !!
-        }*/
+        }
     }
 
     fun setMagnifyImageViewListener(l: Listener?, param:Any?=null) {
         magnifyImageViewListener = l
         magnifyImageViewListenerParam = param
     }
-
 }

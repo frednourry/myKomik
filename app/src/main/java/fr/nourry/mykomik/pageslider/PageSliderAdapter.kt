@@ -25,7 +25,7 @@ enum class MovementType {
 }
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(val context: Context, private val viewModel:PageSliderViewModel, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
+class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
     interface Listener {
         fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
     }
@@ -43,7 +43,7 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
             Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
             if ((path != "")) {
-                var magnifyImageView:MagnifyImageView? = null
+                val magnifyImageView:MagnifyImageView?
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
@@ -113,13 +113,14 @@ class PageSliderAdapter(val context: Context, private val viewModel:PageSliderVi
         cardView.tag = InnerComicTag(comic, position, magnifyImageView, placeHolderView)
         val myCardView = MyCardView(cardView)
 
+        magnifyImageView.setLTR(isLTR)
+
         cardView.setOnTouchListener { view, motionEvent ->
             imageViewModified = magnifyImageView
            onTouch(view, motionEvent)
         }
 
         magnifyImageView.setMagnifyImageViewListener(this, cardView)
-//        magnifyImageView.resetImage()
 
         placeHolderView.visibility = View.VISIBLE
         magnifyImageView.visibility = View.INVISIBLE
