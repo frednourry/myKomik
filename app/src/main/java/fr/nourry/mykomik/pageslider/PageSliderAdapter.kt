@@ -28,6 +28,7 @@ enum class MovementType {
 class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
     interface Listener {
         fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
+        fun onPageDrag(dx:Float, dy:Float)
     }
 
     private var imageViewModified: MagnifyImageView? = null
@@ -173,5 +174,10 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
         } catch (e:Exception) {
             Timber.w("onMagnifyImageViewClick :: error = "+e.printStackTrace())
         }
+    }
+
+    override fun onMagnifyImageDrag(dx: Float, dy: Float) {
+        Timber.d("onMagnifyImageDrag::  dx=$dx dy=$dy")
+        pageSliderAdapterListener?.onPageDrag(dx, dy)
     }
 }

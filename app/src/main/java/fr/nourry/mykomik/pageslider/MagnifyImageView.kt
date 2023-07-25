@@ -28,7 +28,11 @@ enum class DisplayOption {
 class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatImageView(context, attrs) {
 
     interface Listener {
+        // User click
         fun onMagnifyImageViewClick(param:Any?, x:Float, y:Float)
+
+        // User drag
+        fun onMagnifyImageDrag(dx:Float, dy:Float)
     }
 
     companion object {
@@ -305,6 +309,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     lastEventX = event.x
                     lastEventY = event.y
 
+                    magnifyImageViewListener?.onMagnifyImageDrag(dx, dy)
                 } else if (movementMode == MovementType.ZOOM){
                     lastActionDownDate = 0
 

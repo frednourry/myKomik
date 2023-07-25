@@ -69,10 +69,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     private lateinit var pageSliderAdapter: PageSliderAdapter
     private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
-    private var currentPage = 0
-    private lateinit var currentComic:ComicEntry
     private lateinit var viewModel: PageSliderViewModel
     private lateinit var supportActionBar: ActionBar
+    private lateinit var currentComic:ComicEntry
+    private var currentPage = 0
 
     private lateinit var toast: Toast
 
@@ -85,8 +85,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     // Informations when scrolling
     private var lastPageBeforeScrolling = 0
-    private var lastPositionOffsetPixel = -1
-    private var scrollingDirection = 0
+    private var currentScrollingDirection = 0  // -1 : scrolling left-to-right (go previous), 0 : no scrolling, +1 : scrolling right-to-left (go next)
 
     private var bRefreshSliderAdapter = false
     private var bRefreshSelectorSliderAdapter = false
@@ -313,24 +312,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
             binding.viewPager.adapter = pageSliderAdapter
 
-/*
-            // If use this, comment "onPageScrolled()" !!
-            binding.viewPager.setPageTransformer(true)  { _, position ->
-                Timber.w("setPageTransformer $position")
-                if (position < -1) {
-                    // [-00,-1): the page is way off-screen to the left.
-                    Timber.w("  setPageTransformer finger LEFT")
-                    scrollingDirection = 1
-                } else if (position <= 1) {
-                    // [-1,1]: the page is "centered"
-                    Timber.w("  setPageTransformer finger CENTERED")
-                } else {
-                    // (1,+00]: the page is way off-screen to the right.
-                    Timber.w("  setPageTransformer finger RIGHT")
-                    scrollingDirection = -1
-                }
-            }
- */
             if (!isLTR) binding.viewPager.rotationY = 180F
 
             // Avoid screen rotation, if asked
@@ -651,7 +632,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                                 val newComic = viewModel.getNextComic()
                                 Timber.d("    newComic=$newComic")
                                 if (newComic != null && newComic != currentComic) {
-//                                    resetLastImageParameters()
                                     changeCurrentComic(newComic)
                                 }
                             }
@@ -679,7 +659,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                     val newComic = viewModel.getPreviousComic()
                     Timber.d("    newComic=$newComic")
                     if (newComic != null && newComic != currentComic) {
-//                        resetLastImageParameters()
                         changeCurrentComic(newComic)
                     }
                 }
@@ -694,6 +673,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun goSettings() {
         val action = PageSliderFragmentDirections.actionPageSliderFragmentToSettingsFragment()
         findNavController().navigate(action)
+    }
+
+    override fun onPageDrag(dx:Float, dy:Float) {
+        Timber.i("onPageDrag dx=$dx dy=$dy")
+        currentScrollingDirection = if (dx>0) -1 else if (dx == 0f) 0 else 1
     }
 
     override fun onPageTap(currentMagnifyImageView:MagnifyImageView, currentPage:Int, x:Float, y:Float) {
@@ -729,7 +713,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-//            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage+1, true)
         } else {
             askNextComic()
@@ -740,7 +723,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
         if (currentPage-1>=0) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-//            resetLastImageParameters()
             binding.viewPager.setCurrentItem(currentPage-1, true)
         } else {
             askPreviousComic()
@@ -756,43 +738,23 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             // Compare if we change the page
             if (lastPageBeforeScrolling == currentPage) {
                 // We couldn't change the current page
-/*                if (scrollingDirection>0) {
-                    Timber.i("LAST PAGE: ASK NEW ONE ?")
-                } else if (scrollingDirection<0) {
-                    Timber.i("FIRST PAGE: ASK PREVIOUS ONE ?")
-                }*/
-                if (currentPage == 0) {
-                    // TODO to change : bug if there only one page in the comic !
-                    Timber.i("FIRST PAGE: ASK PREVIOUS ONE ?")
-                    askPreviousComic()
-                } else if (currentPage == (viewModel.currentComic?.nbPages ?: -1) -1) {
-                    Timber.i("LAST PAGE: ASK NEW ONE ?")
+                if (currentScrollingDirection>0 && (currentPage>=currentComic.nbPages-1)) {
+                    Timber.i(" LAST PAGE: ASK NEW ONE ?")
                     askNextComic()
+                } else if (currentScrollingDirection<0 && (currentPage==0)) {
+                    Timber.i(" FIRST PAGE: ASK PREVIOUS ONE ?")
+                    askPreviousComic()
                 }
             } else {
                 // Informs the pageSliderAdapter that the page was changed
                 pageSliderAdapter.onPageChanged()
             }
-            lastPositionOffsetPixel = -1
-            scrollingDirection = 0
+            currentScrollingDirection = 0
         }
     }
 
     override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
-        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
-        if (lastPositionOffsetPixel > 0) {
-            scrollingDirection = if (lastPositionOffsetPixel > positionOffsetPixels) {
-                -1
-            } else if (lastPositionOffsetPixel < positionOffsetPixels) {
-                +1
-            } else {
-                0
-            }
-            Timber.i("    scrollingDirection=$scrollingDirection   positionOffsetPixels=$positionOffsetPixels")
-        } else {
-            scrollingDirection = 0
-        }
-        lastPositionOffsetPixel = positionOffsetPixels
+//        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
     }
 
     override fun onPageSelected(position: Int) {
