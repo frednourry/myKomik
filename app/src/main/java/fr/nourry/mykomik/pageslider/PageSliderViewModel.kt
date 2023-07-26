@@ -163,7 +163,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         Timber.d("updateComicEntriesFromDAO")
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
-        val comicEntriesFromDisk = getComicEntriesFromUri(context, App.currentTreeUri!!, true)
+        val comicEntriesFromDisk = getComicEntriesFromUri(context, App.currentTreeUri!!)
 
 //        Timber.w("    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
 

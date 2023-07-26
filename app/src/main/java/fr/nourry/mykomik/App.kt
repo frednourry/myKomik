@@ -31,6 +31,7 @@ class App: Application() {
         var pageSliderCurrentDisplayOption = DisplayOption.FULL
         var pageSliderDisplayOptionLocked = pageSliderCurrentDisplayOption
 
+        var rootTreeUri: Uri? = null
         var currentTreeUri: Uri? = null
     }
 

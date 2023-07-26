@@ -111,7 +111,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
 
             imageView.setImageResource(R.drawable.ic_launcher_foreground)
 
-            ComicLoadingManager.getInstance().loadComicEntryCoverInImageView(comic, holder)
+            ComicLoadingManager.getInstance().loadComicEntryCover(comic, holder)
         }
     }
 

@@ -5,6 +5,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceFragmentCompat
 import fr.nourry.mykomik.R
+import fr.nourry.mykomik.loader.IdleController
 
 class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -19,5 +20,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         supportActionBar.setDisplayHomeAsUpEnabled(true)
         supportActionBar.setLogo(R.mipmap.ic_launcher)
         supportActionBar.setDisplayUseLogoEnabled(true)
+
+        IdleController.getInstance().resetIdleTimer()
     }
 }

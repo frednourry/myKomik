@@ -37,6 +37,7 @@ import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentPageSliderBinding
 import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
+import fr.nourry.mykomik.loader.IdleController
 import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.getComicFromUri
 import fr.nourry.mykomik.utils.getLocalDirName
@@ -195,7 +196,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 currentComic = args.comic
             } else {
                 val uri = Uri.parse(currentComicPath)
-                val comic = getComicFromUri(requireContext(), uri)
+                val comic = getComicFromUri(requireContext(), uri, true)
                 currentComic = comic ?: args.comic
             }
             currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
@@ -290,6 +291,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters} bRefreshSliderAdapter=$bRefreshSliderAdapter bRefreshSelectorSliderAdapter=$bRefreshSelectorSliderAdapter")
         var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
         val shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
+
+        IdleController.getInstance().resetIdleTimer()
 
         supportActionBar.hide()
 

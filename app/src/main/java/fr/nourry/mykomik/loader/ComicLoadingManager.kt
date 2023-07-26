@@ -128,23 +128,23 @@ class ComicLoadingManager private constructor() {
     }
 
 
-    fun loadComicEntryCoverInImageView(comic:ComicEntry, listener:ComicLoadingProgressListener) {
+    fun loadComicEntryCover(comic:ComicEntry, listener:ComicLoadingProgressListener) {
         if (comic.isDirectory) {
-            loadComicDirectoryCoverInImageView(comic, listener)
+            loadComicDirectoryCover(comic, listener)
         } else {
-            loadComicCoverInImageView(comic, listener)
+            loadComicCover(comic, listener)
         }
     }
 
-    // Find in the comic archive the first image and put it in the given ImageView
-    private fun loadComicCoverInImageView(comic:ComicEntry, listener:ComicLoadingProgressListener) {
+    // Find in the comic archive the first image
+    private fun loadComicCover(comic:ComicEntry, listener:ComicLoadingProgressListener) {
         addInWaitingCoverList(ComicEntryLoadingCover(comic, listener))
         loadNext()
     }
 
     // Generate a cover with some of the first comic covers in the directory
-    private fun loadComicDirectoryCoverInImageView(dirComic: ComicEntry, listener:ComicLoadingProgressListener) {
-        Timber.i("loadComicDirectoryCoverInImageView(${dirComic.path})")
+    private fun loadComicDirectoryCover(dirComic: ComicEntry, listener:ComicLoadingProgressListener) {
+        Timber.i("loadComicDirectoryCover(${dirComic.path})")
         if (dirComic.isDirectory) {
             val cacheFilePath = getComicEntryThumbnailFilePath(dirComic)
             val cacheFile = File(cacheFilePath)
@@ -165,7 +165,7 @@ class ComicLoadingManager private constructor() {
                         addInWaitingCoverList(ComicEntryLoadingCover(f, null, null))
                     }
                 }
-//                    Timber.i("loadComicDirectoryCoverInImageView :: $fileList")
+//                    Timber.i("loadComicDirectoryCover :: $fileList")
                 if (fileList.isNotEmpty()) {
                     // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
                     addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, fileList))

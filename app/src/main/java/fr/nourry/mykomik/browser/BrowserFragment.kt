@@ -32,6 +32,7 @@ import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
 import fr.nourry.mykomik.loader.ComicLoadingManager
+import fr.nourry.mykomik.loader.IdleController
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.*
@@ -196,9 +197,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         // Action bar
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.setDisplayHomeAsUpEnabled(false)
-/*        supportActionBar.setIcon(R.mipmap.ic_launcher)
-        supportActionBar.setDisplayUseLogoEnabled(true)
-        supportActionBar.setDisplayShowHomeEnabled(true)*/
 
         // Side menubar (DrawerLayout and NavigationView)
         NavigationUI.setupWithNavController(binding.navigationView,NavHostFragment.findNavController(thisFragment))
@@ -223,6 +221,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
             uriInStorage = trueUriInStorage
             rootTreeUri = trueUriInStorage
+            App.rootTreeUri = rootTreeUri
         }
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
 
@@ -241,7 +240,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }
         return null
     }
-
 
     private fun askTreeUriPermission() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
@@ -300,6 +298,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
                             rootTreeUri = trueUri
                             viewModel.setPrefRootTreeUri(trueUri)
+                            App.rootTreeUri = trueUri
 
                             // Update the view model
                             viewModel.init(trueUri)
@@ -321,8 +320,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             break
         }
     }
-
-
     // End permissions
 
 
@@ -383,10 +380,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     private fun handleStateInit(state:BrowserViewModelState.Init) {
         Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri}")
 
-/*        if (state.rootUriPath != null) {
-            rootTreeUri = state.rootUriPath
-        }
-*/
         if (state.currentTreeUri == null) {
             askTreeUriPermission()
         } else {
@@ -410,6 +403,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         Timber.i("handleStateReady")
         Timber.i("  state.comics=${state.comics}")
 
+        IdleController.getInstance().resetIdleTimer()
+
         supportActionBar.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
 
         viewModel.setPrefLastComicUri(null)      // Forget the last comic...
@@ -420,6 +415,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         comics.addAll(state.comics)
         browserAdapter.notifyDataSetChanged()
         binding.recyclerView.scrollToPosition(0)
+
+        IdleController.getInstance().resetIdleTimer()
     }
 
     private fun initBrowser(treeUri: Uri, lastUri:Uri?, prefCurrentPage:String) {
