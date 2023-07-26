@@ -26,8 +26,8 @@ class IdleController : ComicLoadingProgressListener {
             }
     }
 
-    var handler: Handler = Handler(Looper.getMainLooper())
-    var runnable: Runnable = Runnable {
+    private var handler: Handler = Handler(Looper.getMainLooper())
+    private var runnable: Runnable = Runnable {
         // Timeout, so do something here
         onIdle()
     }
@@ -130,11 +130,13 @@ class IdleController : ComicLoadingProgressListener {
                 return
             } else {
                 while (currentComicList.isEmpty()) {
+                    if (dirUriList.isEmpty()) break     // No remaining directory... so exit
+
                     currentUri = dirUriList.removeAt(0)
 
                     // Build the new comic entry list
                     val tempComicList = getComicEntriesFromUri(App.appContext, currentUri!!, true)
-                    if (!tempComicList.isEmpty()) {
+                    if (tempComicList.isNotEmpty()) {
                         currentComicList = tempComicList as MutableList<ComicEntry>
                     }
                     // Add this uri to generate an directory icon
