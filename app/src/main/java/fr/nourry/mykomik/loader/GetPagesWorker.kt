@@ -321,7 +321,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         }
                         val fileHeader = fileHeaders[numPage]
                         val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
-                        Timber.w("  Unrar page=$numPage in $pagePath")
+                        Timber.v("  Unrar page=$numPage in $pagePath")
                         val outputStream = File(pagePath).outputStream()
                         rarArchive.extractFile(fileHeader, outputStream)
                         outputStream.close()

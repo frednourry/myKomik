@@ -289,91 +289,6 @@ fun File.copyTo(file: File) {
 // Specific to IdleController
 //
 
-// Retrieves a list of comics uri order by its path :
-//   first : comics (files) in 'uri'
-//   second : comics (files and directories) in the sub-directories of 'uri'
-//   third : comics (files and directories) in 'rootTreeUri', except those in 'uri' (already in the beginning of the list)
-// Precond: the given uris are a directory
-/*fun getOrderedComicEntriesFromUri(context: Context, uri:Uri, rootTreeUri: Uri, uriToIgnore:Uri? = null): List<ComicEntry> {
-    Timber.v("getOrderedComicEntriesFromUri uri = $uri rootTreeUri=$rootTreeUri uriToIgnore=$uriToIgnore")
-
-    val docId = DocumentsContract.getDocumentId(uri)
-    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, docId)
-    var results: List<ComicEntry> = emptyList()
-    val resultDirs: MutableList<ComicEntry> = mutableListOf()
-    val resultComics: MutableList<ComicEntry> = mutableListOf()
-
-    val projection = arrayOf(
-        DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-        DocumentsContract.Document.COLUMN_MIME_TYPE,
-        DocumentsContract.Document.COLUMN_SIZE,
-        DocumentsContract.Document.COLUMN_LAST_MODIFIED
-    )
-
-    var c: Cursor? = null
-    try {
-        c = context.applicationContext.contentResolver.query(childrenUri, projection, null, null, null)
-        if (c != null) {
-            // 1st PASS : get the URIs in the current directory (ie 'uri')
-            while (c.moveToNext()) {
-                val documentId: String = c.getString(0)
-                val name = URLDecoder.decode(c.getString(1), "utf-8")
-                val mime = c.getString(2)
-                val size = c.getString(3)
-                val lastModified = c.getString(4)
-
-                val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
-                Timber.v("getOrderedComicEntriesFromUri :: documentUri = $documentUri")
-
-                if (DocumentsContract.Document.MIME_TYPE_DIR == mime) {
-                    resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified.toLong(), 0, true))
-                } else {
-                    // Filter by file type
-                    val extension = getExtension(name)
-                    if (extension in comicExtensionList) {
-                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified.toLong(), size.toLong(), false))
-                    }
-                }
-            }
-
-            // Order each list
-            val tempResultDirs = resultDirs.sortedBy { it.name }
-            val tempFinalResult = resultComics.sortedBy { it.name }     // Will be the list to return
-            Timber.e("   getOrderedComicEntriesFromUri 1ST PASS: $tempFinalResult")
-
-            // 2nd PASS : Get all the comics in each sub-directories
-            for (subDir in tempResultDirs) {
-                // Check if the uri to ignore is this sub-directory first...
-                if (subDir.uri.compareTo(uriToIgnore) != 0) {
-                    val tempSubDirResult = getOrderedComicEntriesFromUri(context, subDir.uri, rootTreeUri, uriToIgnore)
-
-                    // Add in
-                    tempFinalResult.plus(tempSubDirResult)
-                    tempFinalResult.plus(subDir)
-                }
-            }
-            Timber.e("   getOrderedComicEntriesFromUri 2ND PASS: $tempFinalResult")
-
-            // 3rd PASS : Get all comics from 'rootTreeUri'
-            if (uri.compareTo(rootTreeUri) != 0) {
-                val tempRootResult = getOrderedComicEntriesFromUri(context, rootTreeUri, rootTreeUri, uri)
-                tempFinalResult.plus(tempRootResult)
-            }
-            Timber.e("   getOrderedComicEntriesFromUri 3RD PASS: $tempFinalResult")
-
-            // Concat
-            results = tempFinalResult
-        }
-    } catch (e: java.lang.Exception) {
-        Timber.w("getOrderedComicEntriesFromUri :: Failed query: $e")
-    } finally {
-        c?.close()
-    }
-    return results
-}
-*/
-
 // Retrieves a list of sub-directory URIs (and their children)
 fun getDirectoryUrisFromUri(context: Context, uri:Uri): List<Uri> {
     Timber.v("getDirectoryUrisFromUri uri = $uri")
@@ -410,17 +325,13 @@ fun getDirectoryUrisFromUri(context: Context, uri:Uri): List<Uri> {
 
             // Order list
             val sortedResultDirs = resultChildrenDirs.sortedBy { uri.path }
-            Timber.e("   getDirectoryUrisFromUri 1ST PASS: sortedResultDirs=$sortedResultDirs")
 
             // Sub-directories children
             for (subDirUri in sortedResultDirs) {
                 val tempSubDirResult = getDirectoryUrisFromUri(context, subDirUri)
-                Timber.e("   getDirectoryUrisFromUri           : $tempSubDirResult")
                 results = results.plus(tempSubDirResult)
             }
             results = results.plus(uri)
-
-            Timber.e("   getDirectoryUrisFromUri 2ND PASS: $results")
         }
     } catch (e: java.lang.Exception) {
         Timber.w("getDirectoryUrisFromUri :: Failed query: $e")

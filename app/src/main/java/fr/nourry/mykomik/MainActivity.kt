@@ -28,7 +28,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onUserInteraction() {
         super.onUserInteraction()
-        Timber.d("onUserInteraction")
         IdleController.getInstance().resetIdleTimer()
     }
 }

@@ -70,8 +70,6 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
     implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
     implementation "androidx.navigation:navigation-dynamic-features-fragment:$nav_version"
-    // Safeargs (pour la navigation entre fragments)  !! Ne pas oublier de modifier aussi le build.gradle du projet ET de faire un 'make project' A CHAQUE AJOUT DE TRANSITION/ACTION
-//    implementation "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
 
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.1'
@@ -79,9 +77,6 @@ dependencies {
 
     def preference_version = "1.2.0"
     implementation "androidx.preference:preference-ktx:$preference_version"
-
-    // Coroutine
-//    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9'
 
     // Worker + coroutine
     def work_version = "2.8.1"
@@ -103,8 +98,4 @@ dependencies {
 
     // Navigation drawers
     implementation 'com.google.android.material:material:1.9.0'
-
-    // IMPORTANT : use this to solve a bug with DocumentFile.fromTreeUri() with children...
-    //   https://stackoverflow.com/questions/62375696/unexpected-behavior-when-documentfile-fromtreeuri-is-called-on-uri-of-subdirec
-//    implementation 'androidx.documentfile:documentfile:1.0.1'
 }

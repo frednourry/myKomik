@@ -173,7 +173,7 @@ class BrowserViewModel : ViewModel() {
 //        Timber.d("    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
 
         val comicEntriesFromDisk = getComicEntriesFromUri(App.appContext, currentTreeUri!!)
-        Timber.w("comicEntriesFromDisk = $comicEntriesFromDisk")
+        Timber.v("comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesToShow.clear()
@@ -204,9 +204,9 @@ class BrowserViewModel : ViewModel() {
             if (!found) {
                 // Search in comicEntriesFromDAO
                 for (feDAO in comicEntriesFromDAO) {
-                    Timber.v("  -- ${fe.parentUriPath}")
+//                    Timber.v("  -- ${fe.parentUriPath}")
                     if (fe.hashkey == feDAO.hashkey) {
-                        Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+//                        Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
                         feDAO.uri = fe.uri
                         feDAO.fromDAO = true
                         result.add(feDAO)

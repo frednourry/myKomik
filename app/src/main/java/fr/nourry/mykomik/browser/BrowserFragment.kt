@@ -273,15 +273,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                     val documentsTree = DocumentFile.fromTreeUri(requireContext(), treeUri)
                     documentsTree?.let {
 
-                        // TO DELETE : Show contents
-/*                        Timber.i( "documentsTree.uri=${documentsTree.uri}")
-                        Timber.i( "documentsTree=$documentsTree name:${documentsTree.name} type:${documentsTree.type} isDirectory:${documentsTree.isDirectory}")
-                        val childDocuments = documentsTree.listFiles()
-                        for (docFile in childDocuments) {
-                            Timber.i( "   => docFile = $docFile name:${docFile.name} type:${docFile.type} isDirectory:${docFile.isDirectory} uri:${docFile.uri}")
-                        }*/
-                        // END TO DELETE
-
                         // Check if it's a directory (should be...)
                         if (documentsTree.isDirectory) {
                             // Save this uri in PersistableUriPermission (keep only one, so delete the other ones)
@@ -289,7 +280,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
                             requireContext().contentResolver.takePersistableUriPermission(
                                 treeUri,
-                                flags //Intent.FLAG_GRANT_READ_URI_PERMISSION //or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                flags
                             )
 
                             // Convert treeUri in a usable one

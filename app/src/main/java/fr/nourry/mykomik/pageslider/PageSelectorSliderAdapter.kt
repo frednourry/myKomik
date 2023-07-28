@@ -17,17 +17,14 @@ import timber.log.Timber
 import java.io.File
 
 
-// To work with a viewPager2
 class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: ComicEntry): RecyclerView.Adapter<PageSelectorSliderAdapter.MyViewHolder>(), View.OnClickListener {
-
-    public var distanceBetweenCarView = 0
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:ImageView, val textView:TextView)
 
     inner class MyCardView(private val cardView:CardView):ComicLoadingProgressListener {
 
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
+            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path prout2")
             if (path != "") {
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
@@ -63,7 +60,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        Timber.d("onBindViewHolder:: position=$position")
+        Timber.d("onBindViewHolder:: position=$position prout2")
 
         val cardView = holder.itemPicture.findViewById<CardView>(R.id.cardView)
         val imageView = holder.itemPicture.findViewById<ImageView>(R.id.imageView)

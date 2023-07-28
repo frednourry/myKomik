@@ -104,8 +104,8 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
      *  (deltaScale, centerX, centerY): Zoom on the point defined by (centerX, centerY)
      */
     private fun checkAndUpdateImageByDelta(deltaX:Float, deltaY:Float, deltaScale:Float, centerX: Float, centerY: Float) {
-        Timber.w("checkAndUpdateImageByDelta deltaX=$deltaX deltaY=$deltaY deltaScale=$deltaScale centerX=$centerX centerY=$centerY")
-        Timber.w("    imagePath=$imagePath")
+        Timber.v("checkAndUpdateImageByDelta deltaX=$deltaX deltaY=$deltaY deltaScale=$deltaScale centerX=$centerX centerY=$centerY")
+        Timber.v("    imagePath=$imagePath")
         var dx = deltaX
         var dy = deltaY
 
@@ -199,7 +199,6 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             Timber.d("   dx=$dx dy=$dy")
 
             if (dx != 0f || dy != 0f) {
-                Timber.w("      DO TRANSLATE !")
                 imageMatrix = Matrix().apply {
                     // Translate
                     preTranslate(dx, dy)
@@ -365,7 +364,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 val ratioX = width / initialWidth
                 val ratioY = height / initialHeight
                 ratio = Math.min(ratioX, ratioY)
-                Timber.w("    ratioX=$ratioX ratioY=${ratioY} ratio=$ratio")
+                Timber.v("    ratioX=$ratioX ratioY=${ratioY} ratio=$ratio")
 
                 dx = (width - (initialWidth*ratio)) / 2f
                 dy = (height - (initialHeight*ratio)) / 2f
@@ -386,8 +385,8 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         dx /= ratio
         dy /= ratio
 
-        Timber.w("    initialWidth*ratio=${initialWidth*ratio}   initialHeight*ratio=${initialHeight*ratio}")
-        Timber.w("    dx=$dx dy=${dy}")
+        Timber.v("    initialWidth*ratio=${initialWidth*ratio}   initialHeight*ratio=${initialHeight*ratio}")
+        Timber.v("    dx=$dx dy=${dy}")
 
         currentScale = ratio
         fingersDistance0 = 0f
@@ -485,10 +484,6 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             if (maxZoom < currentScale)
                 maxZoom = currentScale
 
-/*            Timber.e("f[Matrix.MTRANS_X]=${f[Matrix.MTRANS_X]} f[Matrix.MTRANS_Y]=${f[Matrix.MTRANS_Y]}")
-            Timber.e("f[Matrix.MSCALE_X]=${f[Matrix.MSCALE_X]} f[Matrix.MSCALE_Y]=${f[Matrix.MSCALE_Y]}")
-            Timber.e("initialWidth=$initialWidth initialHeight=$initialHeight")
-*/
             firstDrawDone = true
 
             // Apply the displayOption

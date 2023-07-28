@@ -518,11 +518,19 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.d("showPageSelector")
 
         // Hide/show buttons?
+/*
+        // WARNING : THE CODE BELOW HAS A SIDE EFFECT -> calling recyclerView.measure(...) causes the recyclerView to create all items (ie gets all page thumbnails),
+        //              so do not use it !!
         val measuredHeight = binding.recyclerViewPageSelector.measuredHeight    // Save measuredHeight before recompute it
         binding.recyclerViewPageSelector.measure(View.MeasureSpec.makeMeasureSpec(binding.recyclerViewPageSelector.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
         val pageSelectorTotalHeight = binding.recyclerViewPageSelector.measuredHeight
         Timber.v("   measuredHeight = $measuredHeight pageSelectorTotalHeight = $pageSelectorTotalHeight")
-        if (pageSelectorTotalHeight<measuredHeight) {
+
+        val shouldHideButtons = pageSelectorTotalHeight<measuredHeight
+        // END WARNING
+*/
+        val shouldHideButtons = currentComic.nbPages<3
+        if (shouldHideButtons) {
             Timber.v("   showPageSelector :: hide buttons")
             binding.buttonGoFirst.visibility = View.INVISIBLE
             binding.buttonGoLast.visibility = View.INVISIBLE

@@ -42,7 +42,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
 
         // Called when the  ComicLoadingManager has an image ready (an image path) for this CardView
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
+            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path prout1")
             if ((path != "")) {
                 val magnifyImageView:MagnifyImageView?
                 val holderInnerComic = cardView.tag as InnerComicTag
@@ -103,7 +103,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
-        Timber.d("instantiateItem :: position=$position")
+        Timber.d("instantiateItem :: position=$position prout1")
         val view = inflater.inflate(R.layout.item_page, container, false)
 
         if (!isLTR) view.rotationY = 180F
