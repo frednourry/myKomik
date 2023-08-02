@@ -10,7 +10,7 @@ import java.io.*
 import java.net.URLDecoder
 import java.util.*
 
-val comicExtensionList = listOf("cbr", "cbz", "pdf")
+val comicExtensionList = listOf("cbr", "cbz", "pdf", "rar", "zip")
 
 fun concatPath(path1:String, path2:String):String {
     return path1+File.separator+path2
