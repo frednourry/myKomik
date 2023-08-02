@@ -315,7 +315,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         Timber.v("pdfCoverInFile")
         var bitmap: Bitmap? = null
 
-        // Unrar
+        // Run through the pdf
         try {
             val fileDescriptor: ParcelFileDescriptor? = applicationContext.contentResolver.openFileDescriptor(fileUri, "r")
             if (fileDescriptor != null) {
