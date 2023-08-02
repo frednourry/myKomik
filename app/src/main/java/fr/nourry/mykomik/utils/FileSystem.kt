@@ -21,9 +21,9 @@ fun isFileExists(path: String):Boolean {
     return f.exists()
 }
 
-// Return true if and only if the extension is 'jpg', 'gif', 'png' or 'jpeg'
+// Return true if and only if the extension is 'jpg', 'gif', 'png', 'jpeg' or 'webp'
 fun isImageExtension(extension:String) : Boolean {
-    return (extension == "jpg") || (extension == "gif") ||(extension == "png") ||(extension == "jpeg")
+    return (extension == "jpg") || (extension == "gif") || (extension == "png") || (extension == "jpeg") || (extension == "webp")
 }
 
 // Return true if the given file path is from an image
