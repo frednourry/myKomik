@@ -84,6 +84,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
 
+    private lateinit var lockableViewPager : LockableViewPager     //  The binding to binding.lockableViewPager doesn't work correctly, so I have to create a variable...
+
     // Informations when scrolling
     private var lastPageBeforeScrolling = 0
     private var currentScrollingDirection = 0  // -1 : scrolling left-to-right (go previous), 0 : no scrolling, +1 : scrolling right-to-left (go next)
@@ -107,6 +109,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         // Update metrics
         App.physicalConstants.updateMetrics(requireContext())
+
+        lockableViewPager = view.findViewById(R.id.lockableViewPager) as LockableViewPager
 
         //// MENU
         // The usage of an interface lets you inject your own implementation
@@ -277,7 +281,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun handleStateLoading(state: PageSliderViewModelState.Loading) {
         Timber.i("handleStateLoading")
 
-        binding.viewPager.visibility = View.INVISIBLE
+        lockableViewPager.visibility = View.INVISIBLE
         binding.zoomOptionLayout.visibility = View.INVISIBLE
 
         dialogComicLoading.isCancelable = false
@@ -313,9 +317,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             pageSliderAdapter = PageSliderAdapter(requireContext(), state.comic, isLTR)
             pageSliderAdapter.setPageSliderAdapterListener(this)
 
-            binding.viewPager.adapter = pageSliderAdapter
+            lockableViewPager.adapter = pageSliderAdapter
 
-            if (!isLTR) binding.viewPager.rotationY = 180F
+            if (!isLTR) lockableViewPager.rotationY = 180F
 
             // Avoid screen rotation, if asked
             val isRotationDisabled = UserPreferences.getInstance(requireContext()).isRotationDisabled()
@@ -327,14 +331,14 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             // Set displayOption
             pageSliderAdapter.setDisplayOption(currentDisplayOption, currentDisplayOption==displayOptionLocked, currentDisplayOption==displayOptionLocked)
 
-            binding.viewPager.addOnPageChangeListener(this)
+            lockableViewPager.addOnPageChangeListener(this)
             shouldUpdatePageSliderAdapter = true
             pageSliderAdapter.notifyDataSetChanged()
             bRefreshSliderAdapter = false
         } else {
             // Back from pageSelector
-            if (binding.viewPager.currentItem != state.currentPage) {
-                pageSliderAdapter.onPageChanged()
+            if (lockableViewPager.currentItem != state.currentPage) {
+                pageSliderAdapter.onPageChanged(state.currentPage)
                 shouldUpdatePageSliderAdapter = true
             }
         }
@@ -343,10 +347,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             pageSliderAdapter.notifyDataSetChanged()
         }
 
-        if (binding.viewPager.currentItem != state.currentPage) {
-            val oldPage = binding.viewPager.currentItem
+        if (lockableViewPager.currentItem != state.currentPage) {
+            val oldPage = lockableViewPager.currentItem
             val newPage = state.currentPage
-            binding.viewPager.setCurrentItem(state.currentPage, false)
+            lockableViewPager.setCurrentItem(state.currentPage, false)
+            pageSliderAdapter.resetCurrentPage(state.currentPage)
             if (::pageSelectorSliderAdapter.isInitialized) {
                 pageSelectorSliderAdapter.notifyItemChanged(oldPage)
                 pageSelectorSliderAdapter.notifyItemChanged(newPage)
@@ -355,7 +360,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         if (::pageSelectorSliderAdapter.isInitialized && shouldUpdatePageSelectorSliderAdapter)
             pageSelectorSliderAdapter.notifyDataSetChanged()
 
-        binding.viewPager.visibility = View.VISIBLE
+        lockableViewPager.visibility = View.VISIBLE
 
         updateDisplayButtons(currentDisplayOption == displayOptionLocked)
     }
@@ -724,7 +729,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-            binding.viewPager.setCurrentItem(currentPage+1, true)
+            lockableViewPager.setCurrentItemCustom(currentPage+1, true)
         } else {
             askNextComic()
         }
@@ -734,7 +739,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
         if (currentPage-1>=0) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
-            binding.viewPager.setCurrentItem(currentPage-1, true)
+            lockableViewPager.setCurrentItemCustom(currentPage-1, true)
         } else {
             askPreviousComic()
         }
@@ -758,7 +763,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 }
             } else {
                 // Informs the pageSliderAdapter that the page was changed
-                pageSliderAdapter.onPageChanged()
+                pageSliderAdapter.onPageChanged(currentPage)
             }
             currentScrollingDirection = 0
         }

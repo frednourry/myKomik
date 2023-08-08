@@ -32,7 +32,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         fun onMagnifyImageViewClick(param:Any?, x:Float, y:Float)
 
         // User drag
-        fun onMagnifyImageDrag(dx:Float, dy:Float)
+        fun onMagnifyImageDrag(dx:Float, dy:Float, allowParentToScrollLeft:Boolean, allowParentToScrollRight:Boolean)
     }
 
     companion object {
@@ -57,7 +57,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 minZoom = getFloat(R.styleable.MagnifyImageView_minZoom, defaultMinZoom)
                 maxZoom = getFloat(R.styleable.MagnifyImageView_maxZoom, defaultMaxZoom)
                 clickDelay = getInt(R.styleable.MagnifyImageView_clickDelay, defaultClickDelay)
-            }catch (e:Exception) { Timber.e(e.stackTraceToString())
+            } catch (e:Exception) { Timber.e(e.stackTraceToString())
             } finally {
                 recycle()
             }
@@ -67,6 +67,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     var imagePath = ""      // For readable debug...
 
     private var firstDrawDone = false
+    private var shouldMagnetRightAfterFirstDraw = false
 
     private var minZoom = defaultMinZoom
     private var maxZoom = defaultMaxZoom
@@ -91,11 +92,23 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
     private var movementMode:MovementType = MovementType.NONE
 
+    var allowParentToScrollLeft = true
+    var allowParentToScrollRight = true
+
     private fun printMatrix(label:String="printMatrix :: ") {
         val f = FloatArray(9)
         imageMatrix.getValues(f)
 
         printFloatArray(f, label)
+    }
+
+    private fun checkParentScrollability() {
+        val f = FloatArray(9)
+        imageMatrix.getValues(f)
+        allowParentToScrollLeft = f[Matrix.MTRANS_X]>=0
+        val minTransX = (initialWidth*currentScale) - width
+        allowParentToScrollRight = (f[Matrix.MTRANS_X]+minTransX) <= 0
+//        Timber.v("checkParentScrollability:: allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight MTRANS_X=${f[Matrix.MTRANS_X]} iWidth=$initialWidth width=$width scale=$currentScale calc=$minTransX")
     }
 
     /**
@@ -160,7 +173,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 // Scale
                 if (deltaScale != 1f) {
                     postScale(deltaScale, deltaScale, centerX, centerY)
-                    currentScale = currentScale*deltaScale
+                    currentScale *= deltaScale
                 }
 
                 // Translate
@@ -168,11 +181,13 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     preTranslate(dx, dy)
                 }
                 preConcat(imageMatrix)
-
             }
 
             invalidate()
         }
+
+        checkParentScrollability()
+
 //        printMatrix("checkAndUpdateImageByDelta :: ")
 
         hasDisplayOptionChanged = false
@@ -180,7 +195,6 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
     private fun checkAndUpdateImageByValues(posX:Float, posY:Float, scale:Float, centerX: Float, centerY: Float, alignVertically:Boolean = false, alignHorizontally:Boolean = false) {
         Timber.d("checkAndUpdateImageByValues posX=$posX posY=$posY scale=$scale centerX=$centerX centerY=$centerY alignVertically=$alignVertically alignHorizontally=$alignHorizontally")
-
 
         scaleType = ScaleType.MATRIX
         imageMatrix = Matrix().apply {
@@ -209,7 +223,46 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
         invalidate()
 
-        printMatrix("checkAndUpdateImageByValues :: ")
+        checkParentScrollability()
+
+//        printMatrix("checkAndUpdateImageByValues :: ")
+    }
+
+
+    fun magnetRight() {
+        Timber.d("magnetRight $imagePath")
+
+        if (firstDrawDone) {
+
+            var dx = 0f
+
+            val f = FloatArray(9)
+            imageMatrix.getValues(f)
+
+            // If this image is larger than width
+            if ((initialWidth * currentScale) > width) {
+                dx = ((width - (initialWidth * currentScale)))
+                if (!isLTR) dx = -dx // Reverse if reading Right-To-Left
+            }
+
+            Timber.d("   magnetRight dx=$dx")
+
+            if (dx != 0f) {
+                imageMatrix = Matrix().apply {
+                    // Translate
+                    preTranslate(dx, 0f)
+                    preConcat(imageMatrix)
+                }
+            }
+
+            invalidate()
+
+            checkParentScrollability()
+
+            shouldMagnetRightAfterFirstDraw = false
+        } else {
+            shouldMagnetRightAfterFirstDraw = true
+        }
     }
 
     /**
@@ -218,13 +271,13 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
      */
     fun onTouchImageView(event: MotionEvent):Boolean {
         Timber.v("onTouchImageView $displayOption :: initialWidth = $initialWidth initialHeight = $initialHeight currentScale = $currentScale")
-        Timber.v("onTouchImageView current width=$width height=$height")
+/*        Timber.v("onTouchImageView current width=$width height=$height")
         Timber.v("onTouchImageView imagePath=$imagePath")
         Timber.v("onTouchImageView drawable:: ${drawable.dirtyBounds} ${drawable.intrinsicWidth} ${drawable.intrinsicHeight} ${drawable.minimumWidth} ${drawable.minimumHeight}")
         Timber.v("onTouchImageView :: $measuredWidth $measuredHeight")
         Timber.v("onTouchImageView :: App.physicalConstants.metrics :: ${App.physicalConstants.metrics.widthPixels} ${App.physicalConstants.metrics.heightPixels}")
         printMatrix("onTouchImageView :: ")
-
+*/
         return when (event.action and MotionEvent.ACTION_MASK) {
             MotionEvent.ACTION_DOWN -> {
                 movementMode = MovementType.CLICK
@@ -293,7 +346,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     lastEventX = event.x
                     lastEventY = event.y
 
-                    magnifyImageViewListener?.onMagnifyImageDrag(dx, dy)
+                    magnifyImageViewListener?.onMagnifyImageDrag(dx, dy, allowParentToScrollLeft, allowParentToScrollRight)
                 } else if (movementMode == MovementType.ZOOM){
                     lastActionDownDate = 0
 
@@ -302,7 +355,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                     val fingersDistance1 = sqrt(dx*dx + dy*dy)
                     var ratio = if (fingersDistance0 != 0f) fingersDistance1/fingersDistance0 else 0f
 
-                    var newScale = currentScale*ratio
+                    val newScale = currentScale*ratio
                     Timber.d("       ratio=$ratio  newScale=$newScale  currentScale=$currentScale fingersDistance1=$fingersDistance1")
                     if (newScale>maxZoom) {
                         ratio = maxZoom/currentScale
@@ -332,12 +385,15 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     fun setDisplayOption(d:DisplayOption) {
         Timber.v("setDisplayOption($d)")
 
-        displayOption = d
+        if (displayOption != d) {
+            hasDisplayOptionChanged = true
+            displayOption = d
+        }
+
 
         // Update image
         if (firstDrawDone) {
             applyDisplayOption()
-            hasDisplayOptionChanged = true
         }
     }
 
@@ -348,12 +404,11 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     }
 
     private fun applyDisplayOption() {
-        Timber.v("applyDisplayOption $displayOption :: ")
-        Timber.v("    imagePath=$imagePath")
-        Timber.v("    initialWidth=$initialWidth initialHeight=${initialHeight}")
+        Timber.v("applyDisplayOption() $displayOption imagePath=$imagePath")
+/*        Timber.v("    initialWidth=$initialWidth initialHeight=${initialHeight}")
         Timber.v("    width=$width height=${height} currentScale=$currentScale")
         Timber.v("    App.physicalConstants.metrics.widthPixels=${App.physicalConstants.metrics.widthPixels} App.physicalConstants.metrics.heightPixels=${App.physicalConstants.metrics.heightPixels}")
-
+*/
         var ratio = 1f
         var dx = 0f
         var dy = 0f
@@ -407,17 +462,16 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         // This view was rescaled, so need to get the new values
         // Surely the ActionBar that disappeared (when it's appear, it resize the image automatically...)
         //  so need to resize the image if necessary
-        if (h > oldh) {
+        if (h > oldh && oldh!= 0) {
             if (hasDisplayOptionChanged) {
-                Timber.v("onSizeChanged:: DO SOMETHING !!")
+                Timber.v("    DO SOMETHING !!")
                 val widthF = w.toFloat()
                 val heightF = h.toFloat()
                 val oldHeightF = oldh.toFloat()
                 val deltaScale = heightF / oldHeightF
+                val imageSize = initialHeight * currentScale
 
-                if (deltaScale == 0f) {
-                    Timber.v("onSizeChanged:: deltaScale == 0 => DO NOTHING !")
-                }
+                Timber.v("    deltaScale = $deltaScale ($heightF/$oldHeightF)  imageSize=$imageSize")
 
                 val f = FloatArray(9)   // Get matrix
                 imageMatrix.getValues(f)
@@ -426,7 +480,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 val posX = f[Matrix.MTRANS_X]
                 val posY = f[Matrix.MTRANS_Y]
                 val scale = f[Matrix.MSCALE_X]
-                Timber.v("onSizeChanged:: posX=$posX posY=$posY scale=$scale      deltaHeight=$deltaHeight")
+                Timber.v("    posX=$posX posY=$posY scale=$scale      deltaHeight=$deltaHeight")
 
                 when (displayOption) {
                     DisplayOption.FULL -> {
@@ -447,11 +501,14 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                         }
                     }
                     DisplayOption.MAXIMIZE_HEIGHT -> {
-                        checkAndUpdateImageByDelta(0f, 0f, deltaScale, widthF/2, heightF)
+                        if (imageSize.toInt() != h) {
+                            checkAndUpdateImageByDelta(0f, 0f, deltaScale, widthF / 2, heightF)
+                        } else {
+                            Timber.v("    Do nothing (right height already)")
+                        }
                     }
                 }
                 hasDisplayOptionChanged = false
-
             }
         }
     }
@@ -488,6 +545,9 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
             // Apply the displayOption
             setDisplayOption(displayOption)
+
+            if (shouldMagnetRightAfterFirstDraw)
+                magnetRight()
         }
     }
 

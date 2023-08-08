@@ -7,13 +7,12 @@
     android:layout_height="match_parent"
     tools:context=".pageslider.PageSliderFragment">
 
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/viewPager"
+    <fr.nourry.mykomik.pageslider.LockableViewPager
+        android:id="@+id/lockableViewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@string/descriptionComicPages" >
-
-    </androidx.viewpager.widget.ViewPager>
+    </fr.nourry.mykomik.pageslider.LockableViewPager>
 
     <RelativeLayout
         android:id="@+id/cachePageSelectorLayout"
