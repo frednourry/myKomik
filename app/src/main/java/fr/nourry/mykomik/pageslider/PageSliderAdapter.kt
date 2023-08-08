@@ -74,6 +74,8 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                             Timber.v("MAGNET !! (onRetrieved) currentIndex=$currentIndex currentPage=$currentPage ")
                             magnifyImageView?.magnetRight()
                         }
+                        // Set the background color according a pixel
+                        magnifyImageView.setBackgroundColor(bitmap.getPixel(0, 0))
                     }
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
