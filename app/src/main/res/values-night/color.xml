@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="darkgrey">#505050</color>
+    <color name="lightgrey">#909090</color>
+    <color name="blue">#0000FF</color>
+    <color name="semi_transparent">#00000000</color>
+    <color name="darken_tint_icon">#FFFFFF</color>
+    <color name="custom_dialog_box_background">#505050</color>
+</resources>

@@ -2,14 +2,19 @@ package fr.nourry.mykomik.dialog
 
 import android.app.Dialog
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import fr.nourry.mykomik.R
 import timber.log.Timber
+
 
 class DialogComicLoading() : DialogFragment() {
     lateinit var progressBar: ProgressBar
@@ -40,7 +45,9 @@ class DialogComicLoading() : DialogFragment() {
             .setTitle("Loading comic...")
             .setView(myView)
         val alertDialog = builder.create()
-        this.setStyle(STYLE_NO_TITLE, 0)
+        this.setStyle(STYLE_NO_TITLE, android.R.style.Theme_Material_Dialog_MinWidth)
+        alertDialog.window?.setBackgroundDrawable(ColorDrawable(ContextCompat.getColor(requireContext(), R.color.custom_dialog_box_background)))
+        alertDialog.window?.setDimAmount(0f)
 
         return alertDialog
     }

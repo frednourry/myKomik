@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: com.google.android.play:core-common:2.0.2@aar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/62809c932b3930031c623cca8ae9f888/transformed/jetified-core-common-2.0.2/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/62809c932b3930031c623cca8ae9f888/transformed/jetified-core-common-2.0.2/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/62809c932b3930031c623cca8ae9f888/transformed/jetified-core-common-2.0.2/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
