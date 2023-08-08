@@ -13,6 +13,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
+import com.github.junrar.exception.UnsupportedRarV5Exception
 import com.github.junrar.rarfile.FileHeader
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
@@ -30,6 +31,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         const val KEY_CURRENT_INDEX                 = "currentIndex"
         const val KEY_CURRENT_PATH                  = "currentPath"
         const val KEY_NB_PAGES                      = "nbPages"
+        const val KEY_ERROR_MESSAGE                 = "errorMessage"
 
         const val BUFFER_SIZE = 2048
     }
@@ -57,19 +59,25 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             val ext = getExtension(archiveUriPath).lowercase()
 
             var boolResult = false
-
-            if (ext == "cbz" || ext == "zip") {
-                boolResult = unzipPages(archiveUri, destPath, pagesList)
-            } else if (ext == "cbr" || ext == "rar") {
-                boolResult = unrarPages(archiveUri, destPath, pagesList)
-            } else if (ext == "pdf") {
-                boolResult = getPagesInPdfFile(archiveUri, destPath, pagesList)
+            var errorMessage = ""
+            try {
+                if (ext == "cbz" || ext == "zip") {
+                    boolResult = unzipPages(archiveUri, destPath, pagesList)
+                } else if (ext == "cbr" || ext == "rar") {
+                    boolResult = unrarPages(archiveUri, destPath, pagesList)
+                } else if (ext == "pdf") {
+                    boolResult = getPagesInPdfFile(archiveUri, destPath, pagesList)
+                }
+            } catch (e:Exception) {
+                boolResult = false
+                errorMessage = e.message ?: ""
             }
 
             if (!boolResult) {
                 val outputData = workDataOf(KEY_PAGES_DESTINATION_PATH to destPath,
                     KEY_PAGES_LIST to pagesListStr,
-                    KEY_NB_PAGES to nbPages)
+                    KEY_NB_PAGES to nbPages,
+                    KEY_ERROR_MESSAGE to errorMessage)
                 return Result.failure(outputData)
             }
         }
@@ -148,11 +156,13 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                     }
                 }
             }
+            catch (e:java.util.zip.ZipException) {
+                Timber.w("unzipPages:: zip error "+e.message)
+                throw e
+            }
             catch (t: Throwable) {
                 Timber.w("unzipPages:: error "+t.message)
-            }
-            finally {
-                Timber.v("unzipPages :: finally...")
+                throw t
             }
         }
         Timber.v("END unzipPages ${tmpFile.name}")
@@ -273,9 +283,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         catch (t: Throwable) {
             Timber.w("unzipPages:: error "+t.message)
         }
-        finally {
-            Timber.w("unzipPages :: finally...")
-        }
         Timber.v("END unzipPages $fileUri")
         return true
     }
@@ -336,12 +343,15 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 }
                 rarArchive.close()
             }
+        } catch (e: UnsupportedRarV5Exception) {
+            Timber.w("unrarPages :: UnsupportedRarV5Exception $e ${e.message}")
+            throw Exception("RAR5 format not supported")
         } catch (e: RarException) {
-            Timber.v("unrarPages :: RarException $e")
-            return false
+            Timber.w("unrarPages :: RarException $e ${e.message}")
+            throw e
         } catch (e: IOException) {
-            Timber.v("unrarPages :: IOException $e")
-            return false
+            Timber.w("unrarPages :: IOException $e")
+            throw e
         }
 
         Timber.v("unrarPages ${fileUri}")

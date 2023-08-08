@@ -614,7 +614,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Timber.i("handleStateError")
         dialogComicLoading.dismiss()
         val alert = AlertDialog.Builder(requireContext())
-            .setMessage("This file is not valid !")
+            .setMessage(resources.getString(R.string.opening_error, state.errorMessage))
             .setCancelable(false)
             .setPositiveButton(R.string.ok) { _,_ ->
                 findNavController().popBackStack()

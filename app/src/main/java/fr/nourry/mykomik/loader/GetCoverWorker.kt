@@ -56,17 +56,24 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             val archiveUri = Uri.parse(archivePath)
             val ext = getExtension(archivePath)
             var boolResult = false
+            var errorMessage = ""
 
-            when (ext) {
-                "cbz", "zip" -> {
-                    boolResult = unzipCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+            try {
+                when (ext) {
+                    "cbz", "zip" -> {
+                        boolResult = unzipCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                    }
+                    "cbr", "rar" -> {
+                        boolResult = unrarCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                    }
+                    "pdf" -> {
+                        boolResult = getCoverInPdfFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                    }
                 }
-                "cbr", "rar" -> {
-                    boolResult = unrarCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-                }
-                "pdf" -> {
-                    boolResult = getCoverInPdfFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-                }
+            } catch (e:Exception) {
+                boolResult = false
+                errorMessage = e.message ?: ""
+                Timber.w("GetCoverWorker.doWork :: error -> $errorMessage")
             }
 
             if (!boolResult)

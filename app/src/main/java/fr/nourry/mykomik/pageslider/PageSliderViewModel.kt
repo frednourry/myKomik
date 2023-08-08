@@ -233,8 +233,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         state.value = PageSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 
-    override fun onFinished(result: ComicLoadingResult, comic: ComicEntry) {
-        Timber.d("onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages}")
+    override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, errorMessage:String) {
+        Timber.d("onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages} errorMessage=$errorMessage")
         if (result == ComicLoadingResult.SUCCESS) {
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
@@ -256,7 +256,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             }
 
         } else {
-            state.value = PageSliderViewModelState.Error("Error loading directory")
+            state.value = PageSliderViewModelState.Error(errorMessage)
         }
     }
 

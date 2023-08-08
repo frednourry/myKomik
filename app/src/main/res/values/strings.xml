@@ -71,6 +71,9 @@
     <string name="save_page_message_error_io">An I/O error occurred while saving this page in %s (%s)</string>
     <string name="loading_image">Loading image</string>
 
+    <string name="opening_error">Error :\n%1$s</string>
+
+
 
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>

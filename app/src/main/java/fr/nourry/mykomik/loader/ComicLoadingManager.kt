@@ -20,7 +20,7 @@ interface ComicLoadingProgressListener {
     fun onRetrieved(comic:ComicEntry, currentIndex:Int, size:Int, path:String)
 }
 interface ComicLoadingFinishedListener {
-    fun onFinished(result:ComicLoadingResult, comic:ComicEntry)
+    fun onFinished(result:ComicLoadingResult, comic:ComicEntry, message:String)
 }
 
 data class TuplePageListenerList (val numPage:Int, var listeners:MutableList<ComicLoadingProgressListener>) {
@@ -364,6 +364,7 @@ class ComicLoadingManager private constructor() {
                             Timber.d(" loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
                             val nbPages = outputData.getInt(GetPagesWorker.KEY_NB_PAGES, 0)
+                            val errorMessage = outputData.getString(GetPagesWorker.KEY_ERROR_MESSAGE) ?: ""
                             Timber.d("   nbPages=$nbPages")
                             if (nbPages>0) {
                                 comic.nbPages = nbPages
@@ -385,7 +386,8 @@ class ComicLoadingManager private constructor() {
                             // Send the onFinished event
                             comicLoading.finishListener?.onFinished(
                                 if (workInfo.state == WorkInfo.State.SUCCEEDED) ComicLoadingResult.SUCCESS else ComicLoadingResult.ERROR,
-                                comic
+                                comic,
+                                errorMessage
                             )
 
                             loadNext()
