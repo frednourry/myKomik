@@ -314,7 +314,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             //  - we should inverse the viewPager (viewPager.rotationY = 180F)
             //  - we should inverse each item of the recyclerView (item.rotationY = 180F)
             val isLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
-            pageSliderAdapter = PageSliderAdapter(requireContext(), state.comic, isLTR)
+            pageSliderAdapter = PageSliderAdapter(requireContext(), state.comic, isLTR, UserPreferences.getInstance(requireContext()).isAdaptPageBackgroundAuto())
             pageSliderAdapter.setPageSliderAdapterListener(this)
 
             lockableViewPager.adapter = pageSliderAdapter

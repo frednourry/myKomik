@@ -23,6 +23,9 @@
             android:entryValues="@array/settings_page_turn_direction_values"
             android:summary="@string/settings_page_turn_direction_summary"
             android:title="@string/settings_page_turn_direction"/>
+        <CheckBoxPreference app:key="adapt_page_background_auto"
+            app:title="@string/settings_adapt_page_background_auto"
+            android:defaultValue="true"/>
         <CheckBoxPreference app:key="disable_rotation"
             app:title="@string/settings_disable_rotation"
             android:defaultValue="false"

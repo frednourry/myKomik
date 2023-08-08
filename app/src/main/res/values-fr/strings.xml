@@ -57,6 +57,7 @@
     <string name="settings_disable_rotation">Désactiver le mode paysage</string>
     <string name="settings_disable_rotation_summary">Activer cette option pour empêcher de passer en mode paysage</string>
     <string name="settings_hide_page_number">Cacher le numéro des pages</string>
+    <string name="settings_adapt_page_background_auto">Adapter l\'arrière-plan des pages automatiquement</string>
     <string name="by_author">de Frédéric Nourry</string>
     <string name="menu_group_general">Général</string>
     <string name="menu_group_guest">Mode invité</string>

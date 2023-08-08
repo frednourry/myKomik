@@ -20,6 +20,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private val readingDirectionLabel   = "page_turn_direction"
     private val disableRotationLabel    = "disable_rotation"
     private val tapToChangePageLabel    = "tap_to_change_page"
+    private val adaptPageBackgroundAuto  = "adapt_page_background_auto"
 
     // Variables
     private lateinit var reading_direction:String
@@ -27,6 +28,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private var hide_read_comics:Boolean = false
     private var disable_rotation:Boolean = false
     private var tap_to_change_page:Boolean = false
+    private var adapt_page_background_auto:Boolean = true
 
     var sharedPreferences: SharedPreferences
 
@@ -58,6 +60,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
         hide_read_comics = sharedPreferences.getBoolean(hideReadComicsLabel, false)
         disable_rotation = sharedPreferences.getBoolean(disableRotationLabel, false)
         tap_to_change_page = sharedPreferences.getBoolean(tapToChangePageLabel, false)
+        adapt_page_background_auto = sharedPreferences.getBoolean(adaptPageBackgroundAuto, true)
     }
 
     override fun onSharedPreferenceChanged(sharePref: SharedPreferences, key: String) {
@@ -74,6 +77,8 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
                     sharePref.getBoolean(disableRotationLabel, false)
                 tapToChangePageLabel -> tap_to_change_page =
                     sharePref.getBoolean(tapToChangePageLabel, false)
+                adaptPageBackgroundAuto -> adapt_page_background_auto =
+                    sharePref.getBoolean(adaptPageBackgroundAuto, true)
             }
         }
     }
@@ -88,4 +93,5 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     fun isRotationDisabled():Boolean = disable_rotation
     fun isTappingToChangePage():Boolean = tap_to_change_page
 
+    fun isAdaptPageBackgroundAuto():Boolean = adapt_page_background_auto
 }

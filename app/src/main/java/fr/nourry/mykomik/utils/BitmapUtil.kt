@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
+import androidx.annotation.ColorInt
 import fr.nourry.mykomik.App
 import timber.log.Timber
 import java.io.File
@@ -308,6 +309,114 @@ class BitmapUtil {
                 }
             }
             return false
+        }
+
+        /**
+         * Get the average color in an image (don't test all pixel, only 1 in 'definition' pixel - ie 1 in 50 pixel for example)
+         */
+        @ColorInt
+        fun getAverageColor(bitmap:Bitmap, definition:Int = 100):Int {
+            var averageRed = 0
+            var averageBlue = 0
+            var averageGreen = 0
+            var pixelCount = 0
+            var pixelColor : Int
+
+            val limitWidth = Math.max(bitmap.width - 1, 0)
+            val limitHeight = Math.max(bitmap.height - 1, 0)
+
+            for(x in 0..limitWidth step definition) {
+                for(y in 0..limitHeight step definition) {
+                    pixelColor = bitmap.getPixel(x, y)
+                    averageRed += Color.red(pixelColor)
+                    averageGreen += Color.green(pixelColor)
+                    averageBlue += Color.blue(pixelColor)
+                    pixelCount++
+                }
+            }
+            Timber.v("getAverageColor :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+
+            return if (pixelCount != 0) {
+                Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)
+            }
+            else
+                0
+        }
+
+        @ColorInt
+        /**
+         * Get the average color in the image vertical border (don't test all pixel, only 1 in 'definition' pixel - ie 1 in 50 pixel for example)
+         */
+        fun getAverageColorAtVBorder(bitmap:Bitmap, definition:Int = 30):Int {
+            var averageRed = 0
+            var averageBlue = 0
+            var averageGreen = 0
+            var pixelCount = 0
+            var pixelColor : Int
+
+            val limitWidth = Math.max(bitmap.width - 1, 0)
+            val limitHeight = Math.max(bitmap.height - 1, 0)
+
+            for(y in 0..limitHeight step definition) {
+                pixelColor = bitmap.getPixel(0, y)
+                averageRed += Color.red(pixelColor)
+                averageGreen += Color.green(pixelColor)
+                averageBlue += Color.blue(pixelColor)
+                pixelCount++
+            }
+
+            for(y in 0..limitHeight step definition) {
+                pixelColor = bitmap.getPixel(limitWidth, y)
+                averageRed += Color.red(pixelColor)
+                averageGreen += Color.green(pixelColor)
+                averageBlue += Color.blue(pixelColor)
+                pixelCount++
+            }
+            Timber.v("getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+
+            return if (pixelCount != 0) {
+                Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)
+            }
+            else
+                0
+        }
+
+        /**
+         * Get the average color in the image horizontal border (don't test all pixel, only 1 in 'definition' pixel - ie 1 in 50 pixel for example)
+         */
+        @ColorInt
+        fun getAverageColorAtHBorder(bitmap:Bitmap, definition:Int = 30):Int {
+            var averageRed = 0
+            var averageBlue = 0
+            var averageGreen = 0
+            var pixelCount = 0
+            var pixelColor : Int
+
+            val limitWidth = Math.max(bitmap.width - 1, 0)
+            val limitHeight = Math.max(bitmap.height - 1, 0)
+
+            for(x in 0..limitWidth step definition) {
+                pixelColor = bitmap.getPixel(0, 0)
+                averageRed += Color.red(pixelColor)
+                averageGreen += Color.green(pixelColor)
+                averageBlue += Color.blue(pixelColor)
+                pixelCount++
+            }
+
+            for(x in 0..limitWidth step definition) {
+                pixelColor = bitmap.getPixel(0, limitHeight)
+                averageRed += Color.red(pixelColor)
+                averageGreen += Color.green(pixelColor)
+                averageBlue += Color.blue(pixelColor)
+                pixelCount++
+            }
+            Timber.v("getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+
+            return if (pixelCount != 0) {
+                Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)
+            }
+            else
+                0
         }
     }
 }

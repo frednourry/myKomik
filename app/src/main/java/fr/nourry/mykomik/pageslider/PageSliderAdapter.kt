@@ -13,6 +13,7 @@ import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
+import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.BitmapUtil
 import timber.log.Timber
 import java.io.File
@@ -25,7 +26,7 @@ enum class MovementType {
 }
 
 // To work with a androidx.viewpager.widget.ViewPager
-class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val isLTR:Boolean):PagerAdapter(), MagnifyImageView.Listener {
+class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val isLTR:Boolean, private val isAdaptPageBackgroundAuto:Boolean):PagerAdapter(), MagnifyImageView.Listener {
     interface Listener {
         fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
         fun onPageDrag(dx:Float, dy:Float)
@@ -75,7 +76,10 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                             magnifyImageView?.magnetRight()
                         }
                         // Set the background color according a pixel
-                        magnifyImageView.setBackgroundColor(bitmap.getPixel(0, 0))
+                        if (isAdaptPageBackgroundAuto) {
+                            magnifyImageView.setBackgroundColor(BitmapUtil.getAverageColorAtHBorder(bitmap, 30))
+//                            magnifyImageView.setBackgroundColor(bitmap.getPixel(0, 0))
+                        }
                     }
                 } else {
                     Timber.w("onRetrieved:: To late. This view no longer requires this image...")
