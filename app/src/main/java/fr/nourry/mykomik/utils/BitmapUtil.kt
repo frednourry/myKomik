@@ -400,7 +400,7 @@ class BitmapUtil {
             val limitHeight = Math.max(bitmap.height - 1, 0)
 
             for(x in 0..limitWidth step definition) {
-                pixelColor = bitmap.getPixel(0, 0)
+                pixelColor = bitmap.getPixel(x, 0)
                 averageRed += Color.red(pixelColor)
                 averageGreen += Color.green(pixelColor)
                 averageBlue += Color.blue(pixelColor)
@@ -408,7 +408,7 @@ class BitmapUtil {
             }
 
             for(x in 0..limitWidth step definition) {
-                pixelColor = bitmap.getPixel(0, limitHeight)
+                pixelColor = bitmap.getPixel(x, limitHeight)
                 averageRed += Color.red(pixelColor)
                 averageGreen += Color.green(pixelColor)
                 averageBlue += Color.blue(pixelColor)

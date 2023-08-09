@@ -77,8 +77,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                         }
                         // Set the background color according a pixel
                         if (isAdaptPageBackgroundAuto) {
-                            magnifyImageView.setBackgroundColor(BitmapUtil.getAverageColorAtHBorder(bitmap, 30))
-//                            magnifyImageView.setBackgroundColor(bitmap.getPixel(0, 0))
+                            magnifyImageView.setBackgroundColor(BitmapUtil.getAverageColor(bitmap, 100))
                         }
                     }
                 } else {
