@@ -41,7 +41,9 @@ class BitmapUtil {
                 // Get the image size
                 val optionTest = BitmapFactory.Options()
                 optionTest.inJustDecodeBounds = true
-                BitmapFactory.decodeStream(FileInputStream(f), null, optionTest)
+                FileInputStream(f).use { inputStream ->
+                    BitmapFactory.decodeStream(inputStream, null, optionTest)
+                }
 
                 val halfOutWidth: Int = optionTest.outWidth / 2
                 val halfOutHeight: Int = optionTest.outHeight / 2
@@ -57,7 +59,9 @@ class BitmapUtil {
                 val option = BitmapFactory.Options()
                 option.inJustDecodeBounds = false
                 option.inSampleSize = inSampleSize
-                return BitmapFactory.decodeStream(FileInputStream(f), null, option)
+                FileInputStream(f).use {inputStream ->
+                    return BitmapFactory.decodeStream(inputStream, null, option)
+                }
             } catch (e: OutOfMemoryError) {
                 Timber.w("decodeStream :: OutOfMemoryError ! f=${f.absolutePath}")
             } catch (e: Error) {
