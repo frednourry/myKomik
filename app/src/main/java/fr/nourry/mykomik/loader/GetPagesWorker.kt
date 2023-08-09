@@ -17,11 +17,14 @@ import com.github.junrar.exception.UnsupportedRarV5Exception
 import com.github.junrar.rarfile.FileHeader
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
+import org.apache.commons.compress.utils.IOUtils
+import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
 import timber.log.Timber
 import java.io.File
 import java.io.IOException
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
+import java.io.InputStream
+
 
 class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
@@ -32,8 +35,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         const val KEY_CURRENT_PATH                  = "currentPath"
         const val KEY_NB_PAGES                      = "nbPages"
         const val KEY_ERROR_MESSAGE                 = "errorMessage"
-
-        const val BUFFER_SIZE = 2048
     }
 
     private var nbPages:Int = 0
@@ -63,6 +64,8 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             try {
                 if (ext == "cbz" || ext == "zip") {
                     boolResult = unzipPages(archiveUri, destPath, pagesList)
+                } else if (ext == "cb7" || ext == "7z") {
+                    boolResult = unzipPageIn7ZipFile(archiveUri, destPath, pagesList)
                 } else if (ext == "cbr" || ext == "rar") {
                     boolResult = unrarPages(archiveUri, destPath, pagesList)
                 } else if (ext == "pdf") {
@@ -71,6 +74,8 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             } catch (e:Exception) {
                 boolResult = false
                 errorMessage = e.message ?: ""
+                Timber.e(e)
+                e.printStackTrace()
             }
 
             if (!boolResult) {
@@ -88,45 +93,111 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         return Result.success(outputData)
     }
 
-    // FAST METHOD BUT NEED TO COPY THE FILE...
+    /**
+     * Extract pages from a zip file - but will try if it's a 7zip in case of error...
+     */
     private fun unzipPages(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
-        Timber.v("unzipPages $fileUri pages=$pages")
-
-        // Copy the uri file in a temp File
-        val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), false)
-        Timber.v("unzipCoverInFile tmpFile=${tmpFile.absoluteFile} tmpFile exists::${tmpFile.exists()}")
-
-        if (!tmpFile.exists() && readTextFromUri(App.appContext, fileUri, tmpFile) == null) {
-            Timber.v("unzipCoverInFile error in readTextFromUri")
-            return false
+        var exceptionToRemember : Exception? = null
+        var result = false
+        try {
+            result = unzipPageInTrueZipFile(fileUri, filePath, pages)
+        } catch (zipE:Exception) {
+            Timber.w("unzipPages (zip try):: exception=$zipE")
+            exceptionToRemember = zipE
         }
 
-        // Unzip
-        ZipFile(tmpFile.absoluteFile).use { zip ->
+        if (!result) {
+            // Try if it's a 7zip file (just in case...)
             try {
-                val sequences = zip.entries().asSequence()
-                var zipEntries : MutableList<ZipEntry> = mutableListOf()
+                Timber.v("unzipPages: trying 7z format")
+                result =  unzipPageIn7ZipFile(fileUri, filePath, pages)
+                Timber.v("unzipPages: trying 7z format => success")
+            } catch (sevenZipE:Exception) {
+                Timber.i("unzipPages (7z try):: exception=$sevenZipE")
+            }
+        }
+        if (result)
+            return true
 
-                var cpt=0
-                for (entry in sequences) {
+        if (exceptionToRemember != null)
+            throw exceptionToRemember
+
+        return false
+    }
+
+    /**
+     * Extract pages from a true zip file
+     */
+    private fun unzipPageInTrueZipFile(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
+        Timber.v("unzipPageInTrueZipFile $filePath pages=$pages")
+
+        // Unzip
+        try {
+            // Get a ZipFile object to unzip
+            var zipFile: org.apache.commons.compress.archivers.zip.ZipFile? = null
+            val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), false)
+
+            var inputStream: InputStream? = null
+            var channel: SeekableInMemoryByteChannel? = null
+
+            // NOTE : There is 2 method to open a ZipFile: a fast one (but can cause OutOfMemory exception) and a slower one (but need to copy the Uri into the drive - not efficient)
+
+            // Test if the tmpFile exists
+            if (tmpFile.exists()) {
+                // It exists (which mean we already use the slow method)
+                Timber.v("unzipTrueZipFile : tmpFile already exists ${tmpFile.path}")
+                zipFile = org.apache.commons.compress.archivers.zip.ZipFile(tmpFile)
+            } else {
+                // Try the fast method
+                try {
+                    inputStream = applicationContext.contentResolver.openInputStream(fileUri)
+                    channel = SeekableInMemoryByteChannel(IOUtils.toByteArray(inputStream))
+                    zipFile = org.apache.commons.compress.archivers.zip.ZipFile(channel)
+                } catch (e:OutOfMemoryError) {
+                    // The file is too big
+                    Timber.w("unzipTrueZipFile : file too big : $e")
+                } catch (e:Exception) {
+                    Timber.w("unzipTrueZipFile : fast method aborted : $e")
+                }
+
+                // If zipFile is still null, try the slow method...
+                if (zipFile == null) {
+                    if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
+                        Timber.v("unzipTrueZipFile : tmpFile created ${tmpFile.path}")
+                        try {
+                            zipFile = org.apache.commons.compress.archivers.zip.ZipFile(tmpFile)
+                        } catch (e:Exception) {
+                            Timber.w("unzipTrueZipFile : slow method aborted : $e")
+                        }
+                    } else {
+                        Timber.v("unzipTrueZipFile : error in readTextFromUri")
+                    }
+                }
+            }
+            if (zipFile != null) {
+                // Run through the zipArchiveEntries
+                var cpt = 0
+                var zipArchiveEntries : MutableList<org.apache.commons.compress.archivers.zip.ZipArchiveEntry> = mutableListOf()
+                Timber.v("unzipTrueZipFile  zipFile.entries=${zipFile.entries}")
+                for (entry in zipFile.entries) {
                     if (isStopped) {    // Check if the work was cancelled
                         break
                     }
-
                     if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
-//                        Timber.v("  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
-                        zipEntries.add(entry)
+//                              Timber.v("unzipTrueZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
+                        zipArchiveEntries.add(entry)
                     } else {
-                        Timber.v("  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
+//                              Timber.v("unzipTrueZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
                     }
                     cpt++
                 }
 
-                // Reorder ZipEntry by filename
-                zipEntries = ZipUtil.sortZipEntryList(zipEntries)
-                nbPages = zipEntries.size
+                // Reorder sevenZEntries by filename
+                zipArchiveEntries = ZipUtil.sortZipArchiveEntry(zipArchiveEntries)
+                nbPages = zipArchiveEntries.size
 
-                if (!isStopped && zipEntries.isNotEmpty()) {
+                // Catch the wished pages
+                if (!isStopped && zipArchiveEntries.isNotEmpty()) {
                     for (numPage in pages) {
                         if (isStopped) {    // Check if the work was cancelled
                             break
@@ -136,157 +207,161 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                             Timber.w("  numPage is bigger than nbPages ! ($numPage>=$nbPages)")
                             continue
                         }
-
-                        val entry = zipEntries[numPage]
-                        zip.getInputStream(entry).use { input ->
-                            val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
-                            Timber.v("  Unzip page=$numPage in $pagePath")
-
-                            File(pagePath).outputStream().use { output ->
-                                input.copyTo(output)
+                        val zipEntry = zipArchiveEntries[numPage]
+                        val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+                        Timber.v("  unZip page=$numPage in $pagePath")
+                        File(pagePath).outputStream().use { output ->
+                            zipFile.getInputStream(zipEntry).use{ inputStream ->
+                                IOUtils.copy(inputStream, output)
                             }
-
-                            // Send a progress event
-                            setProgressAsync(Data.Builder().
-                            putInt(KEY_CURRENT_INDEX, numPage).
-                            putString(KEY_CURRENT_PATH, pagePath).
-                            putInt(KEY_NB_PAGES, nbPages).
-                            build())
                         }
+
+                        // Send a progress event
+                        setProgressAsync(
+                            Data.Builder().putInt(KEY_CURRENT_INDEX, numPage)
+                                .putString(KEY_CURRENT_PATH, pagePath).putInt(KEY_NB_PAGES, nbPages)
+                                .build()
+                        )
                     }
                 }
+                // Close everything
+                zipFile.close()
+                channel?.close()
+                inputStream?.close()
+            } else {
+                // Can't open the file, so exit !
+                channel?.close()
+                inputStream?.close()
+                return false
             }
-            catch (e:java.util.zip.ZipException) {
-                Timber.w("unzipPages:: zip error "+e.message)
-                throw e
-            }
-            catch (t: Throwable) {
-                Timber.w("unzipPages:: error "+t.message)
-                throw t
-            }
+        } catch (e: IOException) {
+            Timber.w("unzipPageInTrueZipFile :: IOException $e")
+            throw e
         }
-        Timber.v("END unzipPages ${tmpFile.name}")
-
-        // Do not delete tmpFile!
-
         return true
     }
 
-/*
-    // SLOW METHOD DUE TO TWO PASS
-    private fun unzipPages(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
-        Timber.v("unzipPages $fileUri pages=$pages")
+   /**
+     * Extract pages from a 7z file
+     */
+    private fun unzipPageIn7ZipFile(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
+        Timber.v("unzipPageIn7ZipFile fileUri=$fileUri filePath=$filePath pages=$pages")
 
-        // Unzip
-        var zipEntries : MutableList<ZipEntry> = arrayListOf()
-
-        // Make a mutableList from pages
-        var wishedPages : MutableList<Int> = mutableListOf()
-        for (e in pages)
-            wishedPages.add(e)
-
-        Timber.v("unzipPages $fileUri pages=$pages wishedPages=$wishedPages")
-
+        // Un7zip
         try {
-            // 1st pass : Get and order the zip entries
-            applicationContext.contentResolver.openInputStream(fileUri)?.use { inputStream ->
-                inputStream.use {
-                    val bufferedInputStream = BufferedInputStream(inputStream)
-                    val zipInputStream = ZipInputStream(bufferedInputStream)
+            // Get a ZipFile object to unzip
+            var sevenZFile: SevenZFile? = null
+            val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), false)
 
-                    var entry: ZipEntry? = zipInputStream.nextEntry
-                    while (entry != null) {
-//                            Timber.i("  entry = ${entry.name} - ${entry.size}")
-                        zipInputStream.closeEntry()
+            var inputStream:InputStream? = null
+            var channel: SeekableInMemoryByteChannel? = null
 
-                        if (!entry.isDirectory && isFilePathAnImage2(entry.name)) {
-//                                Timber.v("  ENTRY :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
-                            zipEntries.add(entry)
-                        } else {
-                            Timber.v("  ENTRY :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
-                        }
+            // NOTE : There is 2 method to open a 7zip: a fast one (but can cause OutOfMemory exception) and a slower one (but need to copy the Uri into the drive - not efficient)
 
-                        entry = zipInputStream.nextEntry
-                    }
-                    bufferedInputStream.close()
+            // Test if the tmpFile exists
+            if (tmpFile.exists()) {
+                // It exists (which mean we already use the slow method)
+                Timber.v("unzipPageIn7ZipFile : tmpFile already exists ${tmpFile.path}")
+                sevenZFile = SevenZFile(tmpFile)
+            } else {
+                // Try the fast method
+                try {
+                    inputStream = applicationContext.contentResolver.openInputStream(fileUri)
+                    channel = SeekableInMemoryByteChannel(IOUtils.toByteArray(inputStream))
+                    sevenZFile = SevenZFile(channel)
+                } catch (e:OutOfMemoryError) {
+                    // The file is too big
+                    Timber.w("unzipPageIn7ZipFile : file too big : $e")
+                } catch (e:Exception) {
+                    Timber.w("unzipPageIn7ZipFile : fast method aborted : $e")
                 }
-            }
 
-            zipEntries = ZipUtil.sortZipEntryList(zipEntries)
-            nbPages = zipEntries.size
-            Timber.i("  nbPages = $nbPages")
-
-            // 2nd pass : Unzip the requested pages (need to reopen the stream...)
-            if (!isStopped && zipEntries.isNotEmpty()) {
-                applicationContext.contentResolver.openInputStream(fileUri)?.use { inputStream ->
-
-                    inputStream.use {
-                        val bufferedInputStream = BufferedInputStream(inputStream)
-                        val zipInputStream = ZipInputStream(bufferedInputStream)
-
-                        var entry: ZipEntry? = zipInputStream.nextEntry
-                        while (entry != null) {
-                            for (numPage in wishedPages) {
-                                if (isStopped) {    // Check if the work was cancelled
-                                    break
-                                }
-                                if (entry!!.name == zipEntries[numPage].name) {
-                                    // Get inputstream
-                                    val pagePath:String = filePath.replace(".999.", ".%03d.".format(numPage))
-                                    Timber.v("  Unzip page=$numPage in $pagePath (${entry!!.name} ${entry!!.size})")
-
-                                    // Unzip this entry in a file
-                                    File(pagePath).outputStream().use { output ->
-//                                             zipInputStream.copyTo(output, entry!!.size.toInt())  // BAD because entry!!.size can returns -1...
-
-                                        try {
-                                            val data = ByteArray(BUFFER_SIZE)
-
-                                            var cpt: Int = zipInputStream.read(data, 0, BUFFER_SIZE)
-                                            while (cpt != -1) {
-                                                output.write(data, 0, cpt)
-                                                cpt = zipInputStream.read(data, 0, BUFFER_SIZE)
-                                            }
-                                            output.flush()
-
-                                        } finally {
-                                            output.close()
-                                        }
-                                    }
-                                    zipInputStream.closeEntry()
-
-                                    // Send a progress event
-                                    setProgressAsync(Data.Builder().
-                                    putInt(KEY_CURRENT_INDEX, numPage).
-                                    putString(KEY_CURRENT_PATH, pagePath).
-                                    putInt(KEY_NB_PAGES, nbPages).
-                                    build())
-
-                                    // Remove numPage from pages
-                                    wishedPages.remove(numPage)
-                                    break
-                                }
-
-                                if (wishedPages.isEmpty())
-                                    // No more page to search
-                                    break
-                            }
-
-                            entry = zipInputStream.nextEntry
+                // If zipFile is still null, try the slow method...
+                if (sevenZFile == null) {
+                    if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
+                        Timber.v("unzipPageIn7ZipFile : tmpFile created ${tmpFile.path}")
+                        try {
+                            sevenZFile = SevenZFile(tmpFile)
+                        } catch (e:Exception) {
+                            Timber.w("unzipPageIn7ZipFile : slow method aborted : $e")
                         }
-                        bufferedInputStream.close()
+                    } else {
+                        Timber.v("unzipPageIn7ZipFile : error in readTextFromUri")
                     }
                 }
             }
+            if (sevenZFile != null) {
+                // Run through the zipArchiveEntries
+                var cpt = 0
+                var sevenZEntries: MutableList<org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry> =
+                    mutableListOf()
+                Timber.v("unzipPageIn7ZipFile  sevenZFile.entries=${sevenZFile.entries}")
 
+                for (entry in sevenZFile.entries) {
+                    if (isStopped) {    // Check if the work was cancelled
+                        break
+                    }
+                    if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
+                        // Timber.v("unzipSevenZFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
+                        sevenZEntries.add(entry)
+                    } else {
+                        // Timber.v("unzipSevenZFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
+                    }
+                    cpt++
+                }
+
+                // Reorder sevenZEntries by filename
+                sevenZEntries = ZipUtil.sortSevenZArchiveEntry(sevenZEntries)
+                nbPages = sevenZEntries.size
+
+                // Catch the wished pages
+                if (!isStopped && sevenZEntries.isNotEmpty()) {
+                    for (numPage in pages) {
+                        if (isStopped) {    // Check if the work was cancelled
+                            break
+                        }
+
+                        if (numPage >= nbPages) {
+                            Timber.w("  numPage is bigger than nbPages ! ($numPage>=$nbPages)")
+                            continue
+                        }
+                        val sevenZEntry = sevenZEntries[numPage]
+                        val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+                        Timber.v("  un7Zip page=$numPage in $pagePath")
+                        File(pagePath).outputStream().use { output ->
+                            IOUtils.copy(sevenZFile.getInputStream(sevenZEntry), output)
+                        }
+
+                        // Send a progress event
+                        setProgressAsync(
+                            Data.Builder().putInt(KEY_CURRENT_INDEX, numPage)
+                                .putString(KEY_CURRENT_PATH, pagePath)
+                                .putInt(KEY_NB_PAGES, nbPages)
+                                .build()
+                        )
+                    }
+                }
+
+                // Close everything
+                channel?.close()
+                inputStream?.close()
+                sevenZFile.close()
+            } else {
+                // Can't open the file, so exit !
+                channel?.close()
+                inputStream?.close()
+                return false
+            }
+        } catch (e: IOException) {
+            Timber.w("unzipPageIn7ZipFile :: IOException $e")
+            throw e
         }
-        catch (t: Throwable) {
-            Timber.w("unzipPages:: error "+t.message)
-        }
-        Timber.v("END unzipPages $fileUri")
         return true
     }
-*/
+
+    /**
+     * Extract pages from a rar file
+     */
     private fun unrarPages(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
         Timber.v("unrarPages $fileUri pages=$pages")
 
@@ -306,7 +381,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
 //                            Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} ADDED")
                             fileHeaders.add(fileHeader)
                         } else {
-                            Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
+//                            Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
                         }
                     }
                     cpt++
@@ -354,10 +429,13 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             throw e
         }
 
-        Timber.v("unrarPages ${fileUri}")
+        Timber.v("unrarPages $fileUri")
         return true
     }
 
+    /**
+     * Extract pages from pdf file
+     */
     private fun getPagesInPdfFile(fileUri: Uri, filePath:String, pages:List<Int>):Boolean {
         Timber.v("getPagesInPdfFile $fileUri pages=$pages")
 
@@ -381,18 +459,12 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         }
 
                         val page: PdfRenderer.Page = renderer.openPage(numPage)
-                        val tempBitmap =
-                            Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                        val tempBitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
 
                         val tempCanvas = Canvas(tempBitmap)
                         tempCanvas.drawColor(Color.WHITE)
                         tempCanvas.drawBitmap(tempBitmap, 0f, 0f, null)
-                        page.render(
-                            tempBitmap,
-                            null,
-                            null,
-                            PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
-                        )
+                        page.render(tempBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         page.close()
 
                         if (tempBitmap == null || PdfUtil.isBitmapBlankOrWhite(tempBitmap)) {
@@ -414,6 +486,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                         )
                     }
                 }
+                renderer.close()
                 fileDescriptor.close()
             }
         } catch (e: IOException) {

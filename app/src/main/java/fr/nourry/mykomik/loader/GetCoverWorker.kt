@@ -15,12 +15,12 @@ import com.github.junrar.exception.RarException
 import com.github.junrar.rarfile.FileHeader
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry
 import timber.log.Timber
 import java.io.*
-import java.util.zip.ZipEntry
-import fr.nourry.mykomik.utils.getTempFile
-import fr.nourry.mykomik.utils.readTextFromUri
-import java.util.zip.ZipFile
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
+import org.apache.commons.compress.utils.IOUtils
+import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
 
 
 class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
@@ -33,8 +33,6 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         const val KEY_THUMBNAIL_INNER_IMAGE_WIDTH   = "thumbnailInnerImageWidth"
         const val KEY_THUMBNAIL_INNER_IMAGE_HEIGHT  = "thumbnailInnerImageHeight"
         const val KEY_THUMBNAIL_FRAME_SIZE          = "thumbnailFrameSize"
-
-        const val BUFFER_SIZE = 2048
     }
 
     private var nbPages = 0
@@ -56,12 +54,15 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             val archiveUri = Uri.parse(archivePath)
             val ext = getExtension(archivePath)
             var boolResult = false
-            var errorMessage = ""
+            var errorMessage:String
 
             try {
                 when (ext) {
                     "cbz", "zip" -> {
                         boolResult = unzipCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                    }
+                    "cb7", "7z" -> {
+                        boolResult = unzipCoverIn7ZipFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
                     }
                     "cbr", "rar" -> {
                         boolResult = unrarCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
@@ -86,171 +87,255 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         return Result.success(outputData)
     }
 
-    // SLOW METHOD DUE TO TWO PASS
-/*    private fun unzipCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int,thumbnailFrameSize: Int): Boolean {
-        Timber.v("unzipCoverInFile fileUri={$fileUri} imagePath=$imagePath")
-
-//        Profiling.getInstance().start("unzipCoverInFile")
-        var bitmap: Bitmap? = null
-
-        try {
-            var zipEntries : MutableList<ZipEntry> = arrayListOf()
-
-            // 1st pass : Get and order the zip entries
-            applicationContext.contentResolver.openInputStream(fileUri)?.use { inputStream ->
-                inputStream.use {
-                    val bufferedInputStream = BufferedInputStream(inputStream)
-                    val zipInputStream = ZipInputStream(bufferedInputStream)
-
-                    var entry: ZipEntry? = zipInputStream.nextEntry
-                    while (entry != null) {
-//                            Timber.i("  entry = ${entry.name} - ${entry.size}")
-//                        zipInputStream.closeEntry()   // No need ? and time consumer
-
-                        if (!entry.isDirectory && isFilePathAnImage2(entry.name)) {
-//                                Timber.v("  ENTRY :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
-                            zipEntries.add(entry)
-                        }
-                        else {
-                            Timber.v("  ENTRY :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
-                        }
-
-                        entry = zipInputStream.nextEntry
-                    }
-                    bufferedInputStream.close()
-                }
-            }
-//            Profiling.getInstance().intermediate("getEntries")
-
-            zipEntries = ZipUtil.sortZipEntryList(zipEntries)
-            val nbPages = zipEntries.size
-//            Profiling.getInstance().intermediate("sortEntries")
-            Timber.i("  nbPages = $nbPages")
-
-            // Get the cover (the first image)
-            if (nbPages>0) {
-                val firstEntry = zipEntries[0]
-
-                // 2nd pass : Unzip the first page (need to reopen the stream...)
-                applicationContext.contentResolver.openInputStream(fileUri)?.use { inputStream ->
-                    inputStream.use {
-                        val bufferedInputStream = BufferedInputStream(inputStream)
-                        val zipInputStream = ZipInputStream(bufferedInputStream)
-
-                        var entry: ZipEntry? = zipInputStream.nextEntry
-                        while (entry != null) {
-                            if (firstEntry.name == entry!!.name) {
-                                // Read the inputStream into an outputStream
-
-                                val outputStream = ByteArrayOutputStream()
-                                try {
-                                    val data = ByteArray(BUFFER_SIZE)
-
-                                    var cpt: Int = zipInputStream.read(data, 0, BUFFER_SIZE)
-                                    while (cpt != -1) {
-                                        outputStream.write(data, 0, cpt)
-                                        cpt = zipInputStream.read(data, 0, BUFFER_SIZE)
-                                    }
-                                    outputStream.flush()
-                                } catch (e:Exception) {
-                                    Timber.w("error while reading zip ! ${outputStream.size()}")
-                                }
-                                zipInputStream.closeEntry()
-
-                                // Create an image with this stream
-                                bitmap = BitmapUtil.createFramedBitmap(outputStream.toByteArray(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-                                if (bitmap != null) {
-
-                                    Timber.w("bitmap null !! outputStream=${outputStream.size()}")
-                                    // Reduce the bitmap if needed
-                                    val bitmapToSave = Bitmap.createScaledBitmap(bitmap!!, bitmap!!.width, bitmap!!.height,false)
-
-                                    // Save the bitmap in cache and return
-                                    BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
-                                }
-                                break
-                            }
-
-                            entry = zipInputStream.nextEntry
-                        }
-                        bufferedInputStream.close()
-                    }
-                }
-            }
-        } catch (ioError:IOException) {
-            Timber.w( ioError.stackTraceToString())
-
-        } catch (error:Exception) {
-            Timber.w( error.stackTraceToString())
-        }
-//        Profiling.getInstance().stop()
-        return (bitmap!=null)
-    }
-*/
-
     // FAST METHOD BUT NEED TO COPY THE FILE...
+    /**
+     * Extract the cover from a ZIP file - but will try if it's a 7zip in case of error...
+     */
     private fun unzipCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
         Timber.v("unzipCoverInFile fileUri={$fileUri} imagePath=$imagePath")
+
+        val result = unzipCoverInTrueZipFile(fileUri, imagePath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+        return if (result)
+            true
+        else {
+            // Try if it's a 7zip file (just in case...)
+            Timber.v("unzipCoverInFile: trying 7z format")
+            unzipCoverIn7ZipFile(fileUri, imagePath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+        }
+    }
+
+    /**
+     * Extract the cover from a true zip file
+     */
+    private fun unzipCoverInTrueZipFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
+        Timber.v("unzipCoverInTrueZipFile $fileUri into $imagePath")
         var bitmap: Bitmap? = null
+//        Profiling.getInstance().start("unZipCoverInTrueZipFile")
 
-//        Profiling.getInstance().start("unzipCoverInFile")
+        // Unzip
+        try {
+            // Get a ZipFile object to unzip
+            var zipFile: org.apache.commons.compress.archivers.zip.ZipFile? = null
+            val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), false)
 
-        // Copy the uri file in a temp File
-        val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), true)
-        Timber.v("unzipCoverInFile tmpFile=${tmpFile.absoluteFile}")
-        if (readTextFromUri(App.appContext, fileUri, tmpFile) == null) {
-            Timber.v("unzipCoverInFile error in readTextFromUri")
+            var inputStream:InputStream? = null
+            var channel: SeekableInMemoryByteChannel? = null
+
+            // NOTE : There is 2 method to open a ZipFile: a fast one (but can cause OutOfMemory exception) and a slower one (but need to copy the Uri into the drive - not efficient)
+
+            // Test if the tmpFile exists
+            if (tmpFile.exists()) {
+                // It exists (which mean we already use the slow method)
+                Timber.v("unzipCoverInTrueZipFile : tmpFile already exists ${tmpFile.path}")
+                zipFile = org.apache.commons.compress.archivers.zip.ZipFile(tmpFile)
+            } else {
+                // Try the fast method
+                try {
+                    inputStream = applicationContext.contentResolver.openInputStream(fileUri)
+                    channel = SeekableInMemoryByteChannel(IOUtils.toByteArray(inputStream))
+                    zipFile = org.apache.commons.compress.archivers.zip.ZipFile(channel)
+                } catch (e:OutOfMemoryError) {
+                    // The file is too big
+                    Timber.w("unzipCoverInTrueZipFile : file too big : $e")
+                } catch (e:Exception) {
+                    Timber.w("unzipCoverInTrueZipFile : fast method aborted : $e")
+                }
+
+                // If zipFile is still null, try the slow method...
+                if (zipFile == null) {
+                    if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
+                        Timber.v("unzipCoverInTrueZipFile : tmpFile created ${tmpFile.path}")
+                        try {
+                            zipFile = org.apache.commons.compress.archivers.zip.ZipFile(tmpFile)
+                        } catch (e:Exception) {
+                            Timber.w("unzipCoverInTrueZipFile : slow method aborted : $e")
+                        }
+                    } else {
+                        Timber.v("unzipCoverInTrueZipFile : error in readTextFromUri")
+                    }
+                }
+            }
+            if (zipFile != null) {
+                // Run through the zipArchiveEntries
+                var cpt = 0
+                var zipArchiveEntries: MutableList<org.apache.commons.compress.archivers.zip.ZipArchiveEntry> = mutableListOf()
+
+                for (entry in zipFile.entries) {
+                    if (isStopped) {    // Check if the work was cancelled
+                        break
+                    }
+                    if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
+                        // Timber.v("unZipCoverInTrueZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
+                        zipArchiveEntries.add(entry)
+                    } else {
+                        // Timber.v("unZipCoverInTrueZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
+                    }
+                    cpt++
+                }
+
+                // Reorder entries by filename
+                zipArchiveEntries = ZipUtil.sortZipArchiveEntry(zipArchiveEntries)
+                nbPages = zipArchiveEntries.size
+
+                // Get the cover (the first image)
+                if (nbPages > 0) {
+                    val entry = zipArchiveEntries[0]
+                    zipFile.getInputStream(entry).use { input ->
+                        bitmap = BitmapUtil.createFramedBitmap(
+                            input.readBytes(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                        if (bitmap != null) {
+                            // Reduce the bitmap if needed
+                            val bitmapToSave = Bitmap.createScaledBitmap( bitmap!!, bitmap!!.width, bitmap!!.height, false )
+
+                            // Save the bitmap in cache and return
+                            BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
+                        }
+                    }
+                }
+
+                // Close everything
+                zipFile.close()
+                channel?.close()
+                inputStream?.close()
+
+                Timber.v("unzipCoverInTrueZipFile :: bitmap=$bitmap")
+            } else {
+                // Can't open the file, so exit !
+                channel?.close()
+                inputStream?.close()
+                return false
+            }
+
+        } catch (e: IOException) {
+            Timber.v("unzipCoverInTrueZipFile :: IOException $e")
+            return false
+        } catch (e: Exception) {
+            Timber.v("unzipCoverInTrueZipFile :: Exception $e")
             return false
         }
-
-        ZipFile(tmpFile.absoluteFile).use { zip ->
-            val sequences = zip.entries().asSequence()
-            var zipEntries: MutableList<ZipEntry> = mutableListOf()
-
-            var cpt = 0
-            for (entry in sequences) {
-                if (isStopped) {    // Check if the work was cancelled
-                    break
-                }
-
-                if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
-//                    Timber.v("  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
-                    zipEntries.add(entry)
-                } else {
-                    Timber.v("  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
-                }
-                cpt++
-            }
-//            Profiling.getInstance().intermediate("getEntries")
-
-            // Reorder ZipEntry by filename
-            zipEntries = ZipUtil.sortZipEntryList(zipEntries)
-            nbPages = zipEntries.size
-//            Profiling.getInstance().intermediate("sortEntries")
-
-            // Get the cover (the first image)
-            if (nbPages>0) {
-                val entry = zipEntries[0]
-                val input = zip.getInputStream(entry)
-                bitmap = BitmapUtil.createFramedBitmap(input.readBytes(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
-                if (bitmap != null) {
-                    // Reduce the bitmap if needed
-                    val bitmapToSave = Bitmap.createScaledBitmap(bitmap!!, bitmap!!.width, bitmap!!.height,false)
-
-                    // Save the bitmap in cache and return
-                    BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
-                }
-            }
-        }
-
-        // Delete tmpFile
-        deleteFile(tmpFile)
-
 //        Profiling.getInstance().stop()
 
         return (bitmap!=null)
     }
 
+    /**
+     * Extract the cover from a 7zip file
+     */
+    private fun unzipCoverIn7ZipFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
+        Timber.v("unzipCoverIn7ZipFile $fileUri into $imagePath")
+        var bitmap: Bitmap? = null
+//        Profiling.getInstance().start("unSevenZipCoverInFile")
+
+        // Unzip
+        try {
+            // Get a ZipFile object to unzip
+            var sevenZFile: SevenZFile? = null
+            val tmpFile = getTempFile(App.pageCacheDirectory, fileUri.toString().md5(), false)
+
+            var inputStream:InputStream? = null
+            var channel: SeekableInMemoryByteChannel? = null
+
+            // NOTE : There is 2 method to open a 7zip: a fast one (but can cause OutOfMemory exception) and a slower one (but need to copy the Uri into the drive - not efficient)
+
+            // Test if the tmpFile exists
+            if (tmpFile.exists()) {
+                // It exists (which mean we already use the slow method)
+                Timber.v("unzipCoverIn7ZipFile : tmpFile already exists ${tmpFile.path}")
+                sevenZFile = SevenZFile(tmpFile)
+            } else {
+                // Try the fast method
+                try {
+                    inputStream = applicationContext.contentResolver.openInputStream(fileUri)
+                    channel = SeekableInMemoryByteChannel(IOUtils.toByteArray(inputStream))
+                    sevenZFile = SevenZFile(channel)
+                } catch (e:OutOfMemoryError) {
+                    // The file is too big
+                    Timber.w("unzipCoverIn7ZipFile : file too big : $e")
+                } catch (e:Exception) {
+                    Timber.w("unzipCoverIn7ZipFile : fast method aborted : $e")
+                }
+
+                // If zipFile is still null, try the slow method...
+                if (sevenZFile == null) {
+                    if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
+                        Timber.v("unzipCoverIn7ZipFile : tmpFile created ${tmpFile.path}")
+                        try {
+                            sevenZFile = SevenZFile(tmpFile)
+                        } catch (e:Exception) {
+                            Timber.w("unzipCoverIn7ZipFile : slow method aborted : $e")
+                        }
+                    } else {
+                        Timber.v("unzipCoverIn7ZipFile : error in readTextFromUri")
+                    }
+                }
+            }
+            if (sevenZFile != null) {
+                // Run through the zipArchiveEntries
+                var cpt = 0
+                var sevenZEntries: MutableList<SevenZArchiveEntry> = mutableListOf()
+
+                for (entry in sevenZFile.entries) {
+                    if (isStopped) {    // Check if the work was cancelled
+                        break
+                    }
+                    if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
+                        // Timber.v("unzipCoverIn7ZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
+                        sevenZEntries.add(entry)
+                    } else {
+                        // Timber.v("unzipCoverIn7ZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} SKIPPED")
+                    }
+                    cpt++
+                }
+
+                // Reorder entries by filename
+                sevenZEntries = ZipUtil.sortSevenZArchiveEntry(sevenZEntries)
+                nbPages = sevenZEntries.size
+
+                // Get the cover (the first image)
+                if (nbPages > 0) {
+                    val entry = sevenZEntries[0]
+                    sevenZFile.getInputStream(entry).use { input ->
+                        bitmap = BitmapUtil.createFramedBitmap(
+                            input.readBytes(), thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                        if (bitmap != null) {
+                            // Reduce the bitmap if needed
+                            val bitmapToSave = Bitmap.createScaledBitmap( bitmap!!, bitmap!!.width, bitmap!!.height, false )
+
+                            // Save the bitmap in cache and return
+                            BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
+                        }
+                    }
+                }
+
+                // Close everything
+                channel?.close()
+                inputStream?.close()
+                sevenZFile.close()
+
+                Timber.v("unzipCoverIn7ZipFile :: bitmap=$bitmap")
+            } else {
+                // Can't open the file, so exit !
+                channel?.close()
+                inputStream?.close()
+                return false
+            }
+
+        } catch (e: IOException) {
+            Timber.v("unzipCoverIn7ZipFile :: IOException $e")
+            return false
+        } catch (e: Exception) {
+            Timber.v("unzipCoverIn7ZipFile :: Exception $e")
+            return false
+        }
+//        Profiling.getInstance().stop()
+
+        return (bitmap!=null)
+    }
+
+
+    /**
+     * Extract the cover from a RAR file
+     */
     private fun unrarCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
         Timber.v("unrarCoverInFile")
         var bitmap: Bitmap? = null
@@ -273,8 +358,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
 //                            Timber.v("  ENTRY $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} ADDED")
                             fileHeaders.add(fileHeader)
                         } else {
-                            Timber.v("  ENTRY $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
-
+//                            Timber.v("  ENTRY $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} SKIPPED")
                         }
                     }
                     cpt++
@@ -305,20 +389,18 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         } catch (e: IOException) {
             Timber.v("unrarCoverInFile :: IOException $e")
             return false
+        } catch (e: Exception) {
+            Timber.v("unrarCoverInFile :: Exception $e")
+            return false
         }
 
         return (bitmap!=null)
     }
 
-    private fun getCoverInPdfFile(
-        fileUri: Uri,
-        imagePath: String,
-        thumbnailWidth: Int,
-        thumbnailHeight: Int,
-        thumbnailInnerImageWidth: Int,
-        thumbnailInnerImageHeight: Int,
-        thumbnailFrameSize: Int,
-    ): Boolean {
+    /**
+     * Extract the cover from a PDF file
+     */
+    private fun getCoverInPdfFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
         Timber.v("pdfCoverInFile")
         var bitmap: Bitmap? = null
 
@@ -360,8 +442,8 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
 
                         break  // For(...)
                     }
-
                 }
+                renderer.close()
                 fileDescriptor.close()
             }
 

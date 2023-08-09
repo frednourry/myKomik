@@ -10,7 +10,7 @@ import java.io.*
 import java.net.URLDecoder
 import java.util.*
 
-val comicExtensionList = listOf("cbr", "cbz", "pdf", "rar", "zip")
+val comicExtensionList = listOf("cbr", "cbz", "pdf", "rar", "zip", "cb7", "7z")
 
 fun concatPath(path1:String, path2:String):String {
     return path1+File.separator+path2
@@ -35,6 +35,7 @@ fun isFilePathAnImage(filename:String) : Boolean {
 
 // Delete files in a directory
 fun clearFilesInDir(dir:File) {
+    Timber.v("clearFilesInDir(${dir.absoluteFile})")
     if (dir.exists() && dir.isDirectory) {
         val list = dir.listFiles()
         if (list != null) {
@@ -262,7 +263,11 @@ fun getTempFile(tempDirectory:File, name:String, checkExist:Boolean):File {     
     }
     return file
 }
-fun readTextFromUri(context:Context, uri: Uri, file:File): File? {
+
+/**
+ * Copy a file from its Uri into a given file and returns the file if ok
+ */
+fun copyFileFromUri(context:Context, uri: Uri, file:File): File? {
     try {
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             file.outputStream().use { outputStream ->
