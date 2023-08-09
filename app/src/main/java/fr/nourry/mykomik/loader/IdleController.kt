@@ -56,6 +56,9 @@ class IdleController : ComicLoadingProgressListener {
 
         handler.removeCallbacks(runnable)
         handler.postDelayed(runnable, idleDelay)
+
+        loadCompleted = false
+        dirUriList.clear()
     }
 
     private fun onIdle() {

@@ -584,11 +584,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(R.string.ask_clear_cache)
             .setPositiveButton(R.string.ok) { _,_ ->
-                val cacheDir = App.physicalConstants.cacheDir
-                if (cacheDir.exists() && cacheDir.isDirectory) {
-                    Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
-                    clearFilesInDir(cacheDir)
-                }
+                clearCache()
             }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
             .create()
@@ -635,6 +631,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }
 
         alert.show()
+    }
+
+    private fun clearCache() {
+        val cacheDir = App.physicalConstants.cacheDir
+        if (cacheDir.exists() && cacheDir.isDirectory) {
+            Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
+            clearFilesInDir(cacheDir)
+        }
+        IdleController.getInstance().resetIdleTimer()
     }
 
     private fun goPageSliderFragment(comic:ComicEntry, page:Int) {
