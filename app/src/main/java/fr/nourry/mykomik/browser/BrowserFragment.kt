@@ -12,6 +12,7 @@ import android.widget.*
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -387,7 +388,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
         IdleController.getInstance().resetIdleTimer()
 
-        (requireActivity() as MainActivity).toolbar.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
 
         viewModel.setPrefLastComicUri(null)      // Forget the last comic...
 

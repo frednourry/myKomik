@@ -18,8 +18,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
-    val toolbar get() = binding.toolbar
-
     override fun onCreate(savedInstanceState: Bundle?) {
         Timber.d("onCreate")
         WindowCompat.setDecorFitsSystemWindows(window, false)
