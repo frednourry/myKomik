@@ -4,19 +4,39 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.VmPolicy
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupActionBarWithNavController
+import fr.nourry.mykomik.databinding.ActivityMainBinding
 import fr.nourry.mykomik.loader.IdleController
 import timber.log.Timber
 
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var appBarConfiguration: AppBarConfiguration
+    private lateinit var binding: ActivityMainBinding
+
+    val toolbar get() = binding.toolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Timber.d("onCreate")
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // Toolbar
+        setSupportActionBar(binding.toolbar)
+        val navController = findNavController(R.id.nav_host_fragment)
+        appBarConfiguration = AppBarConfiguration(navController.graph)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+
+        binding.toolbar.setTitleTextColor(getColor(R.color.white))
+
+        // Create the IdleController
         IdleController.getInstance().initialize()
 
 /*        val comicEntryDao = App.db.comicEntryDao()

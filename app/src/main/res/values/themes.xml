@@ -1,5 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyKomik" parent="Theme.MaterialComponents.DayNight">
+    <style name="Theme.MyKomik" parent="Theme.MaterialComponents.DayNight.NoActionBar">
     </style>
+
+    <style name="Theme.MyKomik.ToolbarTheme" parent="@style/ThemeOverlay.MaterialComponents.Toolbar.Primary">
+        <!-- Customize color of navigation drawer icon and back arrow -->
+        <item name="colorControlNormal">@color/white</item>
+    </style>
+
 </resources>

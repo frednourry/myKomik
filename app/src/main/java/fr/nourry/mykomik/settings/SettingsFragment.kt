@@ -18,8 +18,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
         supportActionBar.title = getString(R.string.settings)
         supportActionBar.setDisplayHomeAsUpEnabled(true)
-        supportActionBar.setLogo(R.mipmap.ic_launcher)
-        supportActionBar.setDisplayUseLogoEnabled(true)
 
         IdleController.getInstance().resetIdleTimer()
     }

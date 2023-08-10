@@ -228,9 +228,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         // Replace the title and hide actionbar
         supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
-        supportActionBar.setDisplayHomeAsUpEnabled(false)
+        supportActionBar.setDisplayHomeAsUpEnabled(true)
         supportActionBar.title = currentComic.name
-//        MagnifyImageView.setSupportActionBarHeight(supportActionBar.height)
         supportActionBar.hide()
     }
 

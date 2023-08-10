@@ -11,9 +11,7 @@ import android.view.*
 import android.widget.*
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -28,6 +26,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mykomik.App
+import fr.nourry.mykomik.MainActivity
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
@@ -46,17 +45,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     private var lastComicUri : Uri? = null
 
     private lateinit var browserAdapter: BrowserAdapter
-    private lateinit var supportActionBar:ActionBar
     private var comics = mutableListOf<ComicEntry>()
 
     private var isFilteredMode = false          // Special mode too select items (to erase or something else...)
     private var selectedComicIndexes:ArrayList<Int> = ArrayList(0)
 
-    // Test for View Binding (replace 'kotlin-android-extensions')
     private var _binding: FragmentBrowserBinding? = null
-    // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
 
+    private lateinit var snackbarSelectionMenu : Snackbar   // To close the selection menu
 
     // Menu item from the side menu (to remind to inactive them)
     private lateinit var sideMenuItemClearCache : MenuItem
@@ -162,8 +159,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
         //// End MENU
 
-
-
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             // Handle the back button event
@@ -193,10 +188,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             viewModel.updateComicEntriesFromDAO(comicEntriesFromDAO)
         }
         // End LiveDatas
-
-        // Action bar
-        supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
-        supportActionBar.setDisplayHomeAsUpEnabled(false)
 
         // Side menubar (DrawerLayout and NavigationView)
         NavigationUI.setupWithNavController(binding.navigationView,NavHostFragment.findNavController(thisFragment))
@@ -396,7 +387,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
         IdleController.getInstance().resetIdleTimer()
 
-        supportActionBar.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
+        (requireActivity() as MainActivity).toolbar.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
 
         viewModel.setPrefLastComicUri(null)      // Forget the last comic...
 
@@ -468,7 +459,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         if (comic.isDirectory) {
             Timber.i("Directory !")
 
-            loadComics(comic.uri!!)
+            loadComics(comic.uri)
         } else {
             Timber.i("File ${comic.uri} !")
             lastComicUri= comic.uri
@@ -495,12 +486,29 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun updateNbItemsSelected(nb:Int) {
-        val customView = supportActionBar.customView
-        if (customView != null) {
-            val textView = customView.findViewById<TextView>(R.id.actionbar_selection_count_textView)
-            if (textView != null)
-                textView.text = "$nb"
-        }
+        val message = if (nb < 2)
+                            getString(R.string.actionbar_text_item_selected, nb)
+                        else
+                            getString(R.string.actionbar_text_items_selected, nb)
+        changeTextSnackbarSelectionMenu(message)
+    }
+
+    private fun showSnackbarSelectionMenu() {
+        snackbarSelectionMenu = Snackbar
+            .make(binding.coordinatorLayout, getString(R.string.actionbar_text_item_selected, 1), Snackbar.LENGTH_INDEFINITE)
+            .setAction(getString(R.string.actionbar_button_done)) {
+                disableMultiSelect()
+            }
+        snackbarSelectionMenu.show()
+    }
+
+    private fun hideSnackbarSelectionMenu() {
+        snackbarSelectionMenu.dismiss()
+    }
+
+    private fun changeTextSnackbarSelectionMenu(message:String) {
+        if (::snackbarSelectionMenu.isInitialized && snackbarSelectionMenu.isShown)
+            snackbarSelectionMenu.setText(message)
     }
 
     private fun setFilterMode(bFilter:Boolean, selectedList:ArrayList<Int>? = null) {
@@ -508,22 +516,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         if (isFilteredMode == bFilter) return
 
         if (!isFilteredMode) {
-            isFilteredMode = true
+            isFilteredMode = !isFilteredMode
             browserAdapter.setFilterMode(isFilteredMode, selectedList)
-            supportActionBar.setDisplayShowTitleEnabled(false)
-            supportActionBar.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
-            supportActionBar.setHomeButtonEnabled(false)
-            val multiSelect = requireActivity().layoutInflater.inflate(R.layout.fragment_browser_actionbar_selection, null) as LinearLayout
-            (multiSelect.findViewById<View>(R.id.actionbar_selection_done) as Button).setOnClickListener { this@BrowserFragment.disableMultiSelect() }
-            supportActionBar.customView = multiSelect
             requireActivity().invalidateOptionsMenu()
+            showSnackbarSelectionMenu()
         } else {
             isFilteredMode = false
-            supportActionBar.displayOptions = ActionBar.DISPLAY_SHOW_HOME
             browserAdapter.setFilterMode(isFilteredMode, selectedList)
-            supportActionBar.setDisplayShowTitleEnabled(true)
-            supportActionBar.setHomeButtonEnabled(true)
             requireActivity().invalidateOptionsMenu()
+            hideSnackbarSelectionMenu()
         }
     }
 
@@ -550,13 +551,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         disableMultiSelect()
         browserAdapter.notifyDataSetChanged()
 
-
-        // Update menu option
-/*        if (menuItemClearCache == null) Timber.i("menuItemClearCache == null") else Timber.i("menuItemClearCache not null")
-        menuItemClearCache.isEnabled = !isGuest
-        menuItemChangeRootDirectory.isEnabled = !isGuest
-        requireActivity().invalidateOptionsMenu()
-*/
         // Update side menu
         Timber.w("menuItemClearCache is null ! $sideMenuItemClearCache")
         sideMenuItemClearCache.isEnabled = !isGuest

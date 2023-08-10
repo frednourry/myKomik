@@ -19,8 +19,9 @@
     <string name="about">A propos</string>
     <string name="settings">Paramètres</string>
     <string name="comic_info">Information</string>
-    <string name="actionbar_text_items_selected">Fichier(s) choisi(s)</string>
-    <string name="actionbar_button_done">X Fini</string>
+    <string name="actionbar_text_item_selected">%1$d Fichier choisi</string>
+    <string name="actionbar_text_items_selected">%1$d Fichiers choisis</string>
+    <string name="actionbar_button_done">Annuler</string>
     <string name="message_files_deleted">Fichier(s) supprimé(s)</string>
     <string name="message_undo">Annuler</string>
     <string name="ok">Ok</string>
