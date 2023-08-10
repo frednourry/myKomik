@@ -633,7 +633,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             Toast.makeText(requireContext(), "Clear cache...", Toast.LENGTH_SHORT).show()
             clearFilesInDir(cacheDir)
         }
-        IdleController.getInstance().resetIdleTimer()
+        IdleController.getInstance().reinit()
     }
 
     private fun goPageSliderFragment(comic:ComicEntry, page:Int) {

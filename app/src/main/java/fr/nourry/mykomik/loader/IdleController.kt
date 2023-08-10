@@ -56,10 +56,16 @@ class IdleController : ComicLoadingProgressListener {
 
         handler.removeCallbacks(runnable)
         handler.postDelayed(runnable, idleDelay)
+    }
+
+    fun reinit() {
+        resetIdleTimer()
 
         loadCompleted = false
         dirUriList.clear()
+
     }
+
 
     private fun onIdle() {
         Timber.v("onIdle")
