@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.setTitleTextColor(getColor(R.color.white))
 
         // Create the IdleController
-        IdleController.getInstance().initialize()
+        IdleController.getInstance().initialize(this)
 
 /*        val comicEntryDao = App.db.comicEntryDao()
         comicEntryDao.getAllComicEntries().observe(this) { comicEntries ->

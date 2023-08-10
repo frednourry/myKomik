@@ -6,6 +6,10 @@
             app:title="@string/settings_hide_read_comics"
             android:summary="@string/settings_hide_read_comics_summary"
             android:defaultValue="false" />
+        <CheckBoxPreference app:key="generate_thumbnails_auto"
+            app:title="Thumbnails generation in background"
+            android:summary="Generate all the thumbnails in background, even in other directories"
+            android:defaultValue="true" />
 
     </PreferenceCategory>
 

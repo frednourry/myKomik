@@ -1,10 +1,12 @@
 package fr.nourry.mykomik.loader
 
+import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.database.ComicEntry
+import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.getComicEntriesFromUri
 import fr.nourry.mykomik.utils.getComicFromUri
 import fr.nourry.mykomik.utils.getDirectoryUrisFromUri
@@ -13,7 +15,7 @@ import timber.log.Timber
 /**
  * To watch the user interactions and to tasks when the user do nothing
  */
-class IdleController : ComicLoadingProgressListener {
+class IdleController() : ComicLoadingProgressListener {
     companion object {
         private const val defaultIdleDelay = 2000L        // in milliseconds
 
@@ -26,6 +28,7 @@ class IdleController : ComicLoadingProgressListener {
             }
     }
 
+    private lateinit var context:Context
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var runnable: Runnable = Runnable {
         // Timeout, so do something here
@@ -41,8 +44,9 @@ class IdleController : ComicLoadingProgressListener {
     private var currentComicList = mutableListOf<ComicEntry>()  // The comic uri list in the "currentUri"
 
 
-    fun initialize() {
+    fun initialize(context:Context) {
         Timber.v("initialize")
+        this.context = context
         idleDelay = defaultIdleDelay
     }
 
@@ -69,6 +73,11 @@ class IdleController : ComicLoadingProgressListener {
 
     private fun onIdle() {
         Timber.v("onIdle")
+
+        // Can we generate the thumbnails in background?
+        if (!UserPreferences.getInstance(context).isGenerateThumbnailsAuto())
+            return
+
         isIdle = true
 
         if (App.rootTreeUri == null || App.currentTreeUri == null)

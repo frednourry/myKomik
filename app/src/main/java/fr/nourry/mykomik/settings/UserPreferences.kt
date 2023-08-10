@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import fr.nourry.mykomik.R
+import fr.nourry.mykomik.loader.IdleController
 import timber.log.Timber
 
 
@@ -20,7 +21,8 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private val readingDirectionLabel   = "page_turn_direction"
     private val disableRotationLabel    = "disable_rotation"
     private val tapToChangePageLabel    = "tap_to_change_page"
-    private val adaptPageBackgroundAuto  = "adapt_page_background_auto"
+    private val adaptPageBackgroundAuto = "adapt_page_background_auto"
+    private val generateThumbnailsAuto  = "generate_thumbnails_auto"
 
     // Variables
     private lateinit var reading_direction:String
@@ -29,6 +31,8 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private var disable_rotation:Boolean = false
     private var tap_to_change_page:Boolean = false
     private var adapt_page_background_auto:Boolean = true
+    private var generate_thumbnails_auto:Boolean = true
+
 
     var sharedPreferences: SharedPreferences
 
@@ -61,6 +65,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
         disable_rotation = sharedPreferences.getBoolean(disableRotationLabel, false)
         tap_to_change_page = sharedPreferences.getBoolean(tapToChangePageLabel, false)
         adapt_page_background_auto = sharedPreferences.getBoolean(adaptPageBackgroundAuto, true)
+        generate_thumbnails_auto = sharedPreferences.getBoolean(generateThumbnailsAuto, true)
     }
 
     override fun onSharedPreferenceChanged(sharePref: SharedPreferences, key: String) {
@@ -79,6 +84,14 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
                     sharePref.getBoolean(tapToChangePageLabel, false)
                 adaptPageBackgroundAuto -> adapt_page_background_auto =
                     sharePref.getBoolean(adaptPageBackgroundAuto, true)
+                generateThumbnailsAuto -> {
+                    generate_thumbnails_auto =
+                        sharePref.getBoolean(generateThumbnailsAuto, true)
+                    if (generate_thumbnails_auto)
+                        IdleController.getInstance().reinit()
+                    else
+                        IdleController.getInstance().resetIdleTimer()
+                }
             }
         }
     }
@@ -92,6 +105,6 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     fun shouldHidePageNumber():Boolean = hide_page_number
     fun isRotationDisabled():Boolean = disable_rotation
     fun isTappingToChangePage():Boolean = tap_to_change_page
-
     fun isAdaptPageBackgroundAuto():Boolean = adapt_page_background_auto
+    fun isGenerateThumbnailsAuto():Boolean = generate_thumbnails_auto
 }
