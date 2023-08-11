@@ -13,7 +13,7 @@ import timber.log.Timber
 import java.util.concurrent.Executors
 
 sealed class BrowserViewModelState(val currentTreeUri:Uri? = null, val isInit: Boolean = false) {
-    class Init(private val uri: Uri?, val rootUriPath: Uri?, val lastComicUri: Uri?, val prefCurrentPage: String) : BrowserViewModelState (
+    class Init(private val uri: Uri?, val rootUriPath: Uri?, val lastComicUri: Uri?, val lastDirUri: Uri?, val prefCurrentPage: String) : BrowserViewModelState (
         currentTreeUri = uri,
         isInit = false
     )
@@ -69,14 +69,16 @@ class BrowserViewModel : ViewModel() {
         Timber.d("init treeUri=$treeUri")
         val rootTreeUriString = SharedPref.get(PREF_ROOT_TREE_URI, "")
         val lastComicUriString = SharedPref.get(PREF_LAST_COMIC_URI, "")
+        val lastDirUriString = SharedPref.get(PREF_LAST_DIR_URI, "")
         val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
         Timber.i("rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString prefCurrentPage=$prefCurrentPage")
 
         val rootTreeUri:Uri? = if (rootTreeUriString == "") null else Uri.parse(rootTreeUriString)
         val lastComicUri:Uri? = if (lastComicUriString == "") null else Uri.parse(lastComicUriString)
+        val lastDirUri:Uri? = if (lastDirUriString == "") null else Uri.parse(lastDirUriString)
 
         Timber.i("treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri prefCurrentPage=$prefCurrentPage")
-        state.value = BrowserViewModelState.Init(treeUri, rootTreeUri, lastComicUri, prefCurrentPage!!)
+        state.value = BrowserViewModelState.Init(treeUri, rootTreeUri, lastComicUri, lastDirUri, prefCurrentPage!!)
 
         bSkipReadComic = skipReadComic
     }
@@ -154,6 +156,7 @@ class BrowserViewModel : ViewModel() {
     }
 
     fun setAppCurrentTreeUri(treeUri:Uri) {
+        setPrefLastDirUri(treeUri)
         App.currentTreeUri = treeUri
     }
 
@@ -163,6 +166,14 @@ class BrowserViewModel : ViewModel() {
         else
             SharedPref.set(PREF_LAST_COMIC_URI, uri.toString())
     }
+
+    fun setPrefLastDirUri(dirUri: Uri?) {
+        if (dirUri == null)
+            SharedPref.set(PREF_LAST_DIR_URI, "")
+        else
+            SharedPref.set(PREF_LAST_DIR_URI, dirUri.toString())
+    }
+
     fun setPrefRootTreeUri(treeUri: Uri) {
         SharedPref.set(PREF_ROOT_TREE_URI, treeUri.toString())
     }

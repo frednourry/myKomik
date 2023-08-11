@@ -233,6 +233,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun askTreeUriPermission() {
+        viewModel.setPrefLastDirUri(null)
+
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             if (::rootTreeUri.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 // Optionally, specify a URI for the directory that should be opened in
@@ -360,13 +362,12 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun handleStateInit(state:BrowserViewModelState.Init) {
-        Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri}")
+        Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri} state.lastDirUri=${state.lastDirUri}")
 
         if (state.currentTreeUri == null) {
             askTreeUriPermission()
         } else {
-            Timber.i("     state.lastComicUri=${state.lastComicUri}")
-            initBrowser(state.currentTreeUri, state.lastComicUri, state.prefCurrentPage)
+            initBrowser(state.currentTreeUri, state.lastComicUri, state.lastDirUri, state.prefCurrentPage)
         }
     }
 
@@ -401,12 +402,12 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         IdleController.getInstance().resetIdleTimer()
     }
 
-    private fun initBrowser(treeUri: Uri, lastUri:Uri?, prefCurrentPage:String) {
-        Timber.d("initBrowser treeUri=$treeUri lastComic=$lastUri prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
+    private fun initBrowser(treeUri: Uri, lastUri:Uri?, lastDirUri:Uri?, prefCurrentPage:String) {
+        Timber.d("initBrowser treeUri=$treeUri lastComicUri=$lastUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
         if (App.currentTreeUri == null) {
-            // It's the first time we come in this fragment
+            // It's the first time we come in this fragment (just start the application)
 
             // Ask if we should use the last comic
             val lastComic = getComicFromUri(requireContext(), lastUri, true)
@@ -415,7 +416,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             }
 
             if (lastComic != null) {
-
                 // Continue reading from where you last left off "....." ?
                 val alert = AlertDialog.Builder(requireContext())
                     .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic.name+")")
@@ -433,29 +433,30 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                     }
                     .setNegativeButton(android.R.string.cancel) { _,_ ->
                         viewModel.setPrefLastComicUri(lastUri)      // Forget the last comic...
-                        loadComics(rootTreeUri)
+                        loadComics(lastDirUri?:rootTreeUri)
                     }
                     .setCancelable(false)
                     .create()
                 alert.show()
             } else {
-                loadComics(rootTreeUri)
+                loadComics(lastDirUri?:rootTreeUri)
             }
 
         } else {
-            //
-            loadComics(App.currentTreeUri!!)
+            // We returns here after a previous state (Settings or PageSlider)
+            loadComics(App.currentTreeUri!!, lastComicUri)
         }
     }
 
     // Ask the viewModel to load comics informations in a given directory
-    private fun loadComics(treeUri:Uri) {
-        Timber.v("loadComics "+treeUri)
+    private fun loadComics(treeUri:Uri, lastComicUri: Uri? = null) {
+        Timber.v("loadComics treeUri=$treeUri lastComicUri=$lastComicUri")
+
         viewModel.loadComics(treeUri)
     }
 
     override fun onComicEntryClicked(comic: ComicEntry, position:Int) {
-        Timber.v("onComicEntryClicked "+comic.uri)
+        Timber.v("onComicEntryClicked position=$position comic=${comic.uri} ")
         if (comic.isDirectory) {
             Timber.i("Directory !")
 
