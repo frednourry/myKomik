@@ -27,7 +27,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mykomik.App
-import fr.nourry.mykomik.MainActivity
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.databinding.FragmentBrowserBinding
