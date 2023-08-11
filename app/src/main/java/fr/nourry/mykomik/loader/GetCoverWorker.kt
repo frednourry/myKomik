@@ -16,11 +16,11 @@ import com.github.junrar.rarfile.FileHeader
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry
-import timber.log.Timber
-import java.io.*
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.utils.IOUtils
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
+import timber.log.Timber
+import java.io.*
 
 
 class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
@@ -141,6 +141,8 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                     Timber.w("unzipCoverInTrueZipFile : fast method aborted : $e")
                 }
 
+                Timber.v("unzipTrueZipFile : slow  method zipFile = $zipFile")
+
                 // If zipFile is still null, try the slow method...
                 if (zipFile == null) {
                     if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
@@ -255,6 +257,8 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                     Timber.w("unzipCoverIn7ZipFile : fast method aborted : $e")
                 }
 
+                Timber.v("unzipPageIn7ZipFile : fast method sevenZFile = $sevenZFile")
+
                 // If zipFile is still null, try the slow method...
                 if (sevenZFile == null) {
                     if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
@@ -337,7 +341,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
      * Extract the cover from a RAR file
      */
     private fun unrarCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
-        Timber.v("unrarCoverInFile")
+        Timber.v("unrarCoverInFile $fileUri into $imagePath")
         var bitmap: Bitmap? = null
 
         // Unrar
@@ -347,8 +351,6 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             // Unrar
             applicationContext.contentResolver.openInputStream(fileUri)?.use { inputStream ->
                 val rarArchive = Archive(inputStream)
-
-                // Check if not a 5.x RAR ...?
 
                 var cpt = 0
                 while (true) {
@@ -386,6 +388,9 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         } catch (e: RarException) {
             Timber.v("unrarCoverInFile :: RarException $e")
             return false
+        } catch (e: OutOfMemoryError) {
+            Timber.w("unrarCoverInFile :: OutOfMemoryError $e ${e.message}")
+            return false
         } catch (e: IOException) {
             Timber.v("unrarCoverInFile :: IOException $e")
             return false
@@ -401,7 +406,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
      * Extract the cover from a PDF file
      */
     private fun getCoverInPdfFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
-        Timber.v("pdfCoverInFile")
+        Timber.v("pdfCoverInFile $fileUri into $imagePath")
         var bitmap: Bitmap? = null
 
         // Run through the pdf

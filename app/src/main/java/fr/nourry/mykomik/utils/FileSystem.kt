@@ -21,9 +21,9 @@ fun isFileExists(path: String):Boolean {
     return f.exists()
 }
 
-// Return true if and only if the extension is 'jpg', 'gif', 'png', 'jpeg' or 'webp'
+// Return true if and only if the extension is 'jpg', 'gif', 'png', 'jpeg', 'webp' or 'bmp'
 fun isImageExtension(extension:String) : Boolean {
-    return (extension == "jpg") || (extension == "gif") || (extension == "png") || (extension == "jpeg") || (extension == "webp")
+    return (extension == "jpg") || (extension == "gif") || (extension == "png") || (extension == "jpeg") || (extension == "webp") || (extension == "bmp")
 }
 
 // Return true if the given file path is from an image
@@ -212,12 +212,12 @@ fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false)
                 Timber.v("getComicEntriesFromDocFile :: documentUri = $documentUri")
 
                 if (!bOnlyFile && DocumentsContract.Document.MIME_TYPE_DIR == mime) {
-                    resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified.toLong(), 0, true))
+                    resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified?.toLong() ?: 0L, 0, true))
                 } else {
                     // Filter by file type
                     val extension = getExtension(name)
                     if (extension in comicExtensionList) {
-                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified.toLong(), size.toLong(), false))
+                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified?.toLong() ?: 0L, size.toLong(), false))
                     }
                 }
             }

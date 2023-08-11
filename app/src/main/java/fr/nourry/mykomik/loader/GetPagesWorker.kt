@@ -25,6 +25,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 
+class NoImageException(message:String): Exception(message)
 
 class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
@@ -101,6 +102,9 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         var result = false
         try {
             result = unzipPageInTrueZipFile(fileUri, filePath, pages)
+        } catch (noImageException:NoImageException) {
+            Timber.w("unzipPages (zip try):: no image=$noImageException")
+            throw noImageException
         } catch (zipE:Exception) {
             Timber.w("unzipPages (zip try):: exception=$zipE")
             exceptionToRemember = zipE
@@ -112,6 +116,9 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 Timber.v("unzipPages: trying 7z format")
                 result =  unzipPageIn7ZipFile(fileUri, filePath, pages)
                 Timber.v("unzipPages: trying 7z format => success")
+            } catch (noImageException:NoImageException) {
+                Timber.w("unzipPages (7z try):: no image=$noImageException")
+                throw noImageException
             } catch (sevenZipE:Exception) {
                 Timber.i("unzipPages (7z try):: exception=$sevenZipE")
             }
@@ -156,9 +163,13 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 } catch (e:OutOfMemoryError) {
                     // The file is too big
                     Timber.w("unzipTrueZipFile : file too big : $e")
+                } catch (e:java.util.zip.ZipException) {
+                    Timber.w("unzipTrueZipFile : java.util.zip.ZipException : $e ")
                 } catch (e:Exception) {
                     Timber.w("unzipTrueZipFile : fast method aborted : $e")
                 }
+
+                Timber.w("unzipTrueZipFile : fast method zipFile = $zipFile")
 
                 // If zipFile is still null, try the slow method...
                 if (zipFile == null) {
@@ -174,6 +185,9 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                     }
                 }
             }
+
+            Timber.v("unzipTrueZipFile : slow  method zipFile = $zipFile")
+
             if (zipFile != null) {
                 // Run through the zipArchiveEntries
                 var cpt = 0
@@ -195,6 +209,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 // Reorder sevenZEntries by filename
                 zipArchiveEntries = ZipUtil.sortZipArchiveEntry(zipArchiveEntries)
                 nbPages = zipArchiveEntries.size
+                if (nbPages == 0) throw NoImageException("No image")
 
                 // Catch the wished pages
                 if (!isStopped && zipArchiveEntries.isNotEmpty()) {
@@ -276,6 +291,8 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                     Timber.w("unzipPageIn7ZipFile : fast method aborted : $e")
                 }
 
+                Timber.v("unzipPageIn7ZipFile : fast method sevenZFile = $sevenZFile")
+
                 // If zipFile is still null, try the slow method...
                 if (sevenZFile == null) {
                     if (copyFileFromUri(App.appContext, fileUri, tmpFile) != null) {
@@ -313,6 +330,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 // Reorder sevenZEntries by filename
                 sevenZEntries = ZipUtil.sortSevenZArchiveEntry(sevenZEntries)
                 nbPages = sevenZEntries.size
+                if (nbPages == 0) throw NoImageException("No image")
 
                 // Catch the wished pages
                 if (!isStopped && sevenZEntries.isNotEmpty()) {
@@ -421,6 +439,9 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         } catch (e: UnsupportedRarV5Exception) {
             Timber.w("unrarPages :: UnsupportedRarV5Exception $e ${e.message}")
             throw Exception("RAR5 format not supported")
+        } catch (e: OutOfMemoryError) {
+            Timber.w("unrarPages :: OutOfMemoryError $e ${e.message}")
+            throw e
         } catch (e: RarException) {
             Timber.w("unrarPages :: RarException $e ${e.message}")
             throw e
