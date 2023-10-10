@@ -71,7 +71,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private lateinit var pageSliderAdapter: PageSliderAdapter
     private lateinit var pageSelectorSliderAdapter: PageSelectorSliderAdapter
     private lateinit var viewModel: PageSliderViewModel
-    private lateinit var supportActionBar: ActionBar
     private lateinit var currentComic:ComicEntry
     private var currentPage = 0
 
@@ -227,10 +226,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         // End LiveDatas
 
         // Replace the title and hide actionbar
-        supportActionBar = (requireActivity() as AppCompatActivity).supportActionBar!!
-        supportActionBar.setDisplayHomeAsUpEnabled(true)
-        supportActionBar.title = currentComic.name
-        supportActionBar.hide()
+        val bar = (requireActivity() as AppCompatActivity).supportActionBar
+        if (bar!= null) {
+            bar.setDisplayHomeAsUpEnabled(true)
+            bar.title = currentComic.name
+            bar.hide()
+        }
     }
 
 
@@ -245,11 +246,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         }
 
         // Update the bar
-        supportActionBar.title = currentComic.name
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = currentComic.name
     }
 
     override fun onDestroyView() {
-        supportActionBar.show()
+        (requireActivity() as AppCompatActivity).supportActionBar?.show()
         _binding = null
         super.onDestroyView()
     }
@@ -297,7 +298,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         IdleController.getInstance().resetIdleTimer()
 
-        supportActionBar.hide()
+        (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
         if (binding.cachePageSelectorLayout.visibility == View.VISIBLE) {
             hidePageSelector()
@@ -571,12 +572,13 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         binding.cachePageSelectorLayout.visibility = View.VISIBLE
         binding.zoomOptionLayout.visibility = View.VISIBLE
-        supportActionBar.show()
+        (requireActivity() as AppCompatActivity).supportActionBar?.show()
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = currentComic.name
     }
 
     private fun hidePageSelector() {
         Timber.d("hidePageSelector")
-        supportActionBar.hide()
+        (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
         // pageSelectorLayout animation
         val animMove = ObjectAnimator.ofFloat(binding.pageSelectorLayout, "x", -binding.pageSelectorLayout.width.toFloat())
