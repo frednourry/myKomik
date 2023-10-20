@@ -30,14 +30,14 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
+
             <TextView
                 android:id="@+id/pageNumberTextView"
-                android:layout_width="15dp"
-                android:layout_height="15dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:text="01"
                 android:textSize="10sp"
-                android:textAlignment="center"
-                app:flow_verticalAlign="center"
+                android:gravity="center_horizontal|center_vertical"
                 android:textStyle="bold"
                 android:textColor="@color/white"
                 android:background="@drawable/round_shape_black"
