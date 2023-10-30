@@ -10,8 +10,6 @@ import java.io.*
 import java.net.URLDecoder
 import java.util.*
 
-val comicExtensionList = listOf("cbr", "cbz", "pdf", "rar", "zip", "cb7", "7z")
-
 fun concatPath(path1:String, path2:String):String {
     return path1+File.separator+path2
 }
@@ -21,17 +19,12 @@ fun isFileExists(path: String):Boolean {
     return f.exists()
 }
 
-// Return true if and only if the extension is 'jpg', 'gif', 'png', 'jpeg', 'webp' or 'bmp'
-fun isImageExtension(extension:String) : Boolean {
-    return (extension == "jpg") || (extension == "gif") || (extension == "png") || (extension == "jpeg") || (extension == "webp") || (extension == "bmp")
+fun getFilesInDirectory(dir:File) : Array<File> {
+    if (dir.exists() && dir.exists()) {
+        return dir.listFiles()?: arrayOf()
+    }
+    return arrayOf()
 }
-
-// Return true if the given file path is from an image
-fun isFilePathAnImage(filename:String) : Boolean {
-    val ext = File(filename).extension.lowercase()
-    return isImageExtension(ext)
-}
-
 
 // Delete files in a directory
 fun clearFilesInDir(dir:File) {
@@ -79,6 +72,9 @@ fun deleteComic(context:Context, comic:ComicEntry):Boolean {
     }
 }
 
+fun fileRename(src:File, dest:File):Boolean {
+    return src.renameTo(dest)
+}
 
 // Create a directory if it's not exists
 fun createDirectory(path:String) {
@@ -107,7 +103,7 @@ fun getLocalDirName(rootTreeUri:Uri?, currentUri:Uri?):String {
 
         if (rootLastSegment != null && currentLastSegment != null) {
             val lastSlash = rootLastSegment.lastIndexOf('/')
-            return currentLastSegment.substring(lastSlash)
+            return rootLastSegment.substring(lastSlash)
         }
     }
     return "--"
@@ -179,8 +175,8 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):Comic
 
 // Retrieves a list of comics uri order by its type and name
 // Precond: the given uri is a directory
-fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false): List<ComicEntry> {
-    Timber.v("getComicEntriesFromDocFile uri = $uri")
+fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, uri:Uri, bOnlyFile:Boolean = false): List<ComicEntry> {
+    Timber.v("getComicEntriesFromUri uri = $uri")
 
     val docId = DocumentsContract.getDocumentId(uri)
     val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, docId)
@@ -209,7 +205,7 @@ fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false)
                 val lastModified = c.getString(4)
 
                 val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
-                Timber.v("getComicEntriesFromDocFile :: documentUri = $documentUri")
+                Timber.v("getComicEntriesFromUri :: documentUri = $documentUri")
 
                 if (!bOnlyFile && DocumentsContract.Document.MIME_TYPE_DIR == mime) {
                     resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified?.toLong() ?: 0L, 0, true))
@@ -230,7 +226,7 @@ fun getComicEntriesFromUri(context: Context, uri:Uri, bOnlyFile:Boolean = false)
             results = tempResultDirs.plus(tempResultComics)
         }
     } catch (e: java.lang.Exception) {
-        Timber.w("getComicEntriesFromDocFile :: Failed query: $e")
+        Timber.w("getComicEntriesFromUri :: Failed query: $e")
     } finally {
         c?.close()
     }

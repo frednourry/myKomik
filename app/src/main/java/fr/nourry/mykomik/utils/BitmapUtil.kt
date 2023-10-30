@@ -138,7 +138,6 @@ class BitmapUtil {
             }
             return bitmapToReturn
         }
-
         /**
          * Resize an image and add a little frame around
          *  byteArray: byte array of the image that will be resized (with ratio respect) and framed
@@ -148,8 +147,26 @@ class BitmapUtil {
          *  innerImageMaxHeight: maximum height of the resize image
          *  borderSize: size (thickness) of the frame
          */
-        fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
-            Timber.v("createFramedBitmap")
+        fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap? {
+            Timber.v("createFramedBitmap(byteArray, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
+            // Transform the ByteArray in Bitmap
+            val bitmap = decodeByteArray(byteArray, 0, byteArray.size)
+            if (bitmap == null) return bitmap
+
+            return createFramedBitmap(bitmap, thumbnailWidth, thumbnailHeight, innerImageMaxWidth, innerImageMaxHeight, borderSize)
+        }
+
+        /**
+         * Resize an image and add a little frame around
+         *  bitmap: the image that will be resized (with ratio respect) and framed
+         *  thumbnailMaxWidth: width of the return image
+         *  thumbnailMaxHeight: height of the return image
+         *  innerImageMaxWidth: maximum width of the resize image
+         *  innerImageMaxHeight: maximum height of the resize image
+         *  borderSize: size (thickness) of the frame
+         */
+        fun createFramedBitmap(bitmap:Bitmap, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
+            Timber.v("createFramedBitmap(bitmap, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
 
             var bitmapToReturn:Bitmap? = null
 
@@ -169,9 +186,6 @@ class BitmapUtil {
             Timber.v("trueFrameWidth=$trueThumbnailWidth trueThumbnailHeight=$trueThumbnailHeight trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
 
             try {
-                // Transform the ByteArray in Bitmap
-                val bitmap = decodeByteArray(byteArray, 0, byteArray.size)
-                if (bitmap == null) return bitmap
                 Timber.v("bitmap.width=${bitmap.width} bitmap.height=${bitmap.height}")
                 val shouldRotate = bitmap.width>bitmap.height
 

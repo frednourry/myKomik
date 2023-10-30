@@ -71,13 +71,13 @@ class BrowserViewModel : ViewModel() {
         val lastComicUriString = SharedPref.get(PREF_LAST_COMIC_URI, "")
         val lastDirUriString = SharedPref.get(PREF_LAST_DIR_URI, "")
         val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
-        Timber.i("rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString prefCurrentPage=$prefCurrentPage")
+        Timber.i("rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString lastDirUriString=$lastDirUriString prefCurrentPage=$prefCurrentPage")
 
         val rootTreeUri:Uri? = if (rootTreeUriString == "") null else Uri.parse(rootTreeUriString)
         val lastComicUri:Uri? = if (lastComicUriString == "") null else Uri.parse(lastComicUriString)
         val lastDirUri:Uri? = if (lastDirUriString == "") null else Uri.parse(lastDirUriString)
 
-        Timber.i("treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri prefCurrentPage=$prefCurrentPage")
+        Timber.i("treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage")
         state.value = BrowserViewModelState.Init(treeUri, rootTreeUri, lastComicUri, lastDirUri, prefCurrentPage!!)
 
         bSkipReadComic = skipReadComic
@@ -183,7 +183,7 @@ class BrowserViewModel : ViewModel() {
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 //        Timber.d("    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
 
-        val comicEntriesFromDisk = getComicEntriesFromUri(App.appContext, currentTreeUri!!)
+        val comicEntriesFromDisk = getComicEntriesFromUri(App.appContext, ComicLoadingManager.comicExtensionList, currentTreeUri!!)
         Timber.v("comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...

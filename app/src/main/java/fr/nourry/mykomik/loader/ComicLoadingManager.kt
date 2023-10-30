@@ -56,6 +56,8 @@ class ComicLoadingManager private constructor() {
     private lateinit var dirUncompressedComic: File
 
     private var cachePathDir:String = ""
+    private var cachePathCoverDir:String = ""
+    private var cachePathPagesDir:String = ""
 
     init {
         isLoading = false
@@ -78,12 +80,36 @@ class ComicLoadingManager private constructor() {
         private const val THUMBNAIL_INNER_IMAGE_HEIGHT      = 155
         private const val THUMBNAIL_FRAME_SIZE              = 5
 
+        val comicExtensionList = listOf("cbr", "cbz", "pdf", "rar", "zip", "cb7", "7z")
+        val acceptedImageExtensionList = listOf("jpg", "gif", "png", "jpeg", "webp", "bmp")
+        var imageExtensionFilterList:List<String> = emptyList()
+
+        // Return true if and only if the extension is in 'acceptedImageExtensionList'
+        fun isImageExtension(extension:String) : Boolean {
+            return acceptedImageExtensionList.contains(extension)
+        }
+
+        // Return true if the given file path is from an image
+        fun isFilePathAnImage(filename:String) : Boolean {
+            val ext = File(filename).extension.lowercase()
+            return isImageExtension(ext)
+        }
+
         fun deleteComicEntryInCache(comic:ComicEntry) {
             val filePath = getInstance().getComicEntryThumbnailFilePath(comic)
             val f = File(filePath)
             if (filePath != "" && f.exists()) {
                 deleteFile(f)
             }
+        }
+
+        init {
+            // Built a list to filter the images by their extensions with 'acceptedImageExtensionList' => listOf("*.jpg", "*.webp")
+            val mutList =  mutableListOf<String>()
+            for (ext in acceptedImageExtensionList) {
+                mutList.add("*.$ext")
+            }
+            imageExtensionFilterList = mutList
         }
     }
 
@@ -95,8 +121,12 @@ class ComicLoadingManager private constructor() {
         workManager.cancelAllWork()
 
         cachePathDir = thumbnailDir.absolutePath
+        cachePathCoverDir = cachePathDir+File.separator+"tempCover"
+        cachePathPagesDir = cachePathDir+File.separator+"tempPages"
         dirUncompressedComic = pageCacheDir
         createDirectory(dirUncompressedComic.absolutePath)
+        createDirectory(cachePathCoverDir)
+        createDirectory(cachePathPagesDir)
     }
 
     fun setLivecycleOwner(lo:LifecycleOwner) {
@@ -157,7 +187,7 @@ class ComicLoadingManager private constructor() {
             } else {
                 // Add some comics in the cache
                 val nbComicsInThumbnail = GetImageDirWorker.MAX_COVER_IN_THUMBNAIL  // Get some comics to build the thumbnail
-                val comicsList = getComicEntriesFromUri(context, dirComic.uri)
+                val comicsList = getComicEntriesFromUri(context, comicExtensionList, dirComic.uri)
                 val fileList = comicsList.subList(0, Math.min(comicsList.size, nbComicsInThumbnail))
                 for (i in fileList.indices) {
                     val f = fileList[i]
@@ -225,6 +255,7 @@ class ComicLoadingManager private constructor() {
     // Delete all the files in the directory where a comic is uncompressed
     fun clearComicDir() {
         clearFilesInDir(dirUncompressedComic)
+        clearFilesInDir(File(cachePathPagesDir))
     }
 
     // Stop all loading and clear the waiting list
@@ -319,7 +350,8 @@ class ComicLoadingManager private constructor() {
             val workData = workDataOf(
                 GetPagesWorker.KEY_ARCHIVE_URI to comic.path,
                 GetPagesWorker.KEY_PAGES_LIST to pagesNumberList.joinToString(","),
-                GetPagesWorker.KEY_PAGES_DESTINATION_PATH to getComicEntryPageFilePath(comic, 999)
+                GetPagesWorker.KEY_PAGES_DESTINATION_PATH to getComicEntryPageFilePath(comic, 999),
+                GetPagesWorker.KEY_PAGES_CONTENT_LIST_PATH to getComicEntryContentListPath(comic)
             )
 
             val work: WorkRequest = OneTimeWorkRequestBuilder<GetPagesWorker>()
@@ -524,5 +556,19 @@ class ComicLoadingManager private constructor() {
 
     fun getComicEntryPageFilePath(comic:ComicEntry, pageNumber:Int):String {
         return concatPath(dirUncompressedComic.absolutePath, "${comic.hashkey}.%03d.jpg".format(pageNumber))
+    }
+
+    // Get the path of the temporary directory used to generate thumbnail cover (should contains zero or one file)
+    fun getTempCoverDirectoryPath():String {
+        return cachePathCoverDir
+    }
+
+    fun getComicEntryContentListPath(comic:ComicEntry):String {
+        return concatPath(dirUncompressedComic.absolutePath, "${comic.hashkey}.list")
+    }
+
+    // Get the path of the temporary directory used to retrieve pages
+    fun getTempPagesDirectoryPath():String {
+        return cachePathPagesDir
     }
 }

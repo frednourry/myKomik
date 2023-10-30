@@ -103,7 +103,7 @@ class IdleController() : ComicLoadingProgressListener {
                 currentUri = App.currentTreeUri
                 dirUriList.remove(currentUri)
 
-                val tempComicList = getComicEntriesFromUri(App.appContext, currentUri!!, true)
+                val tempComicList = getComicEntriesFromUri(App.appContext, ComicLoadingManager.comicExtensionList, currentUri!!, true)
                 if (tempComicList.isNotEmpty()) {
                     currentComicList = tempComicList as MutableList<ComicEntry>
                 } else {
@@ -153,7 +153,7 @@ class IdleController() : ComicLoadingProgressListener {
                     currentUri = dirUriList.removeAt(0)
 
                     // Build the new comic entry list
-                    val tempComicList = getComicEntriesFromUri(App.appContext, currentUri!!, true)
+                    val tempComicList = getComicEntriesFromUri(App.appContext, ComicLoadingManager.comicExtensionList, currentUri!!, true)
                     if (tempComicList.isNotEmpty()) {
                         currentComicList = tempComicList as MutableList<ComicEntry>
                     }

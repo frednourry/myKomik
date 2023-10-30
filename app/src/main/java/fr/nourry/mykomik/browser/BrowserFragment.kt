@@ -164,7 +164,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             // Handle the back button event
             Timber.d("BACK PRESSED !!!!!!!")
 
-            // Check if we can bo back in the tree file AND if the previous fragment was this one (to prevent to go back to PermissionFragment...)
+            // Check if we can bo back in the tree file AND if the previous fragment was this one
             if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false)) {
                 Timber.v("    NO STACK !!")
                 activity?.finish()
@@ -217,12 +217,12 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         val skipReadComic = UserPreferences.getInstance(requireContext()).shouldHideReadComics()
 
         // Define the current URI
-        viewModel.init(App.currentTreeUri?: uriInStorage, skipReadComic)
+        viewModel.init(App.currentTreeUri?: uriInStorage, skipReadComic=skipReadComic)
     }
 
     // Permissions
 
-    // Return the first tree uri un the Shared Storage
+    // Return the first tree uri in the Shared Storage
     private fun treeUriInSharedStorage() : Uri? {
         for (perm in requireContext().contentResolver.persistedUriPermissions) {
             if (DocumentsContract.isTreeUri(perm.uri)) {
@@ -252,7 +252,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private var permissionIntentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        Timber.i("result=$result")
+        Timber.i("permissionIntentLauncher:: result=$result")
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.let{ intent->
 
@@ -260,7 +260,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 flags = flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
 
                 intent.data?.let { treeUri ->
-                    Timber.i("treeUri=$treeUri")
+                    Timber.i("  treeUri=$treeUri")
                     // treeUri is the Uri
 
                     val documentsTree = DocumentFile.fromTreeUri(requireContext(), treeUri)
@@ -280,13 +280,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                             val id = DocumentsContract.getTreeDocumentId(treeUri)
                             val trueUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
 
+                            Timber.i("  trueUri=$trueUri")
                             rootTreeUri = trueUri
                             viewModel.setPrefRootTreeUri(trueUri)
+                            viewModel.setPrefLastDirUri(null)
+                            App.currentTreeUri = trueUri
                             App.rootTreeUri = trueUri
 
                             // Update the view model
                             viewModel.init(trueUri)
-
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.room.Room
+import io.github.frednourry.FnyLib7z
 import fr.nourry.mykomik.database.AppDatabase
 import fr.nourry.mykomik.database.DATABASE_NAME
 import fr.nourry.mykomik.pageslider.DisplayOption
@@ -39,6 +40,11 @@ class App: Application() {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
         appContext = this
+
+        // Initialize my 7z lib
+        FnyLib7z.getInstance().initialize(appContext)
+        Timber.v("7z version : "+ FnyLib7z.get7zVersionInfo())
+
         physicalConstants = PhysicalConstants.newInstance(appContext)
 
         packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

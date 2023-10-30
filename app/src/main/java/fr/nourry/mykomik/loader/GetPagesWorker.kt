@@ -15,8 +15,10 @@ import com.github.junrar.Archive
 import com.github.junrar.exception.RarException
 import com.github.junrar.exception.UnsupportedRarV5Exception
 import com.github.junrar.rarfile.FileHeader
+import io.github.frednourry.FnyLib7z
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
+import io.github.frednourry.itemListFnyLib7z
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.utils.IOUtils
 import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
@@ -32,10 +34,15 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         const val KEY_ARCHIVE_URI                   = "archiveUri"
         const val KEY_PAGES_LIST                    = "pages"
         const val KEY_PAGES_DESTINATION_PATH        = "imageDestinationPath"
+        const val KEY_PAGES_CONTENT_LIST_PATH       = "contentListFilePath"
         const val KEY_CURRENT_INDEX                 = "currentIndex"
         const val KEY_CURRENT_PATH                  = "currentPath"
         const val KEY_NB_PAGES                      = "nbPages"
         const val KEY_ERROR_MESSAGE                 = "errorMessage"
+
+        // Same variables used to cache some datas
+        var currentContentListFilePath = ""
+        var currentContentList:List<itemListFnyLib7z> = listOf()
     }
 
     private var nbPages:Int = 0
@@ -46,11 +53,13 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         val archiveUriPath = inputData.getString(KEY_ARCHIVE_URI)
         val destPath = inputData.getString(KEY_PAGES_DESTINATION_PATH)
         val pagesListStr = inputData.getString(KEY_PAGES_LIST)
+        val contentListFilePath = inputData.getString(KEY_PAGES_CONTENT_LIST_PATH)
 
-        Timber.d("    archivePath=$archiveUriPath")
-        Timber.d("    destPath=$destPath")
-        Timber.d("    pagesListStr=$pagesListStr")
-        Timber.d("    nbPages=$nbPages")
+        Timber.v("    archivePath=$archiveUriPath")
+        Timber.v("    destPath=$destPath")
+        Timber.v("    pagesListStr=$pagesListStr")
+        Timber.v("    nbPages=$nbPages")
+        Timber.v("    contentListFilePath=$contentListFilePath")
 
         val pagesList = pagesListStr?.split(',')?.map { it.toInt() }
         Timber.d("    pagesList=$pagesList")
@@ -63,12 +72,15 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             var boolResult = false
             var errorMessage = ""
             try {
-                if (ext == "cbz" || ext == "zip") {
+/*                if (ext == "cbz" || ext == "zip") {
                     boolResult = unzipPages(archiveUri, destPath, pagesList)
                 } else if (ext == "cb7" || ext == "7z") {
                     boolResult = unzipPageIn7ZipFile(archiveUri, destPath, pagesList)
                 } else if (ext == "cbr" || ext == "rar") {
                     boolResult = unrarPages(archiveUri, destPath, pagesList)
+*/
+                if (ext == "cbz" || ext == "zip" || ext == "cb7" || ext == "7z" || ext == "cbr" || ext == "rar") {
+                    boolResult = unarchivePages(archiveUri, destPath, pagesList, contentListFilePath!!)
                 } else if (ext == "pdf") {
                     boolResult = getPagesInPdfFile(archiveUri, destPath, pagesList)
                 }
@@ -93,6 +105,137 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             KEY_NB_PAGES to nbPages)
         return Result.success(outputData)
     }
+
+    /**
+     * Extract pages from an archive using FnyLib7z
+     */
+    private fun unarchivePages(fileUri: Uri, filePath:String, indexPages:List<Int>, contentListFilePath:String):Boolean {
+        Timber.v("unarchivePages $fileUri filePath=$filePath pages=$indexPages")
+
+        try {
+            // Init temp directory
+            val tempPagesDirectoryPath = ComicLoadingManager.getInstance().getTempPagesDirectoryPath()
+            val tempPagesDirectory = File(tempPagesDirectoryPath)
+
+            // Get the content list of the archive (in a file)
+            val listFile = File(contentListFilePath)
+
+            if (contentListFilePath != currentContentListFilePath) {
+                currentContentListFilePath = contentListFilePath
+                currentContentList = emptyList()
+            }
+
+            if (listFile.exists()) {
+                // No need to regenerate it, keep the same file
+            } else {
+                // Or else, ask FnyLib7z to retrieve it
+                val result0 = FnyLib7z.getInstance().listFiles(fileUri, sortList = true, filtersList=ComicLoadingManager.imageExtensionFilterList, stdOutputPath = contentListFilePath)
+                if (result0 != FnyLib7z.RESULT_OK) {
+                    Timber.w("  unarchivePages :: can't retrieve the content of $fileUri in $contentListFilePath")
+                    return false
+                }
+            }
+
+            if (!listFile.exists()) {
+                Timber.w("  unarchivePages :: content list file was not created : $contentListFilePath")
+                return false
+            }
+
+            // Parse this content file, if necessary
+            if (currentContentList.isEmpty()) {
+                Timber.v("  unarchivePages:: parsing $contentListFilePath ...")
+                currentContentList = FnyLib7z.getInstance().parseListFile(listFile)
+            } else {
+                Timber.v("  unarchivePages:: no need to parse $contentListFilePath ...")
+            }
+            nbPages = currentContentList.size
+            Timber.w("  unarchivePages :: nbPages=$nbPages")
+
+            // Built the list of files to unarchive
+            val pathsToUnarchive = mutableListOf<String>()
+            for (indexPage in indexPages) {
+                if (indexPage < nbPages)
+                    pathsToUnarchive.add(currentContentList[indexPage].name)
+                else
+                    Timber.v("  unarchivePages :: bad page index $indexPage (archive only contains $nbPages file(s))")
+            }
+
+            // Extract the pages
+            val result = FnyLib7z.getInstance().uncompress(fileUri, dirToExtract=tempPagesDirectory, filtersList=pathsToUnarchive)
+            if (result == FnyLib7z.RESULT_OK) {
+                for (indexPage in indexPages) {
+                    if (indexPage < nbPages) {
+                        // Get the file path extracted
+                        val path = currentContentList[indexPage].name
+                        val simplePath = path.substring(path.lastIndexOf(File.separator) + 1)
+                        val pagePath = tempPagesDirectoryPath + File.separator + simplePath
+                        //Timber.v("  unarchivePages :: test page file in $pagePath")
+
+                        // Test if the file exists in the cache
+                        val pageFile = File(pagePath)
+                        if (pageFile.exists()) {
+                            val newPagePath = filePath.replace(".999.", ".%03d.".format(indexPage))
+                            // Move tempFile into pagePath
+                            fileRename(pageFile, File(newPagePath))
+
+                            // Send a progress event
+                            setProgressAsync(
+                                Data.Builder().putInt(KEY_CURRENT_INDEX, indexPage)
+                                    .putString(KEY_CURRENT_PATH, newPagePath)
+                                    .putInt(KEY_NB_PAGES, nbPages)
+                                    .build()
+                            )
+
+                        } else {
+                            Timber.v("  unarchivePages :: no file extracted for index=$indexPage")
+                        }
+                    }
+                }
+
+
+/*                var arrFiles = getFilesInDirectory(tempPagesDirectory)
+                Timber.v("    unarchivePages arrFiles=${arrFiles.toString()}")
+
+                if (arrFiles.size>0) {
+                    if (arrFiles.size != indexPages.size) {
+                        Timber.w("    unarchivePages: not all pages have an image !")
+                        // TODO ask FnyLib7z to automatically rename the files ?
+                    }
+
+                    var cpt = 0
+                    for (numPage in indexPages) {
+                        if (isStopped) {    // Check if the work was cancelled
+                            break
+                        }
+
+                        val pagePath = filePath.replace(".999.", ".%03d.".format(numPage))
+
+                        if (cpt< arrFiles.size) {
+                            val tempFile = arrFiles[cpt]
+
+                            // Move tempFile into pagePath
+                            fileRename(tempFile, File(pagePath))
+
+                            // Send a progress event
+                            setProgressAsync(
+                                Data.Builder().putInt(KEY_CURRENT_INDEX, numPage)
+                                    .putString(KEY_CURRENT_PATH, pagePath).putInt(KEY_NB_PAGES, nbPages)
+                                    .build()
+                            )
+                        }
+                        cpt++
+                    }
+                }*/
+            }
+        } catch (e: Exception) {
+            Timber.w("unarchivePages :: IOException $e")
+            throw e
+        }
+
+        Timber.v("unarchivePages $fileUri")
+        return true
+    }
+
 
     /**
      * Extract pages from a zip file - but will try if it's a 7zip in case of error...
@@ -197,7 +340,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                     if (isStopped) {    // Check if the work was cancelled
                         break
                     }
-                    if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
+                    if (!entry.isDirectory && ComicLoadingManager.isFilePathAnImage(entry.name)) {
 //                              Timber.v("unzipTrueZipFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
                         zipArchiveEntries.add(entry)
                     } else {
@@ -318,7 +461,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                     if (isStopped) {    // Check if the work was cancelled
                         break
                     }
-                    if (!entry.isDirectory && isFilePathAnImage(entry.name)) {
+                    if (!entry.isDirectory && ComicLoadingManager.isFilePathAnImage(entry.name)) {
                         // Timber.v("unzipSevenZFile  ENTRY $cpt :: name=${entry.name} isDirectory=${entry.isDirectory} ADDED")
                         sevenZEntries.add(entry)
                     } else {
@@ -395,7 +538,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 while (true) {
                     val fileHeader = rarArchive.nextFileHeader() ?: break
                     if (fileHeader.fullUnpackSize > 0) {
-                        if (!fileHeader.isDirectory && isFilePathAnImage(fileHeader.fileName)) {
+                        if (!fileHeader.isDirectory && ComicLoadingManager.isFilePathAnImage(fileHeader.fileName)) {
 //                            Timber.v("  HEADER $cpt :: name=${fileHeader.fileName} isDirectory=${fileHeader.isDirectory} ADDED")
                             fileHeaders.add(fileHeader)
                         } else {
