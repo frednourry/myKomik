@@ -29,6 +29,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
     companion object {
         const val KEY_ARCHIVE_URI                  = "archivePath"
         const val KEY_IMAGE_DESTINATION_PATH        = "imageDestinationPath"
+        const val KEY_PAGES_CONTENT_LIST_PATH       = "contentListFilePath"
         const val KEY_NB_PAGES                      = "nbPages"
         const val KEY_THUMBNAIL_WIDTH               = "thumbnailWidth"
         const val KEY_THUMBNAIL_HEIGHT              = "thumbnailHeight"
@@ -49,6 +50,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         val thumbnailInnerImageWidth = inputData.getInt(KEY_THUMBNAIL_INNER_IMAGE_WIDTH, 100)
         val thumbnailInnerImageHeight = inputData.getInt(KEY_THUMBNAIL_INNER_IMAGE_HEIGHT, 155)
         val thumbnailFrameSize = inputData.getInt(KEY_THUMBNAIL_FRAME_SIZE, 5)
+        val contentListFilePath = inputData.getString(GetPagesWorker.KEY_PAGES_CONTENT_LIST_PATH) ?: ""
 
         Timber.i("doWork archivePath=$archivePath")
 
@@ -70,7 +72,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                         boolResult = unrarCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
                     }*/
                     "cbz", "zip","cb7", "7z", "cbr", "rar" -> {
-                        boolResult = unarchiveCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
+                        boolResult = unarchiveCoverInFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize, contentListFilePath)
                     }
                     "pdf" -> {
                         boolResult = getCoverInPdfFile(archiveUri, imageDestinationPath, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth, thumbnailInnerImageHeight, thumbnailFrameSize)
@@ -95,17 +97,61 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
     /**
      * Extract the cover from an archive file using FnyLib7z
      */
-    private fun unarchiveCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
+    private fun unarchiveCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int, contentListFilePath:String): Boolean {
         Timber.v("unarchiveCoverInFile fileUri={$fileUri} imagePath=$imagePath")
         var bitmap: Bitmap? = null
+
+        val bSortPageOrder = false   // Warning : Sorting pages is much slower because it involves writing a file and reading it
 
         try {
             val tempCoverDirectoryPath = ComicLoadingManager.getInstance().getTempCoverDirectoryPath()
             val tempCoverDirectory = File(tempCoverDirectoryPath)
-            clearFilesInDir(tempCoverDirectory)
+
+            var firstPagePath = ""
+
+            // If sorting, should get the content list of the comic and get the first path
+            if (bSortPageOrder) {
+                clearFilesInDir(tempCoverDirectory)
+
+                if (contentListFilePath == "") {
+                    Timber.w("  unarchiveCoverInFile :: tempCoverDirectory is empty !")
+                    return false
+                }
+
+                // Get the content list of the archive (in a file)
+                val listFile = File(contentListFilePath)
+
+                val result0 = FnyLib7z.getInstance().listFiles(
+                    fileUri,
+                    sortList = true,
+                    filtersList = ComicLoadingManager.imageExtensionFilterList,
+                    stdOutputPath = contentListFilePath
+                )
+                if (result0 != FnyLib7z.RESULT_OK) {
+                    Timber.w("  unarchiveCoverInFile :: can't retrieve the content of $fileUri in $contentListFilePath")
+                    return false
+                }
+                if (!listFile.exists()) {
+                    Timber.w("  unarchiveCoverInFile :: content list file was not created : $contentListFilePath")
+                    return false
+                }
+                val contentList = FnyLib7z.getInstance().parseListFile(listFile)
+
+                // Get the first name of the list
+                if (contentList.size > 0) {
+                    firstPagePath = contentList[0].name
+                } else {
+                    return false
+                }
+            }
+
 
             // Extract the first file that is an image
-            val result = FnyLib7z.getInstance().uncompress(fileUri, tempCoverDirectory, numListToExtract=listOf(0), filtersList=ComicLoadingManager.imageExtensionFilterList)
+            val result = if (bSortPageOrder) {
+                            FnyLib7z.getInstance().uncompress(fileUri, tempCoverDirectory, filtersList=listOf(firstPagePath))
+                        } else {
+                            FnyLib7z.getInstance().uncompress(fileUri, tempCoverDirectory, numListToExtract=listOf(0), filtersList=ComicLoadingManager.imageExtensionFilterList)
+                        }
             if (result == FnyLib7z.RESULT_OK) {
                 var arrFiles = getFilesInDirectory(tempCoverDirectory)
                 if (arrFiles.size>0) {
