@@ -390,7 +390,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
         IdleController.getInstance().resetIdleTimer()
 
-        (requireActivity() as AppCompatActivity).supportActionBar?.title = getLocalDirName(rootTreeUri, App.currentTreeUri)
+        updateTitle(getLocalDirName(rootTreeUri, App.currentTreeUri))
 
         viewModel.setPrefLastComicUri(null)      // Forget the last comic...
 
@@ -640,7 +640,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun goPageSliderFragment(comic:ComicEntry, page:Int) {
-//        supportActionBar.hide() // Do this or else the image height will be detected with the supportActionBar height !!
         val action = BrowserFragmentDirections.actionBrowserFragmentToPageSliderFragment(comic, page)
         findNavController().navigate(action)
     }
@@ -675,6 +674,11 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             .show()
     }
 
+    // Update the ActionBar title
+    private fun updateTitle(name:String) {
+        Timber.v("updateTitle($name)")
+        (requireActivity() as AppCompatActivity).supportActionBar?.title = name
+    }
 
     // The button back is pressed, so can we move to the parent directory?
     // Returns true if and only if we can

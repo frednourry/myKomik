@@ -95,21 +95,35 @@ fun getSizeInMo(size:Long): Float {
         return size.toFloat()/1048576f     // NOTE: 1048576 = 1024 x 1024
 }
 
+// Build a path from the rootUri (included) to the currentUri (included too)
 fun getLocalDirName(rootTreeUri:Uri?, currentUri:Uri?):String {
     Timber.d("getLocalDirName rootTreeUri=$rootTreeUri currentUri=$currentUri")
     if (currentUri != null && rootTreeUri != null) {
-        val rootLastSegment = rootTreeUri.lastPathSegment
-        val currentLastSegment = currentUri.lastPathSegment
+        val rootName = getLocalName(rootTreeUri)
 
-        if (rootLastSegment != null && currentLastSegment != null) {
-            val lastSlash = rootLastSegment.lastIndexOf('/')
-            return rootLastSegment.substring(lastSlash)
-        }
+        val rootLastSegment = rootTreeUri.lastPathSegment ?: ""
+        var currentLastSegment = currentUri.lastPathSegment ?: ""
+
+        return if (rootLastSegment != "" && currentLastSegment != "") {
+                currentLastSegment = currentLastSegment.replace(rootLastSegment, rootName)
+                currentLastSegment
+            } else {
+                rootName
+            }
     }
     return "--"
 }
 
-
+// Get the end of the lastSegment
+fun getLocalName(uri:Uri?):String {
+    if (uri != null) {
+        val str = URLDecoder.decode(uri.lastPathSegment, "utf-8")
+        val lastSlash = str.lastIndexOf('/')
+        Timber.d("    getLocalName return ${str.substring(lastSlash)}")
+        return str.substring(lastSlash)
+    }
+    return ""
+}
 
 // Get the last modification date of a file
 fun getReadableDate(l:Long): String {
