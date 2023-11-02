@@ -106,12 +106,12 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         try {
             val tempCoverDirectoryPath = ComicLoadingManager.getInstance().getTempCoverDirectoryPath()
             val tempCoverDirectory = File(tempCoverDirectoryPath)
+            clearFilesInDir(tempCoverDirectory)
 
             var firstPagePath = ""
 
             // If sorting, should get the content list of the comic and get the first path
             if (bSortPageOrder) {
-                clearFilesInDir(tempCoverDirectory)
 
                 if (contentListFilePath == "") {
                     Timber.w("  unarchiveCoverInFile :: tempCoverDirectory is empty !")
@@ -144,7 +144,6 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                     return false
                 }
             }
-
 
             // Extract the first file that is an image
             val result = if (bSortPageOrder) {
