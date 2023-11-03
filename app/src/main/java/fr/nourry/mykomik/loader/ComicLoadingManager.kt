@@ -460,8 +460,7 @@ class ComicLoadingManager private constructor() {
                     GetCoverWorker.KEY_THUMBNAIL_HEIGHT to THUMBNAIL_HEIGHT,
                     GetCoverWorker.KEY_THUMBNAIL_INNER_IMAGE_WIDTH to THUMBNAIL_INNER_IMAGE_WIDTH,
                     GetCoverWorker.KEY_THUMBNAIL_INNER_IMAGE_HEIGHT to THUMBNAIL_INNER_IMAGE_HEIGHT,
-                    GetCoverWorker.KEY_THUMBNAIL_FRAME_SIZE to THUMBNAIL_FRAME_SIZE,
-                    GetCoverWorker.KEY_PAGES_CONTENT_LIST_PATH to getComicEntryContentListPath(comic)
+                    GetCoverWorker.KEY_THUMBNAIL_FRAME_SIZE to THUMBNAIL_FRAME_SIZE
                 )
 
                 // Image not in cache, so uncompress the comic
