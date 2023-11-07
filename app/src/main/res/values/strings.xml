@@ -74,6 +74,9 @@
 
     <string name="opening_error">Error :\n%1$s</string>
 
+    <string name="button_show_full_image">Image en entier</string>
+    <string name="button_maximize_in_width">Maximiser selon la largeur</string>
+    <string name="button_maximize_in_height">Maximiser selon la hauteur</string>
 
 
     <string-array name="settings_page_turn_direction_labels">
