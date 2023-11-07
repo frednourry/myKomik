@@ -370,7 +370,11 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri} state.lastDirUri=${state.lastDirUri}")
 
         if (state.currentTreeUri == null) {
-            askTreeUriPermission()
+            val alert = AlertDialog.Builder(requireContext())
+                .setMessage(R.string.choose_root_directory_the_first_time)
+                .setPositiveButton(R.string.ok) { _,_ -> askTreeUriPermission() }
+                .create()
+            alert.show()
         } else {
             initBrowser(state.currentTreeUri, state.lastComicUri, state.lastDirUri, state.prefCurrentPage)
         }

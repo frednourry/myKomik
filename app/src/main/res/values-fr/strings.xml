@@ -4,6 +4,7 @@
     <string name="no_permission">Merci d\'autoriser cette applications à parcourir vos répertoires.</string>
     <string name="choose_root_text">Choisissez le répertoire avec vos comics</string>
     <string name="empty_cache">Vider le cache</string>
+    <string name="choose_root_directory_the_first_time">Veuillez sélectionner le dossier contenant vos comics</string>
     <string name="change_root_directory">Changer le répertoire racine</string>
     <string name="ask_change_root_directory">Voulez-vous vraiment changer le répertoire racine?</string>
     <string name="ask_clear_cache">Voulez-vous vraiment vider le cacher?</string>

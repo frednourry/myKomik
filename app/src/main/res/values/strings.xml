@@ -5,6 +5,7 @@
     <string name="choose_root_text">Choose your comics root directory</string>
     <string name="empty_cache">Empty cache</string>
     <string name="change_root_directory">Change root directory</string>
+    <string name="choose_root_directory_the_first_time">Please select the directory containing all your comics</string>
     <string name="ask_change_root_directory">Do you really want to change the root comics directory?</string>
     <string name="ask_clear_cache">Do you really want to clear the cache?</string>
     <string name="ask_delete_this_file">Do you really want to delete this file?</string>
