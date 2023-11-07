@@ -120,7 +120,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     fun onSetCurrentPage(n:Int, forceUpdateDAO:Boolean=false) {
         Timber.d("onSetCurrentPage($n) comic = $currentComic")
 
-        if (!App.isGuestMode)
+        if (!App.isGuestMode && !App.isSimpleViewerMode)
             SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
 
         currentPage = n
@@ -163,14 +163,24 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         Timber.d("updateComicEntriesFromDAO")
 //        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
-        val comicEntriesFromDisk = getComicEntriesFromUri(context, ComicLoadingManager.comicExtensionList, App.currentTreeUri!!)
+        val comicEntriesFromDisk = if (App.currentTreeUri != null) {
+                                        getComicEntriesFromUri(
+                                            context,
+                                            ComicLoadingManager.comicExtensionList,
+                                            App.currentTreeUri!!
+                                        )
+                                    } else {
+                                        emptyList()
+                                    }
 
 //        Timber.w("    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesInCurrentDir.clear()
 
-        comicEntriesInCurrentDir = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
+        if (!App.isSimpleViewerMode) {
+            comicEntriesInCurrentDir = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
+        }
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
@@ -239,8 +249,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
 
-            // Update DB if needed (and not in Guest Mode)
-            if (nbExpectedPages != comic.nbPages && !App.isGuestMode) {
+            // Update DB if needed (and not in Guest Mode or Simple Viewer Mode)
+            if (nbExpectedPages != comic.nbPages && !App.isGuestMode && !App.isSimpleViewerMode) {
                 // Update DB
                 Executors.newSingleThreadExecutor().execute {
                     if (comic.fromDAO) {

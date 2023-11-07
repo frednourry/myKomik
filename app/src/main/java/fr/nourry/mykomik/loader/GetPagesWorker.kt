@@ -38,6 +38,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         const val KEY_CURRENT_INDEX                 = "currentIndex"
         const val KEY_CURRENT_PATH                  = "currentPath"
         const val KEY_NB_PAGES                      = "nbPages"
+        const val KEY_COMIC_EXTENSION               = "extension"
         const val KEY_ERROR_MESSAGE                 = "errorMessage"
 
         // Same variables used to cache some datas
@@ -54,8 +55,10 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         val destPath = inputData.getString(KEY_PAGES_DESTINATION_PATH)
         val pagesListStr = inputData.getString(KEY_PAGES_LIST)
         val contentListFilePath = inputData.getString(KEY_PAGES_CONTENT_LIST_PATH)
+        val extension = inputData.getString(KEY_COMIC_EXTENSION)?.lowercase() ?: ""
 
         Timber.v("    archivePath=$archiveUriPath")
+        Timber.v("    extension=$extension")
         Timber.v("    destPath=$destPath")
         Timber.v("    pagesListStr=$pagesListStr")
         Timber.v("    nbPages=$nbPages")
@@ -67,7 +70,6 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
         if (pagesList != null && archiveUriPath != null && destPath!= null) {
             val archiveUri = Uri.parse(archiveUriPath)
             Timber.d("    archiveUri=$archiveUri")
-            val ext = getExtension(archiveUriPath).lowercase()
 
             var boolResult = false
             var errorMessage = ""
@@ -79,9 +81,9 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 } else if (ext == "cbr" || ext == "rar") {
                     boolResult = unrarPages(archiveUri, destPath, pagesList)
 */
-                if (ext == "cbz" || ext == "zip" || ext == "cb7" || ext == "7z" || ext == "cbr" || ext == "rar") {
+                if (extension == "cbz" || extension == "zip" || extension == "cb7" || extension == "7z" || extension == "cbr" || extension == "rar") {
                     boolResult = unarchivePages(archiveUri, destPath, pagesList, contentListFilePath!!)
-                } else if (ext == "pdf") {
+                } else if (extension == "pdf") {
                     boolResult = getPagesInPdfFile(archiveUri, destPath, pagesList)
                 }
             } catch (e:Exception) {

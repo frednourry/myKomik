@@ -3,6 +3,7 @@ package fr.nourry.mykomik.preference
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.fragment.app.FragmentActivity
+import fr.nourry.mykomik.App
 import timber.log.Timber
 
 // Load preferences (https://developer.android.com/training/data-storage/shared-preferences)
@@ -24,6 +25,8 @@ object SharedPref {
     }
 
     fun set(param_name:String, value:String) {
+        if (App.isGuestMode || App.isSimpleViewerMode) return
+
         with (sharedPref.edit()) {
             Timber.i("SharedPref.set($param_name, $value) ")
             putString(param_name, value)

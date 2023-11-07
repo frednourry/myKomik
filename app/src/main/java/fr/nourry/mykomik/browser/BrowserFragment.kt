@@ -63,7 +63,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         Timber.i("onCreateView")
 
-        ComicLoadingManager.getInstance().initialize(requireContext(), App.thumbnailCacheDirectory, App.pageCacheDirectory)
+//        ComicLoadingManager.getInstance().initialize(requireContext(), App.thumbnailCacheDirectory, App.pageCacheDirectory)
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
 
         _binding = FragmentBrowserBinding.inflate(inflater, container, false)
@@ -159,14 +159,17 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
         //// End MENU
 
+        // Reset the SimpleViewer mode (because we're here...)
+        App.resetSimpleViewerMode()
+
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             // Handle the back button event
-            Timber.d("BACK PRESSED !!!!!!!")
+            Timber.d("BACK PRESSED !")
 
             // Check if we can bo back in the tree file AND if the previous fragment was this one
             if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false)) {
-                Timber.v("    NO STACK !!")
+                Timber.i("    No more stack, so exit!")
                 activity?.finish()
             }
         }

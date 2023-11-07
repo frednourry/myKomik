@@ -351,7 +351,8 @@ class ComicLoadingManager private constructor() {
                 GetPagesWorker.KEY_ARCHIVE_URI to comic.path,
                 GetPagesWorker.KEY_PAGES_LIST to pagesNumberList.joinToString(","),
                 GetPagesWorker.KEY_PAGES_DESTINATION_PATH to getComicEntryPageFilePath(comic, 999),
-                GetPagesWorker.KEY_PAGES_CONTENT_LIST_PATH to getComicEntryContentListPath(comic)
+                GetPagesWorker.KEY_PAGES_CONTENT_LIST_PATH to getComicEntryContentListPath(comic),
+                GetPagesWorker.KEY_COMIC_EXTENSION to comic.extension
             )
 
             val work: WorkRequest = OneTimeWorkRequestBuilder<GetPagesWorker>()
@@ -365,18 +366,18 @@ class ComicLoadingManager private constructor() {
 
             workManager.getWorkInfoByIdLiveData(work.id)
                 .observe(lifecycleOwner) { workInfo ->
-                    Timber.d("    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
+                    Timber.d("  observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
 
                     if (workInfo != null) {
                         if (workInfo.state == WorkInfo.State.RUNNING) {
-                            Timber.i("    RUNNING !!!")
+                            Timber.i("    RUNNING")
                             val currentIndex = workInfo.progress.getInt(GetPagesWorker.KEY_CURRENT_INDEX, -1)
                             val nbPages = workInfo.progress.getInt(GetPagesWorker.KEY_NB_PAGES, -1)
                             val path = workInfo.progress.getString(GetPagesWorker.KEY_CURRENT_PATH)?:""
 
                             if (currentIndex>=0) {
-                                Timber.i("    RUNNING !!! currentIndex = $currentIndex nbPages = $nbPages")
-                                Timber.i("    RUNNING !!! path = $path")
+                                Timber.i("      currentIndex = $currentIndex nbPages = $nbPages")
+                                Timber.i("      path = $path")
                                 if (path!= "") {
                                     for (page in newPagesList) {
                                         if (currentIndex == page.numPage) {
@@ -393,11 +394,11 @@ class ComicLoadingManager private constructor() {
                                 }
                             }
                         } else if (workInfo.state.isFinished) {
-                            Timber.d(" loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
+                            Timber.d("    loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
                             val nbPages = outputData.getInt(GetPagesWorker.KEY_NB_PAGES, 0)
                             val errorMessage = outputData.getString(GetPagesWorker.KEY_ERROR_MESSAGE) ?: ""
-                            Timber.d("   nbPages=$nbPages")
+                            Timber.d("    nbPages=$nbPages")
                             if (nbPages>0) {
                                 comic.nbPages = nbPages
                             }

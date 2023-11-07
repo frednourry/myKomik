@@ -161,19 +161,19 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):Comic
             c = context.contentResolver.query(uri, projection, null, null, null)
             if (c != null) {
                 while (c.moveToNext()) {
-                    val name = URLDecoder.decode(c.getString(1), "utf-8")
-                    val mime = c.getString(2)
-                    val size = c.getString(3)
-                    val lastModified = c.getString(4)
+                    val name = URLDecoder.decode(c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1), "utf-8")
+                    val mime = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)?:2)
+                    val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
+                    val lastModified = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)?:4)
 
-                    Timber.i("getComicFromUri:: -> name=$name size=$size mime=$mime lastModified=$lastModified")
+                    Timber.v("getComicFromUri:: -> name=$name size=$size mime=$mime lastModified=$lastModified")
                     return if (DocumentsContract.Document.MIME_TYPE_DIR == mime) {
                         if (bOnlyFile)
                             null
                         else
-                            ComicEntry(uri, getParentUriPath(uri), name, "", lastModified.toLong(), size.toLong(), true)
+                            ComicEntry(uri, getParentUriPath(uri), name, "", lastModified.toLong(), size, true)
                     } else {
-                        ComicEntry(uri, getParentUriPath(uri), name, getExtension(name), lastModified.toLong(), size.toLong(), false)
+                        ComicEntry(uri, getParentUriPath(uri), name, getExtension(name), lastModified.toLong(), size, false)
                     }
                 }
             }
@@ -186,6 +186,41 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):Comic
         Timber.w("getComicFromUri COMIC NOT FOUND ! $uri ")
         return null
     }
+fun getComicFromIntentUri(context: Context, uri:Uri?):ComicEntry? {
+    Timber.v("getComicFromUri_content uri = $uri")
+
+    if (uri == null)
+        return null
+
+    val projection = arrayOf(
+        DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+        DocumentsContract.Document.COLUMN_MIME_TYPE,
+        DocumentsContract.Document.COLUMN_SIZE,
+        DocumentsContract.Document.COLUMN_LAST_MODIFIED
+    )
+
+    var c:Cursor? = null
+    try {
+        c = context.contentResolver.query(uri, projection, null, null, null)
+        if (c != null) {
+            while (c.moveToNext()) {
+                val name = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1)
+                val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
+                Timber.v("getComicFromIntentUri:: -> name=$name size=$size")
+                val extension = getExtension(name)
+                return ComicEntry(uri, "", name,extension, 0, size, false)
+            }
+        }
+    } catch (e: java.lang.Exception) {
+        Timber.w("getComicFromIntentUri $uri Failed query: $e")
+    } finally {
+        c?.close()
+    }
+
+    Timber.w("getComicFromIntentUri COMIC NOT FOUND ! $uri ")
+    return null
+}
 
 // Retrieves a list of comics uri order by its type and name
 // Precond: the given uri is a directory
@@ -212,11 +247,11 @@ fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, ur
         if (c != null) {
             // Get the URIs
             while (c.moveToNext()) {
-                val documentId: String = c.getString(0)
-                val name = URLDecoder.decode(c.getString(1), "utf-8")
-                val mime = c.getString(2)
-                val size = c.getString(3)
-                val lastModified = c.getString(4)
+                val documentId: String = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)?:0)
+                val name = URLDecoder.decode(c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1), "utf-8")
+                val mime = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)?:2)
+                val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
+                val lastModified = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)?:4)
 
                 val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
                 Timber.v("getComicEntriesFromUri :: documentUri = $documentUri")
@@ -227,7 +262,7 @@ fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, ur
                     // Filter by file type
                     val extension = getExtension(name)
                     if (extension in comicExtensionList) {
-                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified?.toLong() ?: 0L, size.toLong(), false))
+                        resultComics.add(ComicEntry(documentUri, uri.toString(), name, extension, lastModified?.toLong() ?: 0L, size, false))
                     }
                 }
             }
@@ -327,8 +362,8 @@ fun getDirectoryUrisFromUri(context: Context, uri:Uri): List<Uri> {
         if (c != null) {
             // 1st PASS : get the URIs in the current directory (ie 'uri')
             while (c.moveToNext()) {
-                val documentId: String = c.getString(0)
-                val mime = c.getString(2)
+                val documentId: String = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)?:0)
+                val mime = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)?:2)
 
                 val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
                 if (DocumentsContract.Document.MIME_TYPE_DIR == mime) {

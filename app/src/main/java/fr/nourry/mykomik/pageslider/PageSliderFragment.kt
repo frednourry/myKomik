@@ -15,7 +15,6 @@ import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.animation.doOnEnd
@@ -39,6 +38,7 @@ import fr.nourry.mykomik.dialog.DialogComicLoading
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.IdleController
 import fr.nourry.mykomik.settings.UserPreferences
+import fr.nourry.mykomik.utils.getComicFromIntentUri
 import fr.nourry.mykomik.utils.getComicFromUri
 import fr.nourry.mykomik.utils.getLocalDirName
 import fr.nourry.mykomik.utils.getReadableDate
@@ -174,10 +174,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             // Handle the back button event
-            Timber.d("BACK PRESSED !!!!!!!")
+            Timber.v("BACK PRESSED")
 
             if (!handleBackPressed() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
-                Timber.d("    PAS DE RETOUR EN STACK !!")
+                Timber.i("    No more stack, so exit!")
                 activity?.finish()
             }
         }
@@ -190,19 +190,35 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             bRefreshSelectorSliderAdapter = true
             bRefreshSliderAdapter = true
         } else {
-            Timber.i("Using args to set currentComic and currentPage")
-            val args = PageSliderFragmentArgs.fromBundle(requireArguments())
+            if (App.appIntentUri != null) {
+                Timber.i("Using Intent(uri) to set currentComic")
+                val tempComic = getComicFromIntentUri(requireContext(), App.appIntentUri)
+                if (tempComic != null)  {
+                    currentComic = tempComic
+                    App.isSimpleViewerMode = true
+                } else {
+                    // TODO error message
+                    Timber.e("Couldn't retrieve comic from uri:: ${App.appIntentUri}")
+                }
 
-            // Check if a comic path was saved in savedInstanceState[STATE_CURRENT_COMIC] (when rotating for example)
-            val currentComicPath = savedInstanceState?.getString(STATE_CURRENT_COMIC) ?: ""
-            if (currentComicPath == "") {
-                currentComic = args.comic
+                currentPage = 0
             } else {
-                val uri = Uri.parse(currentComicPath)
-                val comic = getComicFromUri(requireContext(), uri, true)
-                currentComic = comic ?: args.comic
+
+                Timber.i("Using args to set currentComic and currentPage")
+                val args = PageSliderFragmentArgs.fromBundle(requireArguments())
+
+                // Check if a comic path was saved in savedInstanceState[STATE_CURRENT_COMIC] (when rotating for example)
+                val currentComicPath = savedInstanceState?.getString(STATE_CURRENT_COMIC) ?: ""
+                if (currentComicPath == "") {
+                    currentComic = args.comic
+                } else {
+                    val uri = Uri.parse(currentComicPath)
+                    val comic = getComicFromUri(requireContext(), uri, true)
+                    currentComic = comic ?: args.comic
+                }
+                currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
             }
-            currentPage = savedInstanceState?.getInt(STATE_CURRENT_PAGE) ?: args.currentPage
+
             bRefreshSelectorSliderAdapter = false
             bRefreshSliderAdapter = true
 
@@ -212,7 +228,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
-            Timber.i("BrowserFragment::observer change state !!")
+            Timber.i("PageSliderFragment::observer change state !!")
             updateUI(it!!)
         }
         viewModel.initialize(currentComic, currentPage/*, savedInstanceState == null*/)
@@ -233,7 +249,6 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             bar.hide()
         }
     }
-
 
     private fun changeCurrentComic(comic:ComicEntry) {
         Timber.i("changeCurrentComic")
@@ -257,8 +272,12 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(STATE_CURRENT_COMIC, currentComic.path)
-        outState.putInt(STATE_CURRENT_PAGE, currentPage)
+
+        // Save the current comic info only if in normal mode (and not in guest mode)
+        if (!App.isSimpleViewerMode && !App.isGuestMode) {
+            outState.putString(STATE_CURRENT_COMIC, currentComic.path)
+            outState.putInt(STATE_CURRENT_PAGE, currentPage)
+        }
     }
 
     // Update UI according to the model state events

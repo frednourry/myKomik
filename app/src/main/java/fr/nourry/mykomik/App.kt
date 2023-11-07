@@ -11,6 +11,7 @@ import androidx.room.Room
 import io.github.frednourry.FnyLib7z
 import fr.nourry.mykomik.database.AppDatabase
 import fr.nourry.mykomik.database.DATABASE_NAME
+import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.pageslider.DisplayOption
 import fr.nourry.mykomik.utils.PhysicalConstants
 import timber.log.Timber
@@ -34,6 +35,14 @@ class App: Application() {
 
         var rootTreeUri: Uri? = null
         var currentTreeUri: Uri? = null
+
+        var appIntentUri:Uri? = null        // Uri that will be given by an Intent ACTION_VIEW
+        var isSimpleViewerMode = false      // True only the app starts with an Intent ACTION_VIEW (appIntentUri!= null)
+
+        fun resetSimpleViewerMode() {
+            appIntentUri = null
+            isSimpleViewerMode = false
+        }
     }
 
     override fun onCreate() {
@@ -64,6 +73,10 @@ class App: Application() {
             pageCacheDirectory.mkdirs()
         }
 
+        // Init the ComicLoadingManger
+        ComicLoadingManager.getInstance().initialize(this, App.thumbnailCacheDirectory, App.pageCacheDirectory)
+
+        // Init the database
         db = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME)
 //            .allowMainThreadQueries()     // Very bad !!
             .build()

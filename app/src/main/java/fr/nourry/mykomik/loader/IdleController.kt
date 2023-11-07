@@ -54,6 +54,8 @@ class IdleController() : ComicLoadingProgressListener {
      * Call this when the user asks something to this app
      */
     fun resetIdleTimer() {
+        if (!::context.isInitialized) return
+
         // Cancel the current task here?
         //   empty the comic list ?
         isIdle = false
@@ -63,6 +65,7 @@ class IdleController() : ComicLoadingProgressListener {
     }
 
     fun reinit() {
+        if (!::context.isInitialized) return
         resetIdleTimer()
 
         loadCompleted = false
@@ -73,6 +76,7 @@ class IdleController() : ComicLoadingProgressListener {
 
     private fun onIdle() {
         Timber.v("onIdle")
+        if (!::context.isInitialized) return
 
         // Can we generate the thumbnails in background?
         if (!UserPreferences.getInstance(context).isGenerateThumbnailsAuto())
