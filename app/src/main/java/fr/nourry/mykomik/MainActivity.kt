@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.VmPolicy
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -44,7 +43,12 @@ class MainActivity : AppCompatActivity() {
         // To locate the origin of the message : "A resource failed to call close." - just look for "StrictMode" in logs
 /*        StrictMode.setVmPolicy(
             VmPolicy.Builder(StrictMode.getVmPolicy())
-                .detectLeakedClosableObjects()
+                .detectAll()
+//                .detectLeakedClosableObjects()
+//                .detectFileUriExposure()
+//                .detectLeakedRegistrationObjects()
+                .penaltyLog()
+                .penaltyDeath()
                 .build()
         )*/
     }

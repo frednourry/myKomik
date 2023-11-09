@@ -68,9 +68,9 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
         generate_thumbnails_auto = sharedPreferences.getBoolean(generateThumbnailsAuto, true)
     }
 
-    override fun onSharedPreferenceChanged(sharePref: SharedPreferences, key: String) {
+    override fun onSharedPreferenceChanged(sharePref: SharedPreferences?, key: String?) {
         Timber.v("loadUserPreferences:: onSharedPreferenceChanged key==$key")
-        if (sharePref == sharedPreferences) {
+        if (key != null && sharePref!= null && sharePref == sharedPreferences) {
             when (key) {
                 readingDirectionLabel -> reading_direction =
                     sharePref.getString(readingDirectionLabel, ReadingDirectionLTR)!!
