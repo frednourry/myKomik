@@ -97,7 +97,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     private var allowParentToScrollLeft = true
     private var allowParentToScrollRight = true
     public fun allowParentToScroll(dx:Int) : Boolean {
-        Timber.v("allowParentToScroll($dx)   allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight bijou")
+        Timber.v("allowParentToScroll($dx)   allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
         if (dx > 0) return allowParentToScrollLeft
         if (dx < 0) return allowParentToScrollRight
         return allowParentToScrollLeft || allowParentToScrollRight

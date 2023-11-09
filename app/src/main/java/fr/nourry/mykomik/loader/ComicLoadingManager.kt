@@ -304,7 +304,7 @@ class ComicLoadingManager private constructor() {
                 Timber.d("loadNext() loading ${comicLoading.comic.path}")
                 startLoadingCover(comicLoading)
             } else {
-                Timber.i("waitingCoversList.size = $waitingCoversList.size")
+                Timber.i("waitingCoversList.size = 0")
                 isLoading = false
 
                 // TODO if nothing left to load, check if we can load the rest of the comics !
