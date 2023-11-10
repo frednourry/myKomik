@@ -170,6 +170,15 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             // Check if we can bo back in the tree file AND if the previous fragment was this one
             if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false)) {
                 Timber.i("    No more stack, so exit!")
+
+                // Restore the preference if in guest mode
+                if (App.isGuestMode) {
+                    UserPreferences.getInstance(requireContext()).restoreAppUserPreference()
+                }
+                App.isGuestMode = false
+                App.isSimpleViewerMode = false
+
+                // Exit
                 activity?.finish()
             }
         }
@@ -555,6 +564,13 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     private fun setGuestMode(isGuest:Boolean) {
         Timber.v("setGuestMode:: $isGuest")
         App.isGuestMode = isGuest
+        if (isGuest) {
+            // Save the user's choices
+            UserPreferences.getInstance(requireContext()).saveAppUserPreference()
+        } else {
+            // Reload every user's choices that could have been changed in Guest Mode
+            UserPreferences.getInstance(requireContext()).restoreAppUserPreference()
+        }
 
         // Refresh the browser
         browserAdapter.selectNone()

@@ -8,12 +8,24 @@ import fr.nourry.mykomik.loader.IdleController
 import timber.log.Timber
 
 
+data class AppUserPreferences(var readingDirection:String,
+                              var hidePageNumber:Boolean,
+                              var hideReadComics:Boolean,
+                              var disableRotation:Boolean,
+                              var tapToChangePage:Boolean,
+                              var adaptPageBackgroundAuto:Boolean,
+                              var generateThumbnailsAuto:Boolean) {
+    fun copy(): AppUserPreferences {
+        return AppUserPreferences(readingDirection, hidePageNumber, hideReadComics,
+                                  disableRotation, tapToChangePage, adaptPageBackgroundAuto,
+                                  generateThumbnailsAuto)
+    }
+}
+
 class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceChangeListener {
     // Preferences values (according to array.xml !!)
     private var readingDirectionValues: Array<String> = context.resources.getStringArray(R.array.settings_page_turn_direction_values)
     private var ReadingDirectionLTR:String = readingDirectionValues[0]
-//    private var ReadingDirectionRTL:String = readingDirectionValues[1]
-//    private var ReadingDirectionTTB:String = readingDirectionValues[2]
 
     // Preference label
     private val hideReadComicsLabel     = "hide_read_comics"
@@ -24,17 +36,18 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private val adaptPageBackgroundAuto = "adapt_page_background_auto"
     private val generateThumbnailsAuto  = "generate_thumbnails_auto"
 
-    // Variables
-    private lateinit var reading_direction:String
-    private var hide_page_number:Boolean = false
-    private var hide_read_comics:Boolean = false
-    private var disable_rotation:Boolean = false
-    private var tap_to_change_page:Boolean = false
-    private var adapt_page_background_auto:Boolean = true
-    private var generate_thumbnails_auto:Boolean = true
+    // Values
+    private var appUserPreferences = AppUserPreferences(
+                                        readingDirection = ReadingDirectionLTR,
+                                        hidePageNumber = false,
+                                        hideReadComics = false,
+                                        disableRotation = false,
+                                        tapToChangePage = false,
+                                        adaptPageBackgroundAuto = true,
+                                        generateThumbnailsAuto = true)
+    private var appUserPreferencesSave : AppUserPreferences? = null     // To save the preferences in Guest Mode
 
-
-    var sharedPreferences: SharedPreferences
+    private var sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 
     companion object {
         private var mInstance: UserPreferences? = null
@@ -49,7 +62,6 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     init {
         // Respect the same order present in array.xml !!
 
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         loadUserPreferences()
 
         sharedPreferences.registerOnSharedPreferenceChangeListener(this)
@@ -58,53 +70,65 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private fun loadUserPreferences() {
         val temp = sharedPreferences.getString(readingDirectionLabel, ReadingDirectionLTR)
         Timber.i("loadUserPreferences:: $temp")
-        reading_direction = temp ?: ReadingDirectionLTR
+        appUserPreferences.readingDirection = temp ?: ReadingDirectionLTR
 
-        hide_page_number = sharedPreferences.getBoolean(hidePageNumberLabel, false)
-        hide_read_comics = sharedPreferences.getBoolean(hideReadComicsLabel, false)
-        disable_rotation = sharedPreferences.getBoolean(disableRotationLabel, false)
-        tap_to_change_page = sharedPreferences.getBoolean(tapToChangePageLabel, false)
-        adapt_page_background_auto = sharedPreferences.getBoolean(adaptPageBackgroundAuto, true)
-        generate_thumbnails_auto = sharedPreferences.getBoolean(generateThumbnailsAuto, true)
+        appUserPreferences.hidePageNumber = sharedPreferences.getBoolean(hidePageNumberLabel, false)
+        appUserPreferences.hideReadComics = sharedPreferences.getBoolean(hideReadComicsLabel, false)
+        appUserPreferences.disableRotation = sharedPreferences.getBoolean(disableRotationLabel, false)
+        appUserPreferences.tapToChangePage = sharedPreferences.getBoolean(tapToChangePageLabel, false)
+        appUserPreferences.adaptPageBackgroundAuto = sharedPreferences.getBoolean(adaptPageBackgroundAuto, true)
+        appUserPreferences.generateThumbnailsAuto = sharedPreferences.getBoolean(generateThumbnailsAuto, true)
+    }
+
+    fun saveAppUserPreference() {
+        Timber.v("saveAppUserPreference")
+        appUserPreferencesSave = appUserPreferences.copy()
+    }
+
+    fun restoreAppUserPreference() {
+        Timber.v("restoreAppUserPreference")
+        if (appUserPreferencesSave != null) {
+            appUserPreferences = appUserPreferencesSave!!
+
+            // Restore these values in sharedPreferences
+            sharedPreferences.edit().putString(readingDirectionLabel, appUserPreferences.readingDirection).apply()
+            sharedPreferences.edit().putBoolean(hidePageNumberLabel, appUserPreferences.hidePageNumber).apply()
+            sharedPreferences.edit().putBoolean(hideReadComicsLabel, appUserPreferences.hideReadComics).apply()
+            sharedPreferences.edit().putBoolean(disableRotationLabel, appUserPreferences.disableRotation).apply()
+            sharedPreferences.edit().putBoolean(tapToChangePageLabel, appUserPreferences.tapToChangePage).apply()
+            sharedPreferences.edit().putBoolean(adaptPageBackgroundAuto, appUserPreferences.adaptPageBackgroundAuto).apply()
+
+            appUserPreferencesSave = null
+        }
     }
 
     override fun onSharedPreferenceChanged(sharePref: SharedPreferences?, key: String?) {
         Timber.v("loadUserPreferences:: onSharedPreferenceChanged key==$key")
+
         if (key != null && sharePref!= null && sharePref == sharedPreferences) {
             when (key) {
-                readingDirectionLabel -> reading_direction =
-                    sharePref.getString(readingDirectionLabel, ReadingDirectionLTR)!!
-                hidePageNumberLabel -> hide_page_number =
-                    sharePref.getBoolean(hidePageNumberLabel, false)
-                hideReadComicsLabel -> hide_read_comics =
-                    sharePref.getBoolean(hideReadComicsLabel, false)
-                disableRotationLabel -> disable_rotation =
-                    sharePref.getBoolean(disableRotationLabel, false)
-                tapToChangePageLabel -> tap_to_change_page =
-                    sharePref.getBoolean(tapToChangePageLabel, false)
-                adaptPageBackgroundAuto -> adapt_page_background_auto =
-                    sharePref.getBoolean(adaptPageBackgroundAuto, true)
-                generateThumbnailsAuto -> {
-                    generate_thumbnails_auto =
-                        sharePref.getBoolean(generateThumbnailsAuto, true)
-                    if (generate_thumbnails_auto)
-                        IdleController.getInstance().reinit()
-                    else
-                        IdleController.getInstance().resetIdleTimer()
-                }
+                readingDirectionLabel   -> appUserPreferences.readingDirection = sharePref.getString(readingDirectionLabel, ReadingDirectionLTR)!!
+                hidePageNumberLabel     -> appUserPreferences.hidePageNumber = sharePref.getBoolean(hidePageNumberLabel, false)
+                hideReadComicsLabel     -> appUserPreferences.hideReadComics = sharePref.getBoolean(hideReadComicsLabel, false)
+                disableRotationLabel    -> appUserPreferences.disableRotation = sharePref.getBoolean(disableRotationLabel, false)
+                tapToChangePageLabel    -> appUserPreferences.tapToChangePage = sharePref.getBoolean(tapToChangePageLabel, false)
+                adaptPageBackgroundAuto -> appUserPreferences.adaptPageBackgroundAuto = sharePref.getBoolean(adaptPageBackgroundAuto, true)
+                generateThumbnailsAuto  -> {
+                                                appUserPreferences.generateThumbnailsAuto = sharePref.getBoolean(generateThumbnailsAuto, true)
+                                                if (appUserPreferences.generateThumbnailsAuto)
+                                                    IdleController.getInstance().reinit()
+                                                else
+                                                    IdleController.getInstance().resetIdleTimer()
+                                            }
             }
         }
     }
 
-    fun shouldHideReadComics():Boolean = hide_read_comics
-    fun isReadingDirectionLTR():Boolean = reading_direction==ReadingDirectionLTR
-/*    fun isReadingDirectionLTR():Boolean{
-        Timber.e("loadUserPreferences:: reading_direction=$reading_direction");
-        return reading_direction==ReadingDirectionLTR
-    }*/
-    fun shouldHidePageNumber():Boolean = hide_page_number
-    fun isRotationDisabled():Boolean = disable_rotation
-    fun isTappingToChangePage():Boolean = tap_to_change_page
-    fun isAdaptPageBackgroundAuto():Boolean = adapt_page_background_auto
-    fun isGenerateThumbnailsAuto():Boolean = generate_thumbnails_auto
+    fun shouldHideReadComics():Boolean = appUserPreferences.hideReadComics
+    fun isReadingDirectionLTR():Boolean = appUserPreferences.readingDirection==ReadingDirectionLTR
+    fun shouldHidePageNumber():Boolean = appUserPreferences.hidePageNumber
+    fun isRotationDisabled():Boolean = appUserPreferences.disableRotation
+    fun isTappingToChangePage():Boolean = appUserPreferences.tapToChangePage
+    fun isAdaptPageBackgroundAuto():Boolean = appUserPreferences.adaptPageBackgroundAuto
+    fun isGenerateThumbnailsAuto():Boolean = appUserPreferences.generateThumbnailsAuto
 }
