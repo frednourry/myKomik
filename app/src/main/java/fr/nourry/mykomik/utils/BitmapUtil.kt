@@ -15,15 +15,72 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Locale
+import javax.microedition.khronos.egl.EGL10
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.egl.EGLContext
 
 
 class BitmapUtil {
     companion object {
+        val maxTextureSize = getDeviceMaxTextureSize()
+        val maxHalfTextureSize = maxTextureSize/2
+
+        init {
+            Timber.i("BitmapUtil.maxTextureSize=$maxTextureSize")
+        }
+
+        // Get the maximum texture size for this device
+        //   see this at https://stackoverflow.com/questions/7428996/hw-accelerated-activity-how-to-get-opengl-texture-size-limit
+        private fun getDeviceMaxTextureSize(): Int {
+            // Safe minimum default size
+            val IMAGE_MAX_BITMAP_DIMENSION = 2048
+
+            // Get EGL Display
+            val egl = EGLContext.getEGL() as EGL10
+            val display = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY)
+
+            // Initialise
+            val version = IntArray(2)
+            egl.eglInitialize(display, version)
+
+            // Query total number of configurations
+            val totalConfigurations = IntArray(1)
+            egl.eglGetConfigs(display, null, 0, totalConfigurations)
+
+            // Query actual list configurations
+            val configurationsList = arrayOfNulls<EGLConfig>(
+                totalConfigurations[0]
+            )
+            egl.eglGetConfigs(display, configurationsList, totalConfigurations[0], totalConfigurations)
+            val textureSize = IntArray(1)
+            var maximumTextureSize = 0
+
+            // Iterate through all the configurations to located the maximum texture size
+            for (i in 0 until totalConfigurations[0]) {
+                // Only need to check for width since opengl textures are always squared
+                egl.eglGetConfigAttrib(
+                    display,
+                    configurationsList[i],
+                    EGL10.EGL_MAX_PBUFFER_WIDTH,
+                    textureSize
+                )
+
+                // Keep track of the maximum texture size
+                if (maximumTextureSize < textureSize[0]) maximumTextureSize = textureSize[0]
+            }
+
+            // Release
+            egl.eglTerminate(display)
+
+            // Return largest texture size found, or default
+            return Math.max(maximumTextureSize, IMAGE_MAX_BITMAP_DIMENSION)
+        }
 
         /**
          * Like BitmapFactory.decodeStream but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
          */
-        fun decodeStream(f: File?, width: Int=-1, height: Int=-1): Bitmap? {
+        fun decodeStream(f: File?, width: Int=-1, height: Int=-1, isSimplifyBitmapConfig:Boolean = false): Bitmap? {
+            Timber.v("decodeStream(${f?.absolutePath ?: ""}, width=$width, height=$height, isSimplifyBitmapConfig=$isSimplifyBitmapConfig)")
             if (f == null) {
                 Timber.w("decodeStream :: File null ! Returns null")
                 return null
@@ -34,33 +91,40 @@ class BitmapUtil {
             }
 
             // Set the maximum width and height (if given)
-            val maxWidth = if (width == -1) App.physicalConstants.metrics.widthPixels else width
-            val maxHeight = if (height == -1) App.physicalConstants.metrics.widthPixels else height
+            val maxWidth = Math.min(if (width == -1) App.physicalConstants.metrics.widthPixels else width, maxHalfTextureSize)
+            val maxHeight = Math.min(if (height == -1) App.physicalConstants.metrics.widthPixels else height, maxHalfTextureSize)
 
             try {
                 // Get the image size
-                val optionTest = BitmapFactory.Options()
-                optionTest.inJustDecodeBounds = true
+                val optionsTest = BitmapFactory.Options()
+                optionsTest.inJustDecodeBounds = true
                 FileInputStream(f).use { inputStream ->
-                    BitmapFactory.decodeStream(inputStream, null, optionTest)
+                    BitmapFactory.decodeStream(inputStream, null, optionsTest)
                 }
 
-                val halfOutWidth: Int = optionTest.outWidth / 2
-                val halfOutHeight: Int = optionTest.outHeight / 2
+                var halfOutWidth: Int = optionsTest.outWidth / 2
+                var halfOutHeight: Int = optionsTest.outHeight / 2
                 var inSampleSize = 1
 
                 // Calculate the largest inSampleSize value that is a power of 2 and keeps both
                 // height and width larger than the requested height and width.
-                while (halfOutHeight / inSampleSize >= maxHeight && halfOutWidth / inSampleSize >= maxWidth) {
+                while (halfOutHeight >= maxHeight || halfOutWidth >= maxWidth) {
                     inSampleSize *= 2
+                    halfOutHeight /=2
+                    halfOutWidth /=2
                 }
-
                 // Decode bitmap with inSampleSize set
-                val option = BitmapFactory.Options()
-                option.inJustDecodeBounds = false
-                option.inSampleSize = inSampleSize
+                val options = BitmapFactory.Options()
+                options.inJustDecodeBounds = false
+                options.inSampleSize = inSampleSize
+                options.inScaled = false
+                if (isSimplifyBitmapConfig)
+                    options.inPreferredConfig = Bitmap.Config.RGB_565
+
+                Timber.v("  decodeStream => options.inSampleSize=$inSampleSize")
+
                 FileInputStream(f).use {inputStream ->
-                    return BitmapFactory.decodeStream(inputStream, null, option)
+                    return BitmapFactory.decodeStream(inputStream, null, options)
                 }
             } catch (e: OutOfMemoryError) {
                 Timber.w("decodeStream :: OutOfMemoryError ! f=${f.absolutePath}")
@@ -75,31 +139,40 @@ class BitmapUtil {
          * Like BitmapFactory.decodeByteArray but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
          */
         private fun decodeByteArray(data: ByteArray?, offset:Int, length:Int, width: Int=-1, height: Int=-1):Bitmap? {
+            Timber.v("decodeStream(ByteArray, offset=$offset, length=$length, width=$width, height=$height)")
+
             // Set the maximum width and height (if given)
-            val maxWidth = if (width == -1) App.physicalConstants.metrics.widthPixels else width
-            val maxHeight = if (height == -1) App.physicalConstants.metrics.widthPixels else height
+            val maxWidth = Math.min(if (width == -1) App.physicalConstants.metrics.widthPixels else width, maxHalfTextureSize)
+            val maxHeight = Math.min(if (height == -1) App.physicalConstants.metrics.widthPixels else height, maxHalfTextureSize)
 
             try {
                 // Get the image size
-                val optionTest = BitmapFactory.Options()
-                optionTest.inJustDecodeBounds = true
-                BitmapFactory.decodeByteArray(data, offset, length, optionTest)
+                val optionsTest = BitmapFactory.Options()
+                optionsTest.inJustDecodeBounds = true
+                BitmapFactory.decodeByteArray(data, offset, length, optionsTest)
 
-                val halfOutWidth: Int = optionTest.outWidth / 2
-                val halfOutHeight: Int = optionTest.outHeight / 2
+                var halfOutWidth: Int = optionsTest.outWidth / 2
+                var halfOutHeight: Int = optionsTest.outHeight / 2
                 var inSampleSize = 1
 
                 // Calculate the largest inSampleSize value that is a power of 2 and keeps both
                 // height and width larger than the requested height and width.
-                while (halfOutHeight / inSampleSize >= maxHeight && halfOutWidth / inSampleSize >= maxWidth) {
+                while (halfOutHeight >= maxHeight || halfOutWidth >= maxWidth) {
                     inSampleSize *= 2
+                    halfOutHeight /=2
+                    halfOutWidth /=2
                 }
 
                 // Decode bitmap with inSampleSize set
-                val option = BitmapFactory.Options()
-                option.inJustDecodeBounds = false
-                option.inSampleSize = inSampleSize
-                return BitmapFactory.decodeByteArray(data, offset, length, option)
+                val options = BitmapFactory.Options()
+                options.inJustDecodeBounds = false
+                options.inSampleSize = inSampleSize
+                options.inScaled = false
+                options.inPreferredConfig = Bitmap.Config.RGB_565
+
+                Timber.v("  decodeStream => options.inSampleSize=$inSampleSize")
+
+                return BitmapFactory.decodeByteArray(data, offset, length, options)
             } catch (e: OutOfMemoryError) {
                 Timber.w("decodeStream :: OutOfMemoryError !")
             } catch (e: Error) {

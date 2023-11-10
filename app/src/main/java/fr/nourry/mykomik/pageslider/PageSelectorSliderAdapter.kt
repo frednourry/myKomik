@@ -37,7 +37,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
                     Timber.d("     UPDATING IMAGEVIEW... $path")
 
                     val image = holderInnerComic.imageView
-                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels)
+                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels, isSimplifyBitmapConfig = true)
                     if (bitmap != null) {
                         image.setImageBitmap(bitmap)
                     }

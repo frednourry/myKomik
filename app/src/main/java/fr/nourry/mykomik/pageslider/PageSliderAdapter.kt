@@ -1,6 +1,7 @@
 package fr.nourry.mykomik.pageslider
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -13,7 +14,6 @@ import fr.nourry.mykomik.R
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
-import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.BitmapUtil
 import timber.log.Timber
 import java.io.File
@@ -52,13 +52,12 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                 val holderComic = holderInnerComic.comic
                 Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
 
-
                 // Check if the target is still waiting this image
                 if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
                     Timber.d("     UPDATING IMAGEVIEW... $path")
 
                     // Load the image
-                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels)
+                    val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels, isSimplifyBitmapConfig = true)
                     if (bitmap != null) {
                         magnifyImageView = holderInnerComic.imageView
                         magnifyImageView.imagePath = path
@@ -146,8 +145,6 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
             imageViewModified = magnifyImageView
            onTouch(view, motionEvent)
         }
-
-
 
         magnifyImageView.setMagnifyImageViewListener(this, cardView)
 

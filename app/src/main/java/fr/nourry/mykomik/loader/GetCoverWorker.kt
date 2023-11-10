@@ -11,7 +11,6 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import io.github.frednourry.FnyLib7z
-import fr.nourry.mykomik.App
 import fr.nourry.mykomik.utils.*
 import fr.nourry.mykomik.utils.BitmapUtil.Companion.decodeStream
 import timber.log.Timber

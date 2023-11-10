@@ -16,6 +16,7 @@
         android:theme="@style/Theme.MyKomik">
         <activity
             android:name=".MainActivity"
+            android:hardwareAccelerated="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,6 +26,7 @@
         </activity>
         <activity
             android:name=".SimpleViewerActivity"
+            android:hardwareAccelerated="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
