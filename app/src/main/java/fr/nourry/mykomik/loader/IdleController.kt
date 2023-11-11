@@ -111,8 +111,7 @@ class IdleController() : ComicLoadingProgressListener {
                 if (tempComicList.isNotEmpty()) {
                     currentComicList = tempComicList as MutableList<ComicEntry>
                 } else {
-                    loadCompleted = true
-                    Timber.v("  **** LOAD COMPLETED !! ****")
+                    proceedLoadNextComicNext()
                     return
                 }
                 Timber.v("currentUri = $currentUri")
