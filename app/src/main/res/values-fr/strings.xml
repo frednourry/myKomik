@@ -4,7 +4,7 @@
     <string name="no_permission">Merci d\'autoriser cette applications à parcourir vos répertoires.</string>
     <string name="choose_root_text">Choisissez le répertoire avec vos comics</string>
     <string name="empty_cache">Vider le cache</string>
-    <string name="choose_root_directory_the_first_time">Veuillez sélectionner le dossier contenant vos comics</string>
+    <string name="choose_root_directory_the_first_time">Veuillez sélectionner le répertoire contenant vos comics</string>
     <string name="change_root_directory">Changer le répertoire racine</string>
     <string name="ask_change_root_directory">Voulez-vous vraiment changer le répertoire racine?</string>
     <string name="ask_clear_cache">Voulez-vous vraiment vider le cacher?</string>
@@ -32,7 +32,6 @@
     <string name="back_to_browser">Retour librairie</string>
     <string name="no_next_issue">Il n\'y a pas d\'autres comic.</string>
     <string name="no_previous_issue">Il n\'y a pas de comic précédent.</string>
-    <string name="about_description">Version de dev\n\nDevelopé par Frederic Nourry.</string>
     <string name="descriptionComicPages">Pages du comic</string>
     <string name="browser_comic_image">Image du comic</string>
     <string name="browser_comic_title">Titre du comic</string>
@@ -78,6 +77,10 @@
     <string name="button_show_full_image">Show Full Image</string>
     <string name="button_maximize_in_width">Maximize in width</string>
     <string name="button_maximize_in_height">Maximize in height</string>
+
+    <string name="about_description">Développé par Frédéric Nourry\n\n</string>
+    <string name="about_release_notes">Notes de version:
+    \n - version beta 1</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

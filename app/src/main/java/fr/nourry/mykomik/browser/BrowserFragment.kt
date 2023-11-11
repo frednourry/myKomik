@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.text.Html
 import android.view.*
 import android.widget.*
 import androidx.activity.addCallback
@@ -674,7 +675,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     private fun showAboutPopup() {
         val title = App.appName+" "+ App.packageInfo.versionName
-        val message = getString(R.string.about_description)
+        val message = getString(R.string.about_description) + getString(R.string.about_release_notes)
         AlertDialog.Builder(requireContext())
             .setTitle(title)
                 .setMessage(message)

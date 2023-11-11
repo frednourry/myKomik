@@ -5,9 +5,9 @@ myKomik
 Presentation
 ------------
 
-**myKomik** is a little project that I created to allow me to apply several training courses that I have followed (mainly on [Udemy.com][1]). It is mainly inspired by an old android application called **Komik** that allowed you to read comicbooks, ie image archives compressed in ZIP or RAR format (respectively with the CBZ or CBR extension). The goal of this project is to make an application in Kotlin, reproducing the same functionalities as **Komik**.
+**myKomik** is a little project that I created to allow me to apply several training courses that I have followed (mainly on [Udemy.com][1]). It is inspired by an old android application called **Komik** that allowed you to read comicbooks, ie image archives compressed in ZIP or RAR format (respectively with the CBZ or CBR extension). The goal of this project is to make an application in Kotlin, reproducing the same functionalities as **Komik**.
 
-I took the liberty of adding new features like a new side-menu, PDF support, saving a page locally, and above all, automatically adjusting the pages according to the user's wishes (centered, enlarged on the height or on the width).
+I took the liberty of adding new features like a new side-menu, PDF and 7zip support, saving a page locally, and above all, the automatic adjustment of pages according to the user's wishes (centered, enlarged in height or in width).
 
 Author
 ------
@@ -24,7 +24,7 @@ Screenshots
 
 
 #### myKomik
-![](static/screenshots/Browser_MyKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_MyKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_MyKomik.jpg "myKomik page selector") ![](static/screenshots/PageZoom_MyKomik.jpg "Komik zoomed page")
+![](static/screenshots/Browser_MyKomik.jpg "myKomik browser") ![](static/screenshots/SelectFiles_MyKomik.jpg "myKomik browser with file selection") ![](static/screenshots/PageSelector_MyKomik.jpg "myKomik page selector") ![](static/screenshots/PageZoom_MyKomik.jpg "myKomik zoomed page")
 
 
 #### myKomik (added features)

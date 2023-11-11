@@ -16,8 +16,13 @@ android {
         applicationId "fr.nourry.mykomik"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 4
+        versionName "0.9 (beta)"
+
+        ndkVersion '25.2.9519653'
+        ndk {
+            debugSymbolLevel 'FULL'
+        }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

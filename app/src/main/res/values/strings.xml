@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MyKomik</string>
-    <string name="no_permission">Please, permit this application to browse your folders.</string>
-    <string name="choose_root_text">Choose your comics root directory</string>
+    <string name="no_permission">Please, allow this application to browse your folders.</string>
+    <string name="choose_root_text">Choose your comics folder</string>
     <string name="empty_cache">Empty cache</string>
-    <string name="change_root_directory">Change root directory</string>
-    <string name="choose_root_directory_the_first_time">Please select the directory containing all your comics</string>
-    <string name="ask_change_root_directory">Do you really want to change the root comics directory?</string>
+    <string name="change_root_directory">Change comic folder</string>
+    <string name="choose_root_directory_the_first_time">Please select the folder containing all your comics</string>
+    <string name="ask_change_root_directory">Do you really want to change the main comic folder?</string>
     <string name="ask_clear_cache">Do you really want to clear the cache?</string>
     <string name="ask_delete_this_file">Do you really want to delete this file?</string>
     <string name="ask_delete_files">Do you really want to delete the following %1$d files?</string>
@@ -32,7 +32,6 @@
     <string name="back_to_browser">Back to browser</string>
     <string name="no_next_issue">There is no more issues.</string>
     <string name="no_previous_issue">There is no previous issues.</string>
-    <string name="about_description">Dev version \n\nDeveloped by Frederic Nourry.</string>
     <string name="descriptionComicPages">Comic pages</string>
     <string name="browser_comic_image">Comic image</string>
     <string name="browser_comic_title">Comic title</string>
@@ -79,6 +78,9 @@
     <string name="button_maximize_in_width">Maximiser selon la largeur</string>
     <string name="button_maximize_in_height">Maximiser selon la hauteur</string>
 
+    <string name="about_description">Developed by Frederic Nourry\n\n</string>
+    <string name="about_release_notes">Release notes:
+    \n - beta version</string>
 
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>
