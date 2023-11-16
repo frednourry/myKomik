@@ -32,6 +32,7 @@
     <string name="back_to_browser">Retour librairie</string>
     <string name="no_next_issue">Il n\'y a pas d\'autres comic.</string>
     <string name="no_previous_issue">Il n\'y a pas de comic précédent.</string>
+    <string name="descriptionBrowser">Liste de comics</string>
     <string name="descriptionComicPages">Pages du comic</string>
     <string name="browser_comic_image">Image du comic</string>
     <string name="browser_comic_title">Titre du comic</string>

@@ -33,6 +33,7 @@
     <string name="no_next_issue">There is no more issues.</string>
     <string name="no_previous_issue">There is no previous issues.</string>
     <string name="descriptionComicPages">Comic pages</string>
+    <string name="descriptionBrowser">Comics list</string>
     <string name="browser_comic_image">Comic image</string>
     <string name="browser_comic_title">Comic title</string>
     <string name="browser_reading_completed_or_not">Reading completed or not?</string>
