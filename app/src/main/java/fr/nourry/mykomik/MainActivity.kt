@@ -43,7 +43,8 @@ class MainActivity : AppCompatActivity() {
         // To locate the origin of the message : "A resource failed to call close." - just look for "StrictMode" in logs
 /*        StrictMode.setVmPolicy(
             VmPolicy.Builder(StrictMode.getVmPolicy())
-                .detectAll()
+//                .detectNonSdkApiUsage()
+//                .detectAll()
 //                .detectLeakedClosableObjects()
 //                .detectFileUriExposure()
 //                .detectLeakedRegistrationObjects()

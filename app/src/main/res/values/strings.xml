@@ -80,7 +80,7 @@
 
     <string name="about_description">Developed by Frederic Nourry\n\n</string>
     <string name="about_release_notes">Release notes:
-    \n - beta version</string>
+    \n - beta version 6</string>
 
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>
