@@ -74,13 +74,13 @@
 
     <string name="opening_error">Erreur :\n%1$s</string>
 
-    <string name="button_show_full_image">Show Full Image</string>
-    <string name="button_maximize_in_width">Maximize in width</string>
-    <string name="button_maximize_in_height">Maximize in height</string>
+    <string name="button_show_full_image">Image en entier</string>
+    <string name="button_maximize_in_width">Maximiser selon la largeur</string>
+    <string name="button_maximize_in_height">Maximiser selon la hauteur</string>
 
-    <string name="about_description">Développé par Frédéric Nourry\n\n</string>
-    <string name="about_release_notes">Notes de version:
-    \n - version beta 6</string>
+    <string name="about_description">©2023 Tout droits réservés\n\nDéveloppé par Frédéric Nourry</string>
+    <string name="about_release_notes">\n\nNotes de version:
+    \n - Première version</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

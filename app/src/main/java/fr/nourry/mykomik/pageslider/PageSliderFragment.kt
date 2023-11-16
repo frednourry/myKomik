@@ -817,8 +817,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         if (::toast.isInitialized) {
             toast.cancel()
         }
-        toast = Toast.makeText(context, text, Toast.LENGTH_SHORT)
-        toast.show()
+        toast = Toast.makeText(requireContext(), text, Toast.LENGTH_SHORT)
+        toast.show()    // NOTE : could crash the app if the context is compromised (async task). Seen in GT-P7510
 
 /*
         // NOT WORKING !!

@@ -144,7 +144,7 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
                 Timber.v("  unarchivePages:: no need to parse $contentListFilePath ...")
             }
             nbPages = currentContentList.size
-            Timber.w("  unarchivePages :: nbPages=$nbPages")
+            Timber.v("  unarchivePages :: nbPages=$nbPages")
 
             // Built the list of files to unarchive
             val pathsToUnarchive = mutableListOf<String>()
