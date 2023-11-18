@@ -82,7 +82,8 @@
 
     <string name="about_description">©2023 All rights reserved\n\nDeveloped by Frederic Nourry</string>
     <string name="about_release_notes">\n\nRelease notes:
-    \n - First release</string>
+    \n - UI : Better contrasts
+    \n - Correct save page option</string>
 
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>

@@ -81,7 +81,8 @@
 
     <string name="about_description">©2023 Tout droits réservés\n\nDéveloppé par Frédéric Nourry</string>
     <string name="about_release_notes">\n\nNotes de version:
-    \n - Première version</string>
+    \n - UI : Contrastes améliorés
+    \n - Correction sur sauver une page</string>
 
 
     <string-array name="settings_page_turn_direction_labels">

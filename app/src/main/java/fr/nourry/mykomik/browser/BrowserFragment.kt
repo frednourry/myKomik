@@ -676,7 +676,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     private fun showAboutPopup() {
         val title = App.appName+" "+ App.packageInfo.versionName
-        val message = getString(R.string.about_description) //+ getString(R.string.about_release_notes)
+        val message = getString(R.string.about_description) + getString(R.string.about_release_notes)
         AlertDialog.Builder(requireContext())
             .setTitle(title)
                 .setMessage(message)
