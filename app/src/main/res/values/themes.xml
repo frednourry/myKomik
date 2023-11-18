@@ -1,11 +1,17 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyKomik" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.MyKomik" parent="Theme.MaterialComponents.DayNight.NoActionBar.Bridge">
+        <!--item name="android:statusBarColor">@color/custom_banner</item-->
     </style>
 
-    <style name="Theme.MyKomik.ToolbarTheme" parent="@style/ThemeOverlay.MaterialComponents.Toolbar.Primary">
+    <!--style name="Theme.MyKomik.ToolbarTheme" parent="ThemeOverlay.MaterialComponents.Toolbar.Primary"-->
+    <style name="Theme.MyKomik.ToolbarTheme" parent="Theme.MaterialComponents.DayNight">
         <!-- Customize color of navigation drawer icon and back arrow -->
-        <item name="colorControlNormal">@color/white</item>
+        <!--item name="colorControlNormal">@color/custom_text</item-->
+    </style>
+
+    <style name="CustomAlertDialog" parent="Theme.AppCompat.DayNight.Dialog.MinWidth">
+        <item name="android:windowIsFloating">true</item>   <!-- KEEP IT (could change the windows size...)-->
     </style>
 
 </resources>

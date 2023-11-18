@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
-import android.text.Html
 import android.view.*
 import android.widget.*
 import androidx.activity.addCallback
@@ -590,6 +589,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             return
 
         val alert = AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.change_root_directory))
             .setMessage(R.string.ask_change_root_directory)
             .setPositiveButton(R.string.ok) { _,_ -> askTreeUriPermission() }
             .setNegativeButton(android.R.string.cancel) { _,_ -> }
@@ -603,6 +603,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             return
 
         val alert = AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.empty_cache))
             .setMessage(R.string.ask_clear_cache)
             .setPositiveButton(R.string.ok) { _,_ ->
                 clearCache()

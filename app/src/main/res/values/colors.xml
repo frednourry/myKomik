@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
     <color name="black">#FF000000</color>
+    <color name="custom_dialog_box_background">#B0B0B0</color>
+-->
     <color name="white">#FFFFFFFF</color>
+    <color name="darken_tint_icon">#505050</color>
+    <color name="semi_transparent">#33888888</color>
     <color name="darkgrey">#505050</color>
     <color name="lightgrey">#909090</color>
     <color name="blue">#0000FF</color>
-    <color name="semi_transparent">#33888888</color>
-    <color name="darken_tint_icon">#505050</color>
-    <color name="custom_dialog_box_background">#B0B0B0</color>
+
+    <color name="custom_background">#f1f1ec</color>
+    <color name="custom_banner">#e2e3dc</color>
+    <color name="custom_title">#406835</color>
+    <color name="custom_text">#1a1c18</color>
+    <color name="custom_subtext">#43483f</color>
+    <color name="custom_check_background_selected">#406835</color>
+    <color name="custom_check_button_selected">#bfefb0</color>
+    <color name="custom_check_background_unselected">#666c62</color>
+    <color name="custom_check_button_unselected">#a7ada1</color>
+
 </resources>

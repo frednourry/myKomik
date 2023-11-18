@@ -30,8 +30,6 @@ class MainActivity : AppCompatActivity() {
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        binding.toolbar.setTitleTextColor(getColor(R.color.white))
-
         // Create the IdleController
         IdleController.getInstance().initialize(this)
 

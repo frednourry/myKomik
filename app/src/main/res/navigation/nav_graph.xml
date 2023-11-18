@@ -20,7 +20,7 @@
     <fragment
         android:id="@+id/pageSliderFragment"
         android:name="fr.nourry.mykomik.pageslider.PageSliderFragment"
-        android:label="Slider"
+        android:label=""
         tools:layout="@layout/fragment_page_slider">
         <argument
             android:name="comic"

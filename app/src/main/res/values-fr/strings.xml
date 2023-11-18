@@ -7,7 +7,7 @@
     <string name="choose_root_directory_the_first_time">Veuillez sélectionner le répertoire contenant vos comics</string>
     <string name="change_root_directory">Changer le répertoire racine</string>
     <string name="ask_change_root_directory">Voulez-vous vraiment changer le répertoire racine?</string>
-    <string name="ask_clear_cache">Voulez-vous vraiment vider le cacher?</string>
+    <string name="ask_clear_cache">Voulez-vous vraiment vider le cache?</string>
     <string name="ask_delete_this_file">Voulez-vous vraiment supprimer ce fichier?</string>
     <string name="ask_delete_files">Voulez-vous vraiment supprimer les %1$d fichiers suivant?</string>
     <string name="no_file_selected">Pas de fichier sélectionné!</string>

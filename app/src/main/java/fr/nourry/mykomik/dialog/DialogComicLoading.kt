@@ -45,9 +45,7 @@ class DialogComicLoading() : DialogFragment() {
             .setTitle("Loading comic...")
             .setView(myView)
         val alertDialog = builder.create()
-        this.setStyle(STYLE_NO_TITLE, android.R.style.Theme_Material_Dialog_MinWidth)
-        alertDialog.window?.setBackgroundDrawable(ColorDrawable(ContextCompat.getColor(requireContext(), R.color.custom_dialog_box_background)))
-        alertDialog.window?.setDimAmount(0f)
+//        alertDialog.window?.setDimAmount(0f)
 
         return alertDialog
     }
