@@ -8,6 +8,7 @@
     android:paddingStart="10dp"
     android:paddingBottom="10dp"
     android:orientation="vertical"
+    android:background="?attr/colorBackgroundFloating"
     android:theme="@style/ThemeOverlay.AppCompat.DayNight">
 
     <LinearLayout
