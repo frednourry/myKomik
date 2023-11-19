@@ -14,12 +14,14 @@ import fr.nourry.mykomik.database.DATABASE_NAME
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.pageslider.DisplayOption
 import fr.nourry.mykomik.utils.PhysicalConstants
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 
 class App: Application() {
 
     companion object {
+        const val TAG = "App"
+
         lateinit var appContext: Context
         lateinit var physicalConstants: PhysicalConstants
         lateinit var db : AppDatabase
@@ -47,12 +49,11 @@ class App: Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Timber.plant(Timber.DebugTree())
         appContext = this
 
         // Initialize my 7z lib
         FnyLib7z.getInstance().initialize(appContext)
-        Timber.v("7z version : "+ FnyLib7z.get7zVersionInfo())
+        Log.v(TAG,"7z version : "+ FnyLib7z.get7zVersionInfo())
 
         physicalConstants = PhysicalConstants.newInstance(appContext)
 

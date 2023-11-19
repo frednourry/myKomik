@@ -5,7 +5,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
 import fr.nourry.mykomik.database.ComicEntry
-import timber.log.Timber
+import android.util.Log
 import java.io.*
 import java.net.URLDecoder
 import java.util.*
@@ -28,7 +28,7 @@ fun getFilesInDirectory(dir:File) : Array<File> {
 
 // Delete files in a directory
 fun clearFilesInDir(dir:File) {
-    Timber.v("clearFilesInDir(${dir.absoluteFile})")
+    Log.v("FileSystem","clearFilesInDir(${dir.absoluteFile})")
     if (dir.exists() && dir.isDirectory) {
         val list = dir.listFiles()
         if (list != null) {
@@ -43,7 +43,7 @@ fun clearFilesInDir(dir:File) {
 
 // Delete a file (a simple file or a directory)
 fun deleteFile(f:File): Boolean {
-    Timber.v("deleteFile(${f.absoluteFile})")
+    Log.v("FileSystem","deleteFile(${f.absoluteFile})")
     if (f.exists()) {
         try {
             if (f.isDirectory) {
@@ -55,7 +55,7 @@ fun deleteFile(f:File): Boolean {
             }
             return f.delete()
         } catch (e: SecurityException) {
-            Timber.e("Error while deleting a file")
+            Log.e("FileSystem","Error while deleting a file")
             e.printStackTrace()
         }
     }
@@ -66,7 +66,7 @@ fun deleteComic(context:Context, comic:ComicEntry):Boolean {
     try {
         return DocumentsContract.deleteDocument(context.contentResolver, comic.uri)
     } catch (e:Exception) {
-        Timber.w("deleteComic:: error while deleting comic : ${comic.uri}")
+        Log.w("FileSystem","deleteComic:: error while deleting comic : ${comic.uri}")
         e.printStackTrace()
         return false
     }
@@ -80,13 +80,13 @@ fun fileRename(src:File, dest:File):Boolean {
 fun createDirectory(path:String) {
     val dir = File(path)
     if (dir.exists()) {
-        Timber.v("createDirectory:: $path already exists")
+        Log.v("FileSystem","createDirectory:: $path already exists")
         return
     } else {
         if (dir.mkdirs()) {
-            Timber.v("createDirectory:: $path created")
+            Log.v("FileSystem","createDirectory:: $path created")
         } else {
-            Timber.w("createDirectory:: $path :: error while creating")
+            Log.w("FileSystem","createDirectory:: $path :: error while creating")
         }
     }
 }
@@ -97,7 +97,7 @@ fun getSizeInMo(size:Long): Float {
 
 // Build a path from the rootUri (included) to the currentUri (included too)
 fun getLocalDirName(rootTreeUri:Uri?, currentUri:Uri?):String {
-    Timber.d("getLocalDirName rootTreeUri=$rootTreeUri currentUri=$currentUri")
+    Log.d("FileSystem","getLocalDirName rootTreeUri=$rootTreeUri currentUri=$currentUri")
     if (currentUri != null && rootTreeUri != null) {
         val rootName = getLocalName(rootTreeUri)
 
@@ -119,7 +119,7 @@ fun getLocalName(uri:Uri?):String {
     if (uri != null) {
         val str = URLDecoder.decode(uri.lastPathSegment, "utf-8")
         val lastSlash = str.lastIndexOf('/')
-        Timber.d("    getLocalName return ${str.substring(lastSlash)}")
+        Log.d("FileSystem","    getLocalName return ${str.substring(lastSlash)}")
         return str.substring(lastSlash)
     }
     return ""
@@ -143,7 +143,7 @@ fun getExtension(filename:String): String {
 fun stripExtension(filename:String): String = filename.substring(0, filename.lastIndexOf('.'))
 
 fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):ComicEntry? {
-        Timber.v("getComicFromUri uri = $uri")
+        Log.v("FileSystem","getComicFromUri uri = $uri")
 
         if (uri == null)
             return null
@@ -166,7 +166,7 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):Comic
                     val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
                     val lastModified = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)?:4)
 
-                    Timber.v("getComicFromUri:: -> name=$name size=$size mime=$mime lastModified=$lastModified")
+                    Log.v("FileSystem","getComicFromUri:: -> name=$name size=$size mime=$mime lastModified=$lastModified")
                     return if (DocumentsContract.Document.MIME_TYPE_DIR == mime) {
                         if (bOnlyFile)
                             null
@@ -178,16 +178,16 @@ fun getComicFromUri(context: Context, uri:Uri?, bOnlyFile:Boolean = false):Comic
                 }
             }
         } catch (e: java.lang.Exception) {
-            Timber.w("getComicFromUri $uri Failed query: $e")
+            Log.w("FileSystem","getComicFromUri $uri Failed query: $e")
         } finally {
             c?.close()
         }
 
-        Timber.w("getComicFromUri COMIC NOT FOUND ! $uri ")
+        Log.w("FileSystem","getComicFromUri COMIC NOT FOUND ! $uri ")
         return null
     }
 fun getComicFromIntentUri(context: Context, uri:Uri?):ComicEntry? {
-    Timber.v("getComicFromUri_content uri = $uri")
+    Log.v("FileSystem","getComicFromUri_content uri = $uri")
 
     if (uri == null)
         return null
@@ -207,25 +207,25 @@ fun getComicFromIntentUri(context: Context, uri:Uri?):ComicEntry? {
             while (c.moveToNext()) {
                 val name = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1)
                 val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
-                Timber.v("getComicFromIntentUri:: -> name=$name size=$size")
+                Log.v("FileSystem","getComicFromIntentUri:: -> name=$name size=$size")
                 val extension = getExtension(name)
                 return ComicEntry(uri, "", name,extension, 0, size, false)
             }
         }
     } catch (e: java.lang.Exception) {
-        Timber.w("getComicFromIntentUri $uri Failed query: $e")
+        Log.w("FileSystem","getComicFromIntentUri $uri Failed query: $e")
     } finally {
         c?.close()
     }
 
-    Timber.w("getComicFromIntentUri COMIC NOT FOUND ! $uri ")
+    Log.w("FileSystem","getComicFromIntentUri COMIC NOT FOUND ! $uri ")
     return null
 }
 
 // Retrieves a list of comics uri order by its type and name
 // Precond: the given uri is a directory
 fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, uri:Uri, bOnlyFile:Boolean = false): List<ComicEntry> {
-    Timber.v("getComicEntriesFromUri uri = $uri")
+    Log.v("FileSystem","getComicEntriesFromUri uri = $uri")
 
     val docId = DocumentsContract.getDocumentId(uri)
     val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, docId)
@@ -254,7 +254,7 @@ fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, ur
                 val lastModified = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)?:4)
 
                 val documentUri = DocumentsContract.buildDocumentUriUsingTree(uri, documentId)
-                Timber.v("getComicEntriesFromUri :: documentUri = $documentUri")
+                Log.v("FileSystem","getComicEntriesFromUri :: documentUri = $documentUri")
 
                 if (!bOnlyFile && DocumentsContract.Document.MIME_TYPE_DIR == mime) {
                     resultDirs.add(ComicEntry(documentUri, uri.toString(), name, "", lastModified?.toLong() ?: 0L, 0, true))
@@ -275,7 +275,7 @@ fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, ur
             results = tempResultDirs.plus(tempResultComics)
         }
     } catch (e: java.lang.Exception) {
-        Timber.w("getComicEntriesFromUri :: Failed query: $e")
+        Log.w("FileSystem","getComicEntriesFromUri :: Failed query: $e")
     } finally {
         c?.close()
     }
@@ -320,7 +320,7 @@ fun copyFileFromUri(context:Context, uri: Uri, file:File): File? {
             }
         }
     } catch (e:Exception) {
-        Timber.e(e.stackTraceToString())
+        Log.e("FileSystem",e.stackTraceToString())
         return null
     }
     return file
@@ -341,7 +341,7 @@ fun File.copyTo(file: File) {
 
 // Retrieves a list of sub-directory URIs (and their children)
 fun getDirectoryUrisFromUri(context: Context, uri:Uri): List<Uri> {
-    Timber.v("getDirectoryUrisFromUri uri = $uri")
+    Log.v("FileSystem","getDirectoryUrisFromUri uri = $uri")
 
     val docId = DocumentsContract.getDocumentId(uri)
     val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(uri, docId)
@@ -384,7 +384,7 @@ fun getDirectoryUrisFromUri(context: Context, uri:Uri): List<Uri> {
             results = results.plus(uri)
         }
     } catch (e: java.lang.Exception) {
-        Timber.w("getDirectoryUrisFromUri :: Failed query: $e")
+        Log.w("FileSystem","getDirectoryUrisFromUri :: Failed query: $e")
     } finally {
         c?.close()
     }

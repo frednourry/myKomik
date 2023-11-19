@@ -9,16 +9,20 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import fr.nourry.mykomik.databinding.ActivityMainBinding
 import fr.nourry.mykomik.loader.IdleController
-import timber.log.Timber
+import android.util.Log
 
 
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        const val TAG = "MainActivity"
+    }
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Timber.d("onCreate")
+        Log.d(TAG,"onCreate")
         super.onCreate(savedInstanceState)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -35,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
 /*        val comicEntryDao = App.db.comicEntryDao()
         comicEntryDao.getAllComicEntries().observe(this) { comicEntries ->
-            Timber.d("comicEntries = $comicEntries")
+            Log.d(TAG,"comicEntries = $comicEntries")
         }*/
 
         // To locate the origin of the message : "A resource failed to call close." - just look for "StrictMode" in logs

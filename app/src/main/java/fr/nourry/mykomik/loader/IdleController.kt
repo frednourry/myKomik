@@ -10,13 +10,15 @@ import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.getComicEntriesFromUri
 import fr.nourry.mykomik.utils.getComicFromUri
 import fr.nourry.mykomik.utils.getDirectoryUrisFromUri
-import timber.log.Timber
+import android.util.Log
 
 /**
  * To watch the user interactions and to tasks when the user do nothing
  */
 class IdleController() : ComicLoadingProgressListener {
     companion object {
+        const val TAG = "IdleController"
+
         private const val defaultIdleDelay = 2000L        // in milliseconds
 
         private var mInstance: IdleController? = null
@@ -45,7 +47,7 @@ class IdleController() : ComicLoadingProgressListener {
 
 
     fun initialize(context:Context) {
-        Timber.v("initialize")
+        Log.v(TAG,"initialize")
         this.context = context
         idleDelay = defaultIdleDelay
     }
@@ -75,7 +77,7 @@ class IdleController() : ComicLoadingProgressListener {
 
 
     private fun onIdle() {
-        Timber.v("onIdle")
+        Log.v(TAG,"onIdle")
         if (!::context.isInitialized) return
 
         // Can we generate the thumbnails in background?
@@ -95,7 +97,7 @@ class IdleController() : ComicLoadingProgressListener {
                 if (uriList.isNotEmpty()) {
                     dirUriList = uriList as MutableList<Uri>
                 }
-                Timber.v("dirUriList = $dirUriList")
+                Log.v(TAG,"dirUriList = $dirUriList")
             }
 
             // Can we continue?
@@ -114,8 +116,8 @@ class IdleController() : ComicLoadingProgressListener {
                     proceedLoadNextComicNext()
                     return
                 }
-                Timber.v("currentUri = $currentUri")
-                Timber.v("currentComicList = $currentComicList")
+                Log.v(TAG,"currentUri = $currentUri")
+                Log.v(TAG,"currentComicList = $currentComicList")
             }
 
             // Can we continue?
@@ -129,7 +131,7 @@ class IdleController() : ComicLoadingProgressListener {
      * Called when a comic cover thumbnail is generated
      */
     override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-        Timber.v("onRetrieved comic=${comic.name} path=$path")
+        Log.v(TAG,"onRetrieved comic=${comic.name} path=$path")
 
         // Can we continue?
         if (!isIdle) return
@@ -147,7 +149,7 @@ class IdleController() : ComicLoadingProgressListener {
             // Choose another directory (if any)
             if (dirUriList.isEmpty()) {
                 loadCompleted = true
-                Timber.v("  **** LOAD COMPLETED !! ****")
+                Log.v(TAG,"  **** LOAD COMPLETED !! ****")
                 return
             } else {
                 while (currentComicList.isEmpty()) {
@@ -163,9 +165,9 @@ class IdleController() : ComicLoadingProgressListener {
                     // Add this uri to generate an directory icon
                     currentComicList.add(getComicFromUri(App.appContext, currentUri)!!)
 
-                    Timber.v("new currentUri = $currentUri")
-                    Timber.v("new currentComicList = $currentComicList")
-                    Timber.v("dirUriList = $dirUriList")
+                    Log.v(TAG,"new currentUri = $currentUri")
+                    Log.v(TAG,"new currentComicList = $currentComicList")
+                    Log.v(TAG,"dirUriList = $dirUriList")
 
                     // Can we continue?
                     if (!isIdle) return
@@ -177,7 +179,7 @@ class IdleController() : ComicLoadingProgressListener {
                     ComicLoadingManager.getInstance().loadComicEntryCover(newComic, this)
                 } else {
                     loadCompleted = true
-                    Timber.v("  **** LOAD COMPLETED !! ****")
+                    Log.v(TAG,"  **** LOAD COMPLETED !! ****")
                     return
                 }
             }

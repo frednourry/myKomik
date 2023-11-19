@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
 import fr.nourry.mykomik.R
 import fr.nourry.mykomik.loader.IdleController
-import timber.log.Timber
+import android.util.Log
 
 
 data class AppUserPreferences(var readingDirection:String,
@@ -50,6 +50,8 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     private var sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 
     companion object {
+        const val TAG = "UserPreferences"
+
         private var mInstance: UserPreferences? = null
         fun getInstance(context:Context): UserPreferences {
             if (mInstance == null) {
@@ -69,7 +71,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
 
     private fun loadUserPreferences() {
         val temp = sharedPreferences.getString(readingDirectionLabel, ReadingDirectionLTR)
-        Timber.i("loadUserPreferences:: $temp")
+        Log.i(TAG,"loadUserPreferences:: $temp")
         appUserPreferences.readingDirection = temp ?: ReadingDirectionLTR
 
         appUserPreferences.hidePageNumber = sharedPreferences.getBoolean(hidePageNumberLabel, false)
@@ -81,12 +83,12 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     }
 
     fun saveAppUserPreference() {
-        Timber.v("saveAppUserPreference")
+        Log.v(TAG,"saveAppUserPreference")
         appUserPreferencesSave = appUserPreferences.copy()
     }
 
     fun restoreAppUserPreference() {
-        Timber.v("restoreAppUserPreference")
+        Log.v(TAG,"restoreAppUserPreference")
         if (appUserPreferencesSave != null) {
             appUserPreferences = appUserPreferencesSave!!
 
@@ -103,7 +105,7 @@ class UserPreferences(val context:Context):SharedPreferences.OnSharedPreferenceC
     }
 
     override fun onSharedPreferenceChanged(sharePref: SharedPreferences?, key: String?) {
-        Timber.v("loadUserPreferences:: onSharedPreferenceChanged key==$key")
+        Log.v(TAG,"loadUserPreferences:: onSharedPreferenceChanged key==$key")
 
         if (key != null && sharePref!= null && sharePref == sharedPreferences) {
             when (key) {

@@ -5,7 +5,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.viewpager.widget.ViewPager
-import timber.log.Timber
+import android.util.Log
 
 /**
  * Override ViewPager to be able to lock the scrolling
@@ -13,6 +13,9 @@ import timber.log.Timber
  */
 
 class LockableViewPager : ViewPager {
+    companion object {
+        const val TAG = "LockableViewPager"
+    }
 
     constructor(context: Context?) : super(context!!) {}
     constructor(context: Context?, attrs: AttributeSet?) : super(context!!, attrs) {}
@@ -29,7 +32,7 @@ class LockableViewPager : ViewPager {
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        Timber.v("onInterceptTouchEvent : ev=$ev")
+        Log.v(TAG,"onInterceptTouchEvent : ev=$ev")
         if (ev.action == MotionEvent.ACTION_DOWN) {
             lastPosX = ev.rawX
             lastResultAllowParentToScroll = isScrollAllowedByAdapter(0)
@@ -38,7 +41,7 @@ class LockableViewPager : ViewPager {
             lastPosX = ev.rawX
             val temp = isScrollAllowedByAdapter(deltaX.toInt())
             if (temp && !lastResultAllowParentToScroll) {
-//                Timber.v("    *************** IS NOW ALLOWED **********")
+//                Log.v(TAG,"    *************** IS NOW ALLOWED **********")
                 // Until now, we block the scrolling, but now, it will be allowed
                 // Needed to reset ViewPager.mLastMotionX here with the current position,
                 // or else the scrolling will start from the position we block the scroll, not the current position (so a jerk will be visible)
@@ -50,7 +53,7 @@ class LockableViewPager : ViewPager {
                 // END HACK
 
             } /*else if (!temp && lastResultAllowParentToScroll) {
-                Timber.v("    *************** IS NOW NOT ALLOWED **********")
+                Log.v(TAG,"    *************** IS NOW NOT ALLOWED **********")
             }*/
 
             lastResultAllowParentToScroll = temp
@@ -59,12 +62,12 @@ class LockableViewPager : ViewPager {
         return super.onInterceptTouchEvent(ev)
     }
     override fun canScrollHorizontally(direction: Int): Boolean {
-//        Timber.v("canScrollHorizontally : direction=$direction")
+//        Log.v(TAG,"canScrollHorizontally : direction=$direction")
         return isScrollAllowedByAdapter(direction) && super.canScrollHorizontally(direction)
     }
 
     override fun canScroll(v: View?, checkV: Boolean, dx: Int, x: Int, y: Int): Boolean {
-//        Timber.v("canScroll : checkV=$checkV dx=$dx x=$x y=$y")
+//        Log.v(TAG,"canScroll : checkV=$checkV dx=$dx x=$x y=$y")
         return isScrollAllowedByAdapter(dx) && super.canScroll(v, checkV, dx, x, y)
     }
 

@@ -7,7 +7,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import fr.nourry.mykomik.utils.BitmapUtil
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 
 /**
@@ -15,6 +15,8 @@ import java.io.File
  */
 class GetImageDirWorker (context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
+        const val TAG = "GetImageDirWorker"
+
         const val MAX_COVER_IN_THUMBNAIL            = 3
 
         const val KEY_THUMBNAIL_WIDTH               = "thumbnailWidth"
@@ -28,7 +30,7 @@ class GetImageDirWorker (context: Context, workerParams: WorkerParameters): Work
     }
 
     override fun doWork(): Result {
-        Timber.d("GetImageDirWorker.doWork")
+        Log.d(TAG,"GetImageDirWorker.doWork")
         val thumbnailWidth = inputData.getInt(KEY_THUMBNAIL_WIDTH, 200)
         val thumbnailHeight = inputData.getInt(KEY_THUMBNAIL_HEIGHT, 220)
 
@@ -38,7 +40,7 @@ class GetImageDirWorker (context: Context, workerParams: WorkerParameters): Work
         val comicPath3 = inputData.getString(KEY_COMIC_PATH_3)
         val comicPath4 = inputData.getString(KEY_COMIC_PATH_4)
         val destPath = inputData.getString(KEY_DESTINATION_DIRECTORY_PATH)
-        Timber.d("GetImageDirWorker.doWork :: comicPath0=$comicPath0 comicPath1=$comicPath1 comicPath2=$comicPath2 comicPath3=$comicPath3 comicPath4=$comicPath4 destPath=$destPath")
+        Log.d(TAG,"GetImageDirWorker.doWork :: comicPath0=$comicPath0 comicPath1=$comicPath1 comicPath2=$comicPath2 comicPath3=$comicPath3 comicPath4=$comicPath4 destPath=$destPath")
 
         val pathList = mutableListOf<String>()
         if (comicPath0 != null && comicPath0 != "")  pathList.add(comicPath0)

@@ -13,13 +13,15 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import fr.nourry.mykomik.R
-import timber.log.Timber
+import android.util.Log
 
 
 class DialogComicLoading() : DialogFragment() {
     lateinit var progressBar: ProgressBar
 
     companion object {
+        const val TAG = "DialogComicLoading"
+
         private var myInstance: DialogComicLoading? = null
         fun newInstance(): DialogComicLoading {
             if (myInstance == null) {
@@ -30,7 +32,7 @@ class DialogComicLoading() : DialogFragment() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        Timber.d("onCreateDialog")
+        Log.d(TAG,"onCreateDialog")
 
         // Get the layout inflater
         val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater

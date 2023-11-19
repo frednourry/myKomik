@@ -43,7 +43,7 @@ import fr.nourry.mykomik.utils.getComicFromUri
 import fr.nourry.mykomik.utils.getLocalDirName
 import fr.nourry.mykomik.utils.getReadableDate
 import fr.nourry.mykomik.utils.getSizeInMo
-import timber.log.Timber
+import android.util.Log
 import java.io.IOException
 
 
@@ -63,6 +63,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private val buttonClickAnimationDuration = 200L
 
     companion object {
+        const val TAG = "PageSliderFragment"
+
         var PERMISSIONS_TO_WRITE = arrayOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
@@ -174,10 +176,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             // Handle the back button event
-            Timber.v("BACK PRESSED")
+            Log.v(TAG,"BACK PRESSED")
 
             if (!handleBackPressed() && !NavHostFragment.findNavController(thisFragment).popBackStack()) {
-                Timber.i("    No more stack, so exit!")
+                Log.i(TAG,"    No more stack, so exit!")
                 activity?.finish()
             }
         }
@@ -186,25 +188,25 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         if (::currentComic.isInitialized) {
             // We were already here, so no need to use PageSliderFragmentArgs.fromBundle(requireArguments())
-            Timber.w("Using last value of currentComic($currentComic). Not using args.")
+            Log.w(TAG,"Using last value of currentComic($currentComic). Not using args.")
             bRefreshSelectorSliderAdapter = true
             bRefreshSliderAdapter = true
         } else {
             if (App.appIntentUri != null) {
-                Timber.i("Using Intent(uri) to set currentComic")
+                Log.i(TAG,"Using Intent(uri) to set currentComic")
                 val tempComic = getComicFromIntentUri(requireContext(), App.appIntentUri)
                 if (tempComic != null)  {
                     currentComic = tempComic
                     App.isSimpleViewerMode = true
                 } else {
                     // TODO error message
-                    Timber.e("Couldn't retrieve comic from uri:: ${App.appIntentUri}")
+                    Log.e(TAG,"Couldn't retrieve comic from uri:: ${App.appIntentUri}")
                 }
 
                 currentPage = 0
             } else {
 
-                Timber.i("Using args to set currentComic and currentPage")
+                Log.i(TAG,"Using args to set currentComic and currentPage")
                 val args = PageSliderFragmentArgs.fromBundle(requireArguments())
 
                 // Check if a comic path was saved in savedInstanceState[STATE_CURRENT_COMIC] (when rotating for example)
@@ -228,7 +230,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
-            Timber.i("PageSliderFragment::observer change state !!")
+            Log.i(TAG,"PageSliderFragment::observer change state !!")
             updateUI(it!!)
         }
         viewModel.initialize(currentComic, currentPage/*, savedInstanceState == null*/)
@@ -236,7 +238,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         // LiveData for the ViewModel :
         //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
         viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
-//            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
+//            Log.w(TAG,"UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
             viewModel.updateComicEntriesFromDAO(requireContext(), comicEntriesFromDAO)
         }
         // End LiveDatas
@@ -251,7 +253,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun changeCurrentComic(comic:ComicEntry) {
-        Timber.i("changeCurrentComic")
+        Log.i(TAG,"changeCurrentComic")
         currentComic = comic
 
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
@@ -282,7 +284,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
     // Update UI according to the model state events
     private fun updateUI(state: PageSliderViewModelState) {
-        Timber.i("Calling updateUI, switch state=${state::class}")
+        Log.i(TAG,"Calling updateUI, switch state=${state::class}")
         return when(state) {
             is PageSliderViewModelState.Error -> handleStateError(state)
             is PageSliderViewModelState.Init -> handleStateInit(state)
@@ -294,11 +296,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun handleStateCleaned(state: PageSliderViewModelState.Cleaned) {
-        Timber.i("handleStateCleaned")
+        Log.i(TAG,"handleStateCleaned")
     }
 
     private fun handleStateLoading(state: PageSliderViewModelState.Loading) {
-        Timber.i("handleStateLoading")
+        Log.i(TAG,"handleStateLoading")
 
         lockableViewPager.visibility = View.INVISIBLE
         binding.zoomOptionLayout.visibility = View.INVISIBLE
@@ -311,7 +313,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun handleStateReady(state: PageSliderViewModelState.Ready) {
-        Timber.i("handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters} bRefreshSliderAdapter=$bRefreshSliderAdapter bRefreshSelectorSliderAdapter=$bRefreshSelectorSliderAdapter")
+        Log.i(TAG,"handleStateReady nbPages=${state.comic.nbPages} currentPage=${state.currentPage} shouldUpdateAdapters=${state.shouldUpdateAdapters} bRefreshSliderAdapter=$bRefreshSliderAdapter bRefreshSelectorSliderAdapter=$bRefreshSelectorSliderAdapter")
         var shouldUpdatePageSliderAdapter = state.shouldUpdateAdapters
         val shouldUpdatePageSelectorSliderAdapter = state.shouldUpdateAdapters
 
@@ -385,7 +387,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun handleStatePageSelection(state: PageSliderViewModelState.PageSelection) {
-        Timber.i("handleStatePageSelection currentPage=${state.currentPage}")
+        Log.i(TAG,"handleStatePageSelection currentPage=${state.currentPage}")
 
         // Ask to refresh the menu (for the previous and next items...)
         requireActivity().invalidateOptionsMenu()
@@ -402,45 +404,45 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             binding.recyclerViewPageSelector.overScrollMode = View.OVER_SCROLL_ALWAYS
 
             binding.cachePageSelectorLayout.setOnClickListener {
-                Timber.d("onClick background")
+                Log.d(TAG,"onClick background")
                 viewModel.cancelPageSelector()
             }
             binding.buttonGoFirst.setOnClickListener {
-                Timber.d("onClick buttonGoFirst ${it.width} ${it.height}")
+                Log.d(TAG,"onClick buttonGoFirst ${it.width} ${it.height}")
                 it.startAnimation(getButtonAnimation(it))
 
                 binding.recyclerViewPageSelector.scrollToPosition(0)
             }
             binding.buttonGoLast.setOnClickListener {
-                Timber.d("onClick buttonGoLast ${it.width} ${it.height}")
+                Log.d(TAG,"onClick buttonGoLast ${it.width} ${it.height}")
                 it.startAnimation(getButtonAnimation(it))
 
                 binding.recyclerViewPageSelector.scrollToPosition(currentComic.nbPages-1)
             }
             binding.buttonFull.setOnClickListener {
-                Timber.d("onClick buttonFull ${it.width} ${it.height}")
+                Log.d(TAG,"onClick buttonFull ${it.width} ${it.height}")
                 onClickDisplayButton(it, DisplayOption.FULL, false)
             }
             binding.buttonMaximizeWidth.setOnClickListener {
-                Timber.d("onClick buttonMaximizeWidth ${it.width} ${it.height}")
+                Log.d(TAG,"onClick buttonMaximizeWidth ${it.width} ${it.height}")
                 onClickDisplayButton(it, DisplayOption.MAXIMIZE_WIDTH, false)
             }
             binding.buttonMaximizeHeight.setOnClickListener {
-                Timber.d("onClick buttonMaximizeHeight ${it.width} ${it.height}")
+                Log.d(TAG,"onClick buttonMaximizeHeight ${it.width} ${it.height}")
                 onClickDisplayButton(it, DisplayOption.MAXIMIZE_HEIGHT, false)
             }
             binding.buttonFull.setOnLongClickListener{
-                Timber.d("onLongClick buttonFull")
+                Log.d(TAG,"onLongClick buttonFull")
                 onClickDisplayButton(it, DisplayOption.FULL, true)
                 true
             }
             binding.buttonMaximizeWidth.setOnLongClickListener{
-                Timber.d("onLongClick buttonMaximizeWidth")
+                Log.d(TAG,"onLongClick buttonMaximizeWidth")
                 onClickDisplayButton(it, DisplayOption.MAXIMIZE_WIDTH, true)
                 true
             }
             binding.buttonMaximizeHeight.setOnLongClickListener{
-                Timber.d("onLongClick buttonMaximizeHeight")
+                Log.d(TAG,"onLongClick buttonMaximizeHeight")
                 onClickDisplayButton(it, DisplayOption.MAXIMIZE_HEIGHT, true)
                 true
             }
@@ -454,7 +456,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun onClickDisplayButton(btnView: View, dOption: DisplayOption, isLocked: Boolean) {
-        Timber.d("onClickDisplayButton dOption=$dOption isLocked=$isLocked")
+        Log.d(TAG,"onClickDisplayButton dOption=$dOption isLocked=$isLocked")
         val oldDisplayOptionLocked = displayOptionLocked
 
         // Update internal variable
@@ -493,7 +495,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         btn.background = ContextCompat.getDrawable(requireContext(), R.drawable.selectable_round_button_wb)
     }
     private fun updateDisplayButtons(useLock:Boolean = true) {
-        Timber.i("updateDisplayButtons")
+        Log.i(TAG,"updateDisplayButtons")
         val otherButton1 : ImageButton
         val otherButton2 : ImageButton
         val selectedButton : ImageButton
@@ -539,7 +541,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun showPageSelector() {
-        Timber.d("showPageSelector")
+        Log.d(TAG,"showPageSelector")
 
         // Hide/show buttons?
 /*
@@ -548,18 +550,18 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val measuredHeight = binding.recyclerViewPageSelector.measuredHeight    // Save measuredHeight before recompute it
         binding.recyclerViewPageSelector.measure(View.MeasureSpec.makeMeasureSpec(binding.recyclerViewPageSelector.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
         val pageSelectorTotalHeight = binding.recyclerViewPageSelector.measuredHeight
-        Timber.v("   measuredHeight = $measuredHeight pageSelectorTotalHeight = $pageSelectorTotalHeight")
+        Log.v(TAG,"   measuredHeight = $measuredHeight pageSelectorTotalHeight = $pageSelectorTotalHeight")
 
         val shouldHideButtons = pageSelectorTotalHeight<measuredHeight
         // END WARNING
 */
         val shouldHideButtons = currentComic.nbPages<3
         if (shouldHideButtons) {
-            Timber.v("   showPageSelector :: hide buttons")
+            Log.v(TAG,"   showPageSelector :: hide buttons")
             binding.buttonGoFirst.visibility = View.INVISIBLE
             binding.buttonGoLast.visibility = View.INVISIBLE
         } else {
-            Timber.v("   showPageSelector :: show buttons")
+            Log.v(TAG,"   showPageSelector :: show buttons")
             binding.buttonGoFirst.visibility = View.VISIBLE
             binding.buttonGoLast.visibility = View.VISIBLE
         }
@@ -596,7 +598,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun hidePageSelector() {
-        Timber.d("hidePageSelector")
+        Log.d(TAG,"hidePageSelector")
         (requireActivity() as AppCompatActivity).supportActionBar?.hide()
 
         // pageSelectorLayout animation
@@ -627,11 +629,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun handleStateInit(state: PageSliderViewModelState.Init) {
-        Timber.i("handleStateInit")
+        Log.i(TAG,"handleStateInit")
     }
 
     private fun handleStateError(state: PageSliderViewModelState.Error) {
-        Timber.i("handleStateError")
+        Log.i(TAG,"handleStateError")
         dialogComicLoading.dismiss()
         val alert = AlertDialog.Builder(requireContext())
             .setMessage(resources.getString(R.string.opening_error, state.errorMessage))
@@ -653,7 +655,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun askNextComic() {
-        Timber.d("askNextComic")
+        Log.d(TAG,"askNextComic")
         val thisFragment = this
         val alert: AlertDialog = if (!viewModel.hasNextComic()) {
             AlertDialog.Builder(requireContext())
@@ -666,7 +668,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                             .setMessage(resources.getString(R.string.ask_read_next_issue))
                             .setPositiveButton(R.string.ok) { _, _ ->
                                 val newComic = viewModel.getNextComic()
-                                Timber.d("    newComic=$newComic")
+                                Log.d(TAG,"    newComic=$newComic")
                                 if (newComic != null && newComic != currentComic) {
                                     changeCurrentComic(newComic)
                                 }
@@ -680,7 +682,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun askPreviousComic() {
-        Timber.d("askPreviousComic")
+        Log.d(TAG,"askPreviousComic")
         val thisFragment = this
         val alert: AlertDialog = if (!viewModel.hasPreviousComic()) {
             AlertDialog.Builder(requireContext())
@@ -693,7 +695,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
                 .setMessage(resources.getString(R.string.ask_read_previous_issue))
                 .setPositiveButton(R.string.ok) { _, _ ->
                     val newComic = viewModel.getPreviousComic()
-                    Timber.d("    newComic=$newComic")
+                    Log.d(TAG,"    newComic=$newComic")
                     if (newComic != null && newComic != currentComic) {
                         changeCurrentComic(newComic)
                     }
@@ -712,18 +714,18 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     override fun onPageDrag(dx:Float, dy:Float) {
-        Timber.i("onPageDrag dx=$dx dy=$dy")
+        Log.i(TAG,"onPageDrag dx=$dx dy=$dy")
         currentScrollingDirection = if (dx>0) -1 else if (dx == 0f) 0 else 1
     }
 
     override fun onPageTap(currentMagnifyImageView:MagnifyImageView, currentPage:Int, x:Float, y:Float) {
-        Timber.i("onPageTap x=$x y=$y")
+        Log.i(TAG,"onPageTap x=$x y=$y")
 
         if (UserPreferences.getInstance(requireContext()).isTappingToChangePage()) {
             // Check if the tap is near the border
             val width = App.physicalConstants.metrics.widthPixels
             val directionLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
-            Timber.i("   onPageTap "+(width*NEXT_PAGE_BORDER_ZONE)+" < $x < "+(width*(1-NEXT_PAGE_BORDER_ZONE)))
+            Log.i(TAG,"   onPageTap "+(width*NEXT_PAGE_BORDER_ZONE)+" < $x < "+(width*(1-NEXT_PAGE_BORDER_ZONE)))
 
             if (x<width*NEXT_PAGE_BORDER_ZONE) {
                 if (directionLTR)
@@ -746,7 +748,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun scrollToNextPage() {
-        Timber.i("scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
+        Log.i(TAG,"scrollToNextPage:: want to go to page "+(currentPage+1)+"/"+(currentComic.nbPages))
         if (currentPage+1<currentComic.nbPages) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
             lockableViewPager.setCurrentItemCustom(currentPage+1, true)
@@ -756,7 +758,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     private fun scrollToPreviousPage() {
-        Timber.i("scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
+        Log.i(TAG,"scrollToPreviousPage:: want to go to page "+(currentPage-1)+"/"+(currentComic.nbPages))
         if (currentPage-1>=0) {
             lastPageBeforeScrolling = currentPage   // Set manually 'lastPageBeforeScrolling' before ask the scrolling
             lockableViewPager.setCurrentItemCustom(currentPage-1, true)
@@ -766,19 +768,19 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     override fun onPageScrollStateChanged(state: Int) {
-        Timber.i("onPageScrollStateChanged state = $state")
+        Log.i(TAG,"onPageScrollStateChanged state = $state")
         if (state == ViewPager.SCROLL_STATE_DRAGGING) {
             lastPageBeforeScrolling = currentPage
         } else if (state == ViewPager.SCROLL_STATE_IDLE) {
-            Timber.i("   lastPageBeforeScrolling=$lastPageBeforeScrolling currentPage=$currentPage")
+            Log.i(TAG,"   lastPageBeforeScrolling=$lastPageBeforeScrolling currentPage=$currentPage")
             // Compare if we change the page
             if (lastPageBeforeScrolling == currentPage) {
                 // We couldn't change the current page
                 if (currentScrollingDirection>0 && (currentPage>=currentComic.nbPages-1)) {
-                    Timber.i(" LAST PAGE: ASK NEW ONE ?")
+                    Log.i(TAG," LAST PAGE: ASK NEW ONE ?")
                     askNextComic()
                 } else if (currentScrollingDirection<0 && (currentPage==0)) {
-                    Timber.i(" FIRST PAGE: ASK PREVIOUS ONE ?")
+                    Log.i(TAG," FIRST PAGE: ASK PREVIOUS ONE ?")
                     askPreviousComic()
                 }
             } else {
@@ -790,11 +792,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
-//        Timber.i("onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
+//        Log.i(TAG,"onPageScrolled position = $position positionOffset=$positionOffset positionOffsetPixels=$positionOffsetPixels")
     }
 
     override fun onPageSelected(position: Int) {
-        Timber.i("onPageSelected currentPage = $position oldPosition = $currentPage")
+        Log.i(TAG,"onPageSelected currentPage = $position oldPosition = $currentPage")
 
         if (::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter.notifyItemChanged(currentPage)
@@ -833,7 +835,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
 
     private fun showComicInformationPopup() {
-        Timber.v("showComicInformationPopup $currentComic")
+        Log.v(TAG,"showComicInformationPopup $currentComic")
         val title = getString(R.string.popup_info_title)
         val message = Html.fromHtml(
                         "<b>"+getString(R.string.popup_info_name)+" : </b>"+currentComic.name + "<br/>\n" +
@@ -886,7 +888,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         val granted = permissions.entries.all {
             it.value == true
         }
-        Timber.v("writingPermissionRequestLauncher: granted = $granted")
+        Log.v(TAG,"writingPermissionRequestLauncher: granted = $granted")
         if (granted) {
             saveCurrentPageInPictureDirectory(pageToSaveAfterRequest)
         } else {

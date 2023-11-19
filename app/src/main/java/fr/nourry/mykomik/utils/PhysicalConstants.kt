@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.DisplayMetrics
 import android.util.TypedValue
-import fr.nourry.mykomik.App
-import timber.log.Timber
 import java.io.File
 
 class PhysicalConstants(context:Context) {

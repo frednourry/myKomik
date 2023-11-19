@@ -12,11 +12,14 @@ import fr.nourry.mykomik.databinding.ItemComicBinding
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.utils.BitmapUtil
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 
 
 class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:OnComicAdapterListener?):RecyclerView.Adapter<BrowserAdapter.ViewHolder>(), View.OnClickListener, View.OnLongClickListener {
+    companion object {
+        const val TAG = "BrowserAdapter"
+    }
 
     inner class ViewHolder(binding: ItemComicBinding) : RecyclerView.ViewHolder(binding.root), ComicLoadingProgressListener {
         val cardView = binding.cardView
@@ -27,7 +30,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
         val percentView = binding.percentView
 
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Timber.d("onRetrieved currentIndex=$currentIndex size=$size path=$path")
+            Log.d(TAG,"onRetrieved currentIndex=$currentIndex size=$size path=$path")
             if (path != "" && File(path).exists()) {
                 // Check if the target is still waiting this image
                 val holderInnerComic = cardView.tag as InnerComicEntry
@@ -39,10 +42,10 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                         imageView.setImageBitmap(bitmap)
                     }
                 } else {
-                    Timber.i("onRetrieved:: To late. This view no longer requires this image...")
+                    Log.i(TAG,"onRetrieved:: To late. This view no longer requires this image...")
                 }
             } else {
-                Timber.i("onRetrieved:: empty path ! (do nothing)")
+                Log.i(TAG,"onRetrieved:: empty path ! (do nothing)")
             }
         }
     }
@@ -118,7 +121,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
     override fun getItemCount(): Int = comics.size
 
     override fun onClick(v: View) {
-        Timber.v("onClick showFilterMode=$showFilterMode")
+        Log.v(TAG,"onClick showFilterMode=$showFilterMode")
 
         val innerComic = v.tag as InnerComicEntry
         if (showFilterMode) {
@@ -131,7 +134,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 arrCheckedItems.remove(innerComic.position)
             listener?.onComicEntrySelected(arrCheckedItems as ArrayList<Int>)
 
-            Timber.v("  arrCheckedItems = $arrCheckedItems")
+            Log.v(TAG,"  arrCheckedItems = $arrCheckedItems")
         } else {
             listener?.onComicEntryClicked(innerComic.comic, innerComic.position)
         }

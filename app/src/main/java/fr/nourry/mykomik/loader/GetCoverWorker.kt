@@ -13,12 +13,14 @@ import androidx.work.workDataOf
 import io.github.frednourry.FnyLib7z
 import fr.nourry.mykomik.utils.*
 import fr.nourry.mykomik.utils.BitmapUtil.Companion.decodeStream
-import timber.log.Timber
+import android.util.Log
 import java.io.*
 
 
 class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(context, workerParams) {
     companion object {
+        const val TAG = "GetCoverWorker"
+
         const val KEY_ARCHIVE_URI                   = "archivePath"
         const val KEY_IMAGE_DESTINATION_PATH        = "imageDestinationPath"
         const val KEY_NB_PAGES                      = "nbPages"
@@ -32,7 +34,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
     private var nbPages = 0
 
     override fun doWork(): Result {
-        Timber.d("GetCoverWorker.doWork")
+        Log.d(TAG,"GetCoverWorker.doWork")
 
         val archivePath = inputData.getString(KEY_ARCHIVE_URI)
         val imageDestinationPath = inputData.getString(KEY_IMAGE_DESTINATION_PATH)
@@ -42,7 +44,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
         val thumbnailInnerImageHeight = inputData.getInt(KEY_THUMBNAIL_INNER_IMAGE_HEIGHT, 155)
         val thumbnailFrameSize = inputData.getInt(KEY_THUMBNAIL_FRAME_SIZE, 5)
 
-        Timber.i("doWork archivePath=$archivePath")
+        Log.i(TAG,"doWork archivePath=$archivePath")
 
         if (archivePath != null && imageDestinationPath!= null) {
             val archiveUri = Uri.parse(archivePath)
@@ -71,7 +73,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             } catch (e:Exception) {
                 boolResult = false
                 errorMessage = e.message ?: ""
-                Timber.w("GetCoverWorker.doWork :: error -> $errorMessage")
+                Log.w(TAG,"GetCoverWorker.doWork :: error -> $errorMessage")
             }
 
             if (!boolResult)
@@ -88,7 +90,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
      * Extract the cover from an archive file using FnyLib7z
      */
     private fun unarchiveCoverInFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
-        Timber.v("unarchiveCoverInFile fileUri={$fileUri} imagePath=$imagePath")
+        Log.v(TAG,"unarchiveCoverInFile fileUri={$fileUri} imagePath=$imagePath")
         var bitmap: Bitmap? = null
 
         try {
@@ -103,7 +105,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                 if (arrFiles.size>0) {
                     val tempFile = arrFiles[0]
                     val tempBitmap = decodeStream(tempFile)
-                    Timber.v("    unarchiveCoverInFile tempFile=${tempFile.absolutePath}")
+                    Log.v(TAG,"    unarchiveCoverInFile tempFile=${tempFile.absolutePath}")
 
                     if (tempBitmap != null) {
                         bitmap = BitmapUtil.createFramedBitmap(tempBitmap, thumbnailWidth, thumbnailHeight, thumbnailInnerImageWidth,  thumbnailInnerImageHeight, thumbnailFrameSize)
@@ -115,17 +117,17 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
                             BitmapUtil.saveBitmapInFile(bitmapToSave, imagePath)
                         }
                     } else {
-                        Timber.i("unarchiveCoverInFile :: no width found in the first image!")
+                        Log.i(TAG,"unarchiveCoverInFile :: no width found in the first image!")
                         return false
                     }
                 } else {
-                    Timber.i("unarchiveCoverInFile :: no readable image found in $fileUri")
+                    Log.i(TAG,"unarchiveCoverInFile :: no readable image found in $fileUri")
                     return false
                 }
 
             }
         } catch (e: Exception) {
-            Timber.v("unarchiveCoverInFile :: Exception $e")
+            Log.v(TAG,"unarchiveCoverInFile :: Exception $e")
             return false
         }
 
@@ -136,7 +138,7 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
      * Extract the cover from a PDF file
      */
     private fun getCoverInPdfFile(fileUri: Uri, imagePath: String, thumbnailWidth: Int, thumbnailHeight: Int, thumbnailInnerImageWidth: Int, thumbnailInnerImageHeight: Int, thumbnailFrameSize: Int): Boolean {
-        Timber.v("pdfCoverInFile $fileUri into $imagePath")
+        Log.v(TAG,"pdfCoverInFile $fileUri into $imagePath")
         var bitmap: Bitmap? = null
 
         // Run through the pdf
@@ -183,11 +185,11 @@ class GetCoverWorker(context: Context, workerParams: WorkerParameters): Worker(c
             }
 
             if (bitmap == null) {
-                Timber.w("pdfCoverInFile:: pdf without image $fileUri")
+                Log.w(TAG,"pdfCoverInFile:: pdf without image $fileUri")
             }
 
         } catch (e: IOException) {
-            Timber.v("pdfCoverInFile :: IOException $e")
+            Log.v(TAG,"pdfCoverInFile :: IOException $e")
             return false
         }
 

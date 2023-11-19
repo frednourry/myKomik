@@ -15,7 +15,7 @@ import fr.nourry.mykomik.preference.PREF_CURRENT_PAGE_LAST_COMIC
 import fr.nourry.mykomik.preference.PREF_LAST_COMIC_URI
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.utils.*
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -46,6 +46,10 @@ sealed class  PageSliderViewModelState(
 }
 
 class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoadingFinishedListener {
+    companion object {
+        const val TAG = "PageSliderViewModel"
+    }
+
     private val state = MutableLiveData<PageSliderViewModelState>()
     var currentComic : ComicEntry? = null
     private var currentPage = 0
@@ -59,18 +63,18 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     private var currentIndexInDir = -1
     private var currentUri = MutableLiveData<Uri>()
     var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUri.switchMap { uri ->
-//        Timber.d("Transformations.switchMap(currentUri):: uri:$uri")
+//        Log.d(TAG,"Transformations.switchMap(currentUri):: uri:$uri")
         App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(uri.toString())
     }.distinctUntilChanged()
 
     fun getCurrentPage():Int {
-//        Timber.w("   currentPage=$currentPage")
+//        Log.w(TAG,"   currentPage=$currentPage")
         return currentPage
     }
 
     fun initialize(comic: ComicEntry, pageToGo: Int/*, shouldUncompress:Boolean*/) {
-        Timber.d("initialize(${comic.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
-        Timber.d("   comic = $comic")
+        Log.d(TAG,"initialize(${comic.name}) pageToGo=$pageToGo"/* shouldUncompress=$shouldUncompress*/)
+        Log.d(TAG,"   comic = $comic")
 
         ComicLoadingManager.getInstance().clearComicDir()
 
@@ -83,7 +87,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         if (comic.uri != null) {
             currentUri.value = comic.uri!!
         } else {
-            Timber.w("initialize:: comic.uri is null !")
+            Log.w(TAG,"initialize:: comic.uri is null !")
         }
 
         // Determine the pages to ask
@@ -98,17 +102,17 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         nbExpectedPages = comic.nbPages
         ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset, this)
 
-        Timber.d("initialize:: waiting....")
+        Log.d(TAG,"initialize:: waiting....")
     }
 
     // Change the current comic with a new one in the list 'comicEntriesInCurrentDir'
     fun changeCurrentComic(newComic:ComicEntry, numPage:Int){
-        Timber.d("changeCurrentComic $newComic")
+        Log.d(TAG,"changeCurrentComic $newComic")
 
         currentIndexInDir = comicEntriesInCurrentDir.indexOf(newComic)
-        Timber.d("  currentIndexInDir=$currentIndexInDir")
+        Log.d(TAG,"  currentIndexInDir=$currentIndexInDir")
         if (currentIndexInDir < 0) {
-            Timber.w("  newComic not in comicEntriesInCurrentDir!!")
+            Log.w(TAG,"  newComic not in comicEntriesInCurrentDir!!")
         }
 
         setPrefLastComicPath(newComic.uri.toString())
@@ -118,7 +122,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun onSetCurrentPage(n:Int, forceUpdateDAO:Boolean=false) {
-        Timber.d("onSetCurrentPage($n) comic = $currentComic")
+        Log.d(TAG,"onSetCurrentPage($n) comic = $currentComic")
 
         if (!App.isGuestMode && !App.isSimpleViewerMode)
             SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
@@ -131,13 +135,13 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             if (!App.isGuestMode) {
                 Executors.newSingleThreadExecutor().execute {
                     if (currentComic!!.fromDAO) {
-                        Timber.d("  UPDATE in DAO")
+                        Log.d(TAG,"  UPDATE in DAO")
                         App.db.comicEntryDao().updateComicEntry(currentComic!!)
                     } else {
-                        Timber.d("  INSERT in DAO")
+                        Log.d(TAG,"  INSERT in DAO")
                         currentComic!!.fromDAO = true
                         currentComic!!.id = App.db.comicEntryDao().insertComicEntry(currentComic!!)
-                        Timber.d("  INSERT in DAO :: id = ${currentComic!!.id}")
+                        Log.d(TAG,"  INSERT in DAO :: id = ${currentComic!!.id}")
                     }
                 }
             }
@@ -145,7 +149,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun clean() {
-        Timber.d("clean")
+        Log.d(TAG,"clean")
 
         // Clean ComicLoadingManager waiting list
         if (currentComic != null) {
@@ -160,8 +164,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun updateComicEntriesFromDAO(context: Context, comicEntriesFromDAO: List<ComicEntry>) {
-        Timber.d("updateComicEntriesFromDAO")
-//        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
+        Log.d(TAG,"updateComicEntriesFromDAO")
+//        Log.d(TAG,"    comicEntriesFromDAO=${comicEntriesFromDAO}")
 
         val comicEntriesFromDisk = if (App.currentTreeUri != null) {
                                         getComicEntriesFromUri(
@@ -173,7 +177,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
                                         emptyList()
                                     }
 
-//        Timber.w("    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
+//        Log.w(TAG,"    comicEntriesFromDisk (${comicEntriesFromDisk.size}) = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesInCurrentDir.clear()
@@ -184,19 +188,19 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
-        Timber.d("synchronizeDBWithDisk")
-        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
-        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+        Log.d(TAG,"synchronizeDBWithDisk")
+        Log.d(TAG,"   comicEntriesFromDAO=$comicEntriesFromDAO")
+        Log.d(TAG,"   comicEntriesFromDisk=$comicEntriesFromDisk")
         val result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
         for ((index, fe) in comicEntriesFromDisk.withIndex()) {
-//            Timber.v(" Looking for ${fe.dirPath}")
+//            Log.v(TAG," Looking for ${fe.dirPath}")
             found = false
             // Search in comicEntriesFromDAO
             for (feDAO in comicEntriesFromDAO) {
-//                Timber.v("  -- ${fe.dirPath}")
+//                Log.v(TAG,"  -- ${fe.dirPath}")
                 if (fe.hashkey == feDAO.hashkey) {
-//                    Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+//                    Log.v(TAG,"      -- ${fe.hashkey} == ${feDAO.hashkey}")
                     feDAO.uri = fe.uri
                     feDAO.fromDAO = true
                     result.add(feDAO)
@@ -210,11 +214,11 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
             }
             if (fe.hashkey == currentComic!!.hashkey) {
                 currentIndexInDir = index
-//                Timber.d("   currentIndexInDir=$currentIndexInDir")
+//                Log.d(TAG,"   currentIndexInDir=$currentIndexInDir")
             }
         }
 
-        Timber.d(" returns (${result.size}) => $result")
+        Log.d(TAG," returns (${result.size}) => $result")
         return result
     }
 
@@ -239,12 +243,12 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     override fun onRetrieved(comic:ComicEntry, currentIndex: Int, size: Int, path:String) {
-        Timber.d("onRetrieved currentIndex=$currentIndex size=$size path=$path")
+        Log.d(TAG,"onRetrieved currentIndex=$currentIndex size=$size path=$path")
         state.value = PageSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 
     override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, errorMessage:String) {
-        Timber.d("onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages} errorMessage=$errorMessage")
+        Log.d(TAG,"onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages} errorMessage=$errorMessage")
         if (result == ComicLoadingResult.SUCCESS) {
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)
@@ -254,13 +258,13 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
                 // Update DB
                 Executors.newSingleThreadExecutor().execute {
                     if (comic.fromDAO) {
-                        Timber.d("  UPDATE in DAO $comic")
+                        Log.d(TAG,"  UPDATE in DAO $comic")
                         App.db.comicEntryDao().updateComicEntry(comic)
                     } else {
-                        Timber.d("  INSERT in DAO $comic")
+                        Log.d(TAG,"  INSERT in DAO $comic")
                         comic.fromDAO = true
                         comic.id = App.db.comicEntryDao().insertComicEntry(comic)
-                        Timber.d("  INSERT in DAO :: id = ${comic.id}")
+                        Log.d(TAG,"  INSERT in DAO :: id = ${comic.id}")
                     }
                 }
             }
@@ -271,17 +275,17 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun showPageSelector(page:Int) {
-        Timber.d("showPageSelector page=$page")
+        Log.d(TAG,"showPageSelector page=$page")
         state.value = PageSliderViewModelState.PageSelection(currentComic!!, page)
     }
 
     fun cancelPageSelector() {
-        Timber.d("cancelPageSelector")
+        Log.d(TAG,"cancelPageSelector")
         state.value = PageSliderViewModelState.Ready(currentComic!!, currentPage, false)
     }
 
     fun onClickPageSelector(page:Int) {
-        Timber.d("onClickPageSelector page=$page")
+        Log.d(TAG,"onClickPageSelector page=$page")
         state.value = PageSliderViewModelState.Ready(currentComic!!, page, false)
     }
 
@@ -294,19 +298,19 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     // NOTE: the page should already be in cache !
     @Throws(IOException::class)
     fun saveCurrentPageInPictureDirectory(comic: ComicEntry, numPage: Int):String {
-        Timber.d("saveCurrentPageInPictureDirectory")
+        Log.d(TAG,"saveCurrentPageInPictureDirectory")
         val dirImageFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
         val saveDirectory = File(concatPath(dirImageFile.absolutePath, App.appName))
-        Timber.d("saveCurrentPageInPictureDirectory:: dirImageFile=$dirImageFile saveDirectory=$saveDirectory")
+        Log.d(TAG,"saveCurrentPageInPictureDirectory:: dirImageFile=$dirImageFile saveDirectory=$saveDirectory")
 
         if (!saveDirectory.exists()) {
 /*            if (!saveDirectory.mkdir())
-                Timber.d("saveCurrentPage: 1")
+                Log.d(TAG,"saveCurrentPage: 1")
                 // Exit
                 return ""*/
             saveDirectory.mkdir()
             if (!saveDirectory.exists()) {
-                Timber.d("saveCurrentPageInPictureDirectory: unable to create Picture directory")
+                Log.d(TAG,"saveCurrentPageInPictureDirectory: unable to create Picture directory")
                 return ""
             }
         }
@@ -327,7 +331,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         val currentCachePagePath = ComicLoadingManager.getInstance().getComicEntryPageFilePath(comic, numPage)
         val currentCachePageFile = File(currentCachePagePath)
         if (currentCachePageFile.exists()) {
-            Timber.d("saveCurrentPage: 2")
+            Log.d(TAG,"saveCurrentPage: 2")
             // Copy this file in 'imageToSavePath'
             currentCachePageFile.copyTo(outputFile)
 
@@ -341,7 +345,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     fun setDisplayOption(zo : DisplayOption, lock:Boolean=false) {
-        Timber.d("setZoomOption($zo)")
+        Log.d(TAG,"setZoomOption($zo)")
         zoomOption = zo
         zoomLocked = lock
     }

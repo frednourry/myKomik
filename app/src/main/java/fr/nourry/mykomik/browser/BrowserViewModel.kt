@@ -9,7 +9,7 @@ import fr.nourry.mykomik.preference.*
 import fr.nourry.mykomik.utils.deleteComic
 import fr.nourry.mykomik.utils.getComicEntriesFromUri
 import kotlinx.coroutines.*
-import timber.log.Timber
+import android.util.Log
 import java.util.concurrent.Executors
 
 sealed class BrowserViewModelState(val currentTreeUri:Uri? = null, val isInit: Boolean = false) {
@@ -35,6 +35,11 @@ sealed class BrowserViewModelState(val currentTreeUri:Uri? = null, val isInit: B
 
 
 class BrowserViewModel : ViewModel() {
+
+    companion object {
+        const val TAG = "BrowserViewModel"
+    }
+
     private var currentTreeUri:Uri? = null
     private var comicEntriesToShow: MutableList<ComicEntry> = mutableListOf()
     private var comicEntriesToDelete = mutableListOf<ComicEntry>()   // List of files that should not appear in 'comics' (it's a list of files that was asked to be delete)
@@ -49,7 +54,7 @@ class BrowserViewModel : ViewModel() {
     private var currentUriTreeMutableLiveData = MutableLiveData<Uri>()
 
     var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUriTreeMutableLiveData.switchMap { treeUri ->
-//        Timber.d("Transformations.switchMap(currentDirFile):: treeUri=$treeUri")
+//        Log.d(TAG,"Transformations.switchMap(currentDirFile):: treeUri=$treeUri")
         App.db.comicEntryDao().getComicEntriesByDirPath(treeUri.toString())
     }/*.distinctUntilChanged() */   // Important or else the livedata will send a changed signal even if nothing change...
 
@@ -58,7 +63,7 @@ class BrowserViewModel : ViewModel() {
 
 
     fun errorPermissionDenied() {
-        Timber.d("errorPermissionDenied")
+        Log.d(TAG,"errorPermissionDenied")
         state.value = BrowserViewModelState.Error(
             "Permission denied: cannot read directory!",
             isInit = isInitialized()
@@ -66,18 +71,18 @@ class BrowserViewModel : ViewModel() {
     }
 
     fun init(treeUri: Uri?, skipReadComic:Boolean=false) {
-        Timber.d("init treeUri=$treeUri")
+        Log.d(TAG,"init treeUri=$treeUri")
         val rootTreeUriString = SharedPref.get(PREF_ROOT_TREE_URI, "")
         val lastComicUriString = SharedPref.get(PREF_LAST_COMIC_URI, "")
         val lastDirUriString = SharedPref.get(PREF_LAST_DIR_URI, "")
         val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
-        Timber.i("rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString lastDirUriString=$lastDirUriString prefCurrentPage=$prefCurrentPage")
+        Log.i(TAG,"rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString lastDirUriString=$lastDirUriString prefCurrentPage=$prefCurrentPage")
 
         val rootTreeUri:Uri? = if (rootTreeUriString == "") null else Uri.parse(rootTreeUriString)
         val lastComicUri:Uri? = if (lastComicUriString == "") null else Uri.parse(lastComicUriString)
         val lastDirUri:Uri? = if (lastDirUriString == "") null else Uri.parse(lastDirUriString)
 
-        Timber.i("treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage")
+        Log.i(TAG,"treeUri=$treeUri rootTreeUri=$rootTreeUri lastComicUri=$lastComicUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage")
         state.value = BrowserViewModelState.Init(treeUri, rootTreeUri, lastComicUri, lastDirUri, prefCurrentPage!!)
 
         bSkipReadComic = skipReadComic
@@ -85,8 +90,8 @@ class BrowserViewModel : ViewModel() {
 
     // Load informations about a directory (comics and directories list)
     fun loadComics(treeUri: Uri) {
-        Timber.d("----- loadComics($treeUri) -----")
-        Timber.v("  comicEntriesToDelete = $comicEntriesToDelete")
+        Log.d(TAG,"----- loadComics($treeUri) -----")
+        Log.v(TAG,"  comicEntriesToDelete = $comicEntriesToDelete")
 
         currentUriTreeMutableLiveData.value = treeUri
 
@@ -99,7 +104,7 @@ class BrowserViewModel : ViewModel() {
 
     // Prepare to delete files (or directory) and start a timer that will really delete those files
     fun prepareDeleteComicEntries(deleteList: List<ComicEntry>) {
-        Timber.d("prepareDeleteComicEntries($deleteList)")
+        Log.d(TAG,"prepareDeleteComicEntries($deleteList)")
         // Clear the old 'deleteList' if not still empty
         if (comicEntriesToDelete.size > 0) {
             deleteComicEntries()
@@ -123,13 +128,13 @@ class BrowserViewModel : ViewModel() {
 
     // Stop the timer that should delete the files in 'comicEntriesToDelete'
     fun undoDeleteComicEntries():Boolean {
-        Timber.d("undoDeleteComicEntries !!")
+        Log.d(TAG,"undoDeleteComicEntries !!")
         if(deletionJob != null) {
             (deletionJob as Job).cancel()
             deletionJob = null
 
             if (comicEntriesToDelete.size>0) {
-                Timber.d("undoDeleteComicEntries :: comicEntriesToDelete.size>0")
+                Log.d(TAG,"undoDeleteComicEntries :: comicEntriesToDelete.size>0")
                 comicEntriesToDelete.clear()
                 return true
             }
@@ -139,13 +144,13 @@ class BrowserViewModel : ViewModel() {
 
     // Delete the files in 'comicEntriesToDelete' (should be called by the timer 'deletionJob' or in 'prepareDeleteComicEntries()')
     private fun deleteComicEntries() {
-        Timber.d("deleteComicEntries :: comicEntriesToDelete= $comicEntriesToDelete)")
+        Log.d(TAG,"deleteComicEntries :: comicEntriesToDelete= $comicEntriesToDelete)")
         for (comicEntry in comicEntriesToDelete) {
             if (comicEntry.fromDAO) {
                 Executors.newSingleThreadExecutor().execute {
-                    Timber.d("  DELETE IN DATABASE...")
+                    Log.d(TAG,"  DELETE IN DATABASE...")
                     App.db.comicEntryDao().deleteComicEntry(comicEntry)
-                    Timber.d("  END DELETE IN DATABASE...")
+                    Log.d(TAG,"  END DELETE IN DATABASE...")
                 }
             }
 
@@ -179,12 +184,12 @@ class BrowserViewModel : ViewModel() {
     }
 
     fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {
-        Timber.d("updateComicEntriesFromDAO")
-//        Timber.d("    comicEntriesFromDAO=${comicEntriesFromDAO}")
-//        Timber.d("    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
+        Log.d(TAG,"updateComicEntriesFromDAO")
+//        Log.d(TAG,"    comicEntriesFromDAO=${comicEntriesFromDAO}")
+//        Log.d(TAG,"    currentUriTreeMutableLiveData.value=${currentUriTreeMutableLiveData.value.toString()}")
 
         val comicEntriesFromDisk = getComicEntriesFromUri(App.appContext, ComicLoadingManager.comicExtensionList, currentTreeUri!!)
-        Timber.v("comicEntriesFromDisk = $comicEntriesFromDisk")
+        Log.v(TAG,"comicEntriesFromDisk = $comicEntriesFromDisk")
 
         // Built a correct comicEntries list...
         comicEntriesToShow.clear()
@@ -194,19 +199,19 @@ class BrowserViewModel : ViewModel() {
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {
-        Timber.d("synchronizeDBWithDisk")
-//        Timber.d("   comicEntriesFromDAO=$comicEntriesFromDAO")
-//        Timber.d("   comicEntriesFromDisk=$comicEntriesFromDisk")
+        Log.d(TAG,"synchronizeDBWithDisk")
+//        Log.d(TAG,"   comicEntriesFromDAO=$comicEntriesFromDAO")
+//        Log.d(TAG,"   comicEntriesFromDisk=$comicEntriesFromDisk")
         val hashkeyToIgnore: MutableList<String> = mutableListOf()
         var result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
         for (fe in comicEntriesFromDisk) {
-//            Timber.v(" Looking for ${fe.dirPath}")
+//            Log.v(TAG," Looking for ${fe.dirPath}")
             found = false
             // Search in comicEntriesToDelete
             for (feToDelete in comicEntriesToDelete) {
                 if (fe.hashkey == feToDelete.hashkey) {
-//                    Timber.v("  -- IGNORED !")
+//                    Log.v(TAG,"  -- IGNORED !")
                     hashkeyToIgnore.add(fe.hashkey)
                     found = true
                     break
@@ -215,14 +220,14 @@ class BrowserViewModel : ViewModel() {
             if (!found) {
                 // Search in comicEntriesFromDAO
                 for (feDAO in comicEntriesFromDAO) {
-//                    Timber.v("  -- ${fe.parentUriPath}")
+//                    Log.v(TAG,"  -- ${fe.parentUriPath}")
                     if (fe.hashkey == feDAO.hashkey) {
-//                        Timber.v("      -- ${fe.hashkey} == ${feDAO.hashkey}")
+//                        Log.v(TAG,"      -- ${fe.hashkey} == ${feDAO.hashkey}")
                         feDAO.uri = fe.uri
                         feDAO.fromDAO = true
                         result.add(feDAO)
                         found = true
-//                        Timber.v("  -- FOUND IN DAO !")
+//                        Log.v(TAG,"  -- FOUND IN DAO !")
                         break
                     }
                 }
@@ -230,7 +235,7 @@ class BrowserViewModel : ViewModel() {
             if (!found) {
                 fe.fromDAO = false
                 result.add(fe)
-//                Timber.v("  -- ADDING FROM DISK ${result.size} ${fe.name}")
+//                Log.v(TAG,"  -- ADDING FROM DISK ${result.size} ${fe.name}")
             }
         }
 
@@ -240,16 +245,16 @@ class BrowserViewModel : ViewModel() {
         for (feDAO in comicEntriesFromDAO) {
             if (!feDAO.fromDAO && hashkeyToIgnore.indexOf(feDAO.hashkey)==-1) {
                 // Not in the disk anymore, so delete it
-                Timber.d("  Should be delete : ${feDAO.uri}")
+                Log.d(TAG,"  Should be delete : ${feDAO.uri}")
                 comicEntriesToDelete.add(feDAO)
                 ComicLoadingManager.deleteComicEntryInCache(feDAO)
             }
         }
         if (comicEntriesToDelete.isNotEmpty()) {
             Executors.newSingleThreadExecutor().execute {
-                Timber.d("  DELETE ENTRIES IN DATABASE...")
+                Log.d(TAG,"  DELETE ENTRIES IN DATABASE...")
                 App.db.comicEntryDao().deleteComicEntries(*comicEntriesToDelete.map{it}.toTypedArray())
-                Timber.d("  END DELETE ENTRIES IN DATABASE...")
+                Log.d(TAG,"  END DELETE ENTRIES IN DATABASE...")
             }
         }
 
@@ -257,7 +262,7 @@ class BrowserViewModel : ViewModel() {
         if (bSkipReadComic) {
             for (comic in result) {
                 if (comic.fromDAO && comic.nbPages == (comic.currentPage+1)) {
-                    Timber.v("  skip ${comic.name} (already read)")
+                    Log.v(TAG,"  skip ${comic.name} (already read)")
                 } else {
                     result2.add(comic)
                 }
@@ -265,7 +270,7 @@ class BrowserViewModel : ViewModel() {
             result = result2
         }
 
-        Timber.d(" returns => $result")
+        Log.d(TAG," returns => $result")
         return result
     }
 }

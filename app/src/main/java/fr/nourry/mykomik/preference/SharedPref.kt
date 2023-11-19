@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.fragment.app.FragmentActivity
 import fr.nourry.mykomik.App
-import timber.log.Timber
+import android.util.Log
 
 // Load preferences (https://developer.android.com/training/data-storage/shared-preferences)
 
@@ -14,6 +14,8 @@ const val PREF_LAST_COMIC_URI           = "comics_last_comic_uri"
 const val PREF_CURRENT_PAGE_LAST_COMIC  = "comics_current_page_last_comic"
 
 object SharedPref {
+    const val TAG = "SharedPref"
+
     private lateinit var sharedPref : SharedPreferences
 
     fun init(a: FragmentActivity) {
@@ -28,7 +30,7 @@ object SharedPref {
         if (App.isGuestMode || App.isSimpleViewerMode) return
 
         with (sharedPref.edit()) {
-            Timber.i("SharedPref.set($param_name, $value) ")
+            Log.i(TAG,"SharedPref.set($param_name, $value) ")
             putString(param_name, value)
             apply()
         }

@@ -15,7 +15,7 @@ import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.utils.BitmapUtil
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 
 enum class MovementType {
@@ -27,6 +27,10 @@ enum class MovementType {
 
 // To work with a androidx.viewpager.widget.ViewPager
 class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val isLTR:Boolean, private val isAdaptPageBackgroundAuto:Boolean):PagerAdapter(), MagnifyImageView.Listener {
+    companion object {
+        const val TAG = "PageSliderAdapter"
+    }
+
     interface Listener {
         fun onPageTap(imageView:MagnifyImageView, currentPage:Int, x:Float, y:Float)
         fun onPageDrag(dx:Float, dy:Float)
@@ -45,16 +49,16 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
 
         // Called when the  ComicLoadingManager has an image ready (an image path) for this CardView
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path prout1 currentPage=$currentPage")
+            Log.d(TAG,"onRetrieved:: currentIndex=$currentIndex size=$size path=$path prout1 currentPage=$currentPage")
             if ((path != "")) {
                 val magnifyImageView:MagnifyImageView?
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
-                Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
+                Log.d(TAG,"     holderInnerComic.position=${holderInnerComic.position}")
 
                 // Check if the target is still waiting this image
                 if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
-                    Timber.d("     UPDATING IMAGEVIEW... $path")
+                    Log.d(TAG,"     UPDATING IMAGEVIEW... $path")
 
                     // Load the image
                     val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels, isSimplifyBitmapConfig = true)
@@ -71,7 +75,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                         placeHolder.visibility = View.INVISIBLE
 
                         if (currentIndex == currentPage-1) {
-                            Timber.v("MAGNET !! (onRetrieved) currentIndex=$currentIndex currentPage=$currentPage ")
+                            Log.v(TAG,"MAGNET !! (onRetrieved) currentIndex=$currentIndex currentPage=$currentPage ")
                             magnifyImageView?.magnetRight()
                         }
                         // Set the background color according a pixel
@@ -80,7 +84,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
                         }
                     }
                 } else {
-                    Timber.w("onRetrieved:: To late. This view no longer requires this image...")
+                    Log.w(TAG,"onRetrieved:: To late. This view no longer requires this image...")
                 }
             }
         }
@@ -96,18 +100,18 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     private var allowParentToScrollLeft = true
     private var allowParentToScrollRight = true
     public fun allowParentToScroll(dx:Int) : Boolean {
-        Timber.v("allowParentToScroll($dx)   allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
+        Log.v(TAG,"allowParentToScroll($dx)   allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
         if (dx > 0) return allowParentToScrollLeft
         if (dx < 0) return allowParentToScrollRight
         return allowParentToScrollLeft || allowParentToScrollRight
     }
 
     fun setDisplayOption(d:DisplayOption, isLocked:Boolean, updateAll:Boolean) {
-        Timber.i("setDisplayOption($d, $isLocked, $updateAll)")
+        Log.i(TAG,"setDisplayOption($d, $isLocked, $updateAll)")
 
         if (updateAll) {
             // Update every images already loaded
-            Timber.i("  setDisplayOption($d) => notifyDataSetChanged()")
+            Log.i(TAG,"  setDisplayOption($d) => notifyDataSetChanged()")
             displayOption = d
             notifyDataSetChanged()
         } else {
@@ -117,7 +121,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     fun setNewComic(newComic:ComicEntry) {
-        Timber.d("setNewComic :: newComic=$newComic nbPage=${newComic.nbPages}")
+        Log.d(TAG,"setNewComic :: newComic=$newComic nbPage=${newComic.nbPages}")
         onPageChanged(newComic.currentPage)
         comic = newComic
         this.notifyDataSetChanged()
@@ -128,7 +132,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
-        Timber.d("instantiateItem :: position=$position")
+        Log.d(TAG,"instantiateItem :: position=$position")
         val view = inflater.inflate(R.layout.item_page, container, false)
 
         if (!isLTR) view.rotationY = 180F
@@ -182,18 +186,18 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
             val imageView = cardView.findViewById<MagnifyImageView>(R.id.imageView)
             imageView.onTouchImageView(event)
         } catch(e:Exception) {
-            Timber.d("onTouch::  error = ${e.printStackTrace()}")
+            Log.d(TAG,"onTouch::  error = ${e.printStackTrace()}")
             false
         }
     }
 
     fun onPageChanged(newPageIndex:Int) {
-        Timber.d("onPageChanged($newPageIndex) this.currentPage=${this.currentPage}")
+        Log.d(TAG,"onPageChanged($newPageIndex) this.currentPage=${this.currentPage}")
         // Reset the last image when quitting it (the last image index is this.currentPage)
         imageViewModified?.resetDisplayOption()
 
         if (this.currentPage == newPageIndex-1) {
-            Timber.v("MAGNET !! (onPageChanged($newPageIndex)) ${this.currentPage}::${imageViewModified?.imagePath}")
+            Log.v(TAG,"MAGNET !! (onPageChanged($newPageIndex)) ${this.currentPage}::${imageViewModified?.imagePath}")
             imageViewModified?.magnetRight()
         }
 
@@ -208,12 +212,12 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
             innerComic.imageView
             pageSliderAdapterListener?.onPageTap(innerComic.imageView, innerComic.position, x, y)
         } catch (e:Exception) {
-            Timber.w("onMagnifyImageViewClick :: error = "+e.printStackTrace())
+            Log.w(TAG,"onMagnifyImageViewClick :: error = "+e.printStackTrace())
         }
     }
 
     override fun onMagnifyImageDrag(dx: Float, dy: Float, allowParentToScrollLeft: Boolean, allowParentToScrollRight: Boolean) {
-        Timber.d("onMagnifyImageDrag::  dx=$dx dy=$dy allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
+        Log.d(TAG,"onMagnifyImageDrag::  dx=$dx dy=$dy allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
         this.allowParentToScrollLeft = allowParentToScrollLeft
         this.allowParentToScrollRight = allowParentToScrollRight
         pageSliderAdapterListener?.onPageDrag(dx, dy)

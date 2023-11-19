@@ -6,7 +6,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.work.*
 import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.utils.*
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 import java.util.*
 import kotlin.collections.ArrayList
@@ -64,6 +64,8 @@ class ComicLoadingManager private constructor() {
     }
 
     companion object {
+        const val TAG = "ComicLoadingManager"
+
         @SuppressLint("StaticFieldLeak")
         @Volatile
         private var mInstance: ComicLoadingManager? = null
@@ -114,7 +116,7 @@ class ComicLoadingManager private constructor() {
     }
 
     fun initialize(appContext: Context, thumbnailDir:File, pageCacheDir: File) {
-        Timber.v("initialize")
+        Log.v(TAG,"initialize")
         context = appContext
 
         workManager = WorkManager.getInstance(context)
@@ -130,7 +132,7 @@ class ComicLoadingManager private constructor() {
     }
 
     fun setLivecycleOwner(lo:LifecycleOwner) {
-        Timber.v("setLivecycleOwner")
+        Log.v(TAG,"setLivecycleOwner")
 
         // Clean the WorkManager
         clean()
@@ -146,7 +148,7 @@ class ComicLoadingManager private constructor() {
         while (cpt <waitingCoversList.size) {
             val entry = waitingCoversList[cpt]
             if (pathToFind == entry.comic.path) {
-                Timber.v("addInWaitingList:: file already in list, so replace it ! $pathToFind")    // NOTE : Should replace it because the old listener may not be still valid...
+                Log.v(TAG,"addInWaitingList:: file already in list, so replace it ! $pathToFind")    // NOTE : Should replace it because the old listener may not be still valid...
 
                 waitingCoversList[cpt] = comicEntryLoading
                 return
@@ -174,7 +176,7 @@ class ComicLoadingManager private constructor() {
 
     // Generate a cover with some of the first comic covers in the directory
     private fun loadComicDirectoryCover(dirComic: ComicEntry, listener:ComicLoadingProgressListener) {
-        Timber.i("loadComicDirectoryCover(${dirComic.path})")
+        Log.i(TAG,"loadComicDirectoryCover(${dirComic.path})")
         if (dirComic.isDirectory) {
             val cacheFilePath = getComicEntryThumbnailFilePath(dirComic)
             val cacheFile = File(cacheFilePath)
@@ -195,7 +197,7 @@ class ComicLoadingManager private constructor() {
                         addInWaitingCoverList(ComicEntryLoadingCover(f, null, null))
                     }
                 }
-//                    Timber.i("loadComicDirectoryCover :: $fileList")
+//                    Log.i(TAG,"loadComicDirectoryCover :: $fileList")
                 if (fileList.isNotEmpty()) {
                     // Be sure to add this directory AFTER its comics to make sure there will be some images of this dir in the cache
                     addInWaitingCoverList(ComicEntryLoadingCover(dirComic, listener, fileList))
@@ -206,10 +208,10 @@ class ComicLoadingManager private constructor() {
     }
 
     fun loadComicPages(comic:ComicEntry, listener: ComicLoadingProgressListener, numPage:Int, offset:Int, finishedListener:ComicLoadingFinishedListener?=null) {
-        Timber.d("loadComicPages:: numPage=$numPage offset=$offset")
+        Log.d(TAG,"loadComicPages:: numPage=$numPage offset=$offset")
         if (currentComicLoadingPages!= null && currentComicLoadingPages!!.comic.hashkey == comic.hashkey) {
             // Same comic, so add/update the given pages
-            Timber.d("loadComicPages:: same comic, so update")
+            Log.d(TAG,"loadComicPages:: same comic, so update")
             val pageList:MutableList<Int> = ArrayList() // List of the wanted pages
             for (num in 0 until offset) {
                 pageList.add(numPage+num)
@@ -238,15 +240,15 @@ class ComicLoadingManager private constructor() {
                 // Add this page
                 currentComicLoadingPages!!.pages.add(TuplePageListenerList(numPage, mutableListOf(listener)))
             }
-            Timber.d("loadComicPages::  ${currentComicLoadingPages!!.pages}")
+            Log.d(TAG,"loadComicPages::  ${currentComicLoadingPages!!.pages}")
         } else {
             // New comic, so forget the last one
-            Timber.d("loadComicPages:: new comic")
+            Log.d(TAG,"loadComicPages:: new comic")
             val pageList:MutableList<TuplePageListenerList> = ArrayList()
             for (num in 0 until offset) {
                 pageList.add(TuplePageListenerList(numPage+num, mutableListOf(listener)))
             }
-            Timber.d("loadComicPages:: targetList = $pageList")
+            Log.d(TAG,"loadComicPages:: targetList = $pageList")
             currentComicLoadingPages = ComicEntryLoadingPages(comic, pageList, finishedListener)
         }
         loadNext()
@@ -260,7 +262,7 @@ class ComicLoadingManager private constructor() {
 
     // Stop all loading and clear the waiting list
     fun clean() {
-        Timber.d("clean")
+        Log.d(TAG,"clean")
 
         // Stop currentJob
         workManager.cancelAllWork()
@@ -289,7 +291,7 @@ class ComicLoadingManager private constructor() {
     }
 
     private fun loadNext() {
-        Timber.d("loadNext() isLoading=$isLoading currentComicEntryLoadingPages=${currentComicLoadingPages?.comic?.name} list.size=${waitingCoversList.size}")
+        Log.d(TAG,"loadNext() isLoading=$isLoading currentComicEntryLoadingPages=${currentComicLoadingPages?.comic?.name} list.size=${waitingCoversList.size}")
         if (!isLoading) {
             if (currentComicLoadingPages != null) {
                 isLoading = true
@@ -298,13 +300,13 @@ class ComicLoadingManager private constructor() {
                 startLoadingPages(comicLoading)
             }
             else if (waitingCoversList.size > 0) {
-                Timber.i("waitingCoversList.size = "+waitingCoversList.size+ " $waitingCoversList")
+                Log.i(TAG,"waitingCoversList.size = "+waitingCoversList.size+ " $waitingCoversList")
                 isLoading = true
                 val comicLoading = waitingCoversList.removeAt(0)
-                Timber.d("loadNext() loading ${comicLoading.comic.path}")
+                Log.d(TAG,"loadNext() loading ${comicLoading.comic.path}")
                 startLoadingCover(comicLoading)
             } else {
-                Timber.i("waitingCoversList.size = 0")
+                Log.i(TAG,"waitingCoversList.size = 0")
                 isLoading = false
 
                 // TODO if nothing left to load, check if we can load the rest of the comics !
@@ -313,7 +315,7 @@ class ComicLoadingManager private constructor() {
     }
 
     private fun startLoadingPages(comicLoading:ComicEntryLoadingPages) {
-        Timber.d("startLoadingPages(${comicLoading.comic.path})")
+        Log.d(TAG,"startLoadingPages(${comicLoading.comic.path})")
 
         val comic = comicLoading.comic
         val pagesList = comicLoading.pages
@@ -326,7 +328,7 @@ class ComicLoadingManager private constructor() {
             val cacheFile = File(cacheFilePath)
             if (cacheFile.exists()) {
                 // The cache file already exists, so no need to proceed
-                Timber.i("    File already exists, so skip it ! (but inform listeners)")
+                Log.i(TAG,"    File already exists, so skip it ! (but inform listeners)")
                 pt.listeners.forEach{ it.onRetrieved(comic, pt.numPage, 0, cacheFilePath) }          // Send a onProgress to the listeners
 
             } else {
@@ -362,43 +364,43 @@ class ComicLoadingManager private constructor() {
             currentWorkID = work.id
 //            currentComicLoadingPages = null
             workManager.enqueue(work)
-            Timber.d("   WORK ID = ${work.id}")
+            Log.d(TAG,"   WORK ID = ${work.id}")
 
             workManager.getWorkInfoByIdLiveData(work.id)
                 .observe(lifecycleOwner) { workInfo ->
-                    Timber.d("  observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
+                    Log.d(TAG,"  observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
 
                     if (workInfo != null) {
                         if (workInfo.state == WorkInfo.State.RUNNING) {
-                            Timber.i("    RUNNING")
+                            Log.i(TAG,"    RUNNING")
                             val currentIndex = workInfo.progress.getInt(GetPagesWorker.KEY_CURRENT_INDEX, -1)
                             val nbPages = workInfo.progress.getInt(GetPagesWorker.KEY_NB_PAGES, -1)
                             val path = workInfo.progress.getString(GetPagesWorker.KEY_CURRENT_PATH)?:""
 
                             if (currentIndex>=0) {
-                                Timber.i("      currentIndex = $currentIndex nbPages = $nbPages")
-                                Timber.i("      path = $path")
+                                Log.i(TAG,"      currentIndex = $currentIndex nbPages = $nbPages")
+                                Log.i(TAG,"      path = $path")
                                 if (path!= "") {
                                     for (page in newPagesList) {
                                         if (currentIndex == page.numPage) {
                                             // Notify all the listeners
                                             page.listeners.forEach { it.onRetrieved(comic, currentIndex, nbPages, path) }
 
-//                                            Timber.w("    REMOVING PAGE")
-//                                            Timber.w("        size=${newPagesList.size} before")
+//                                            Log.w(TAG,"    REMOVING PAGE")
+//                                            Log.w(TAG,"        size=${newPagesList.size} before")
                                             newPagesList.remove(page)
-//                                            Timber.w("        size=${newPagesList.size} after")
+//                                            Log.w(TAG,"        size=${newPagesList.size} after")
                                             break
                                         }
                                     }
                                 }
                             }
                         } else if (workInfo.state.isFinished) {
-                            Timber.d("    loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
+                            Log.d(TAG,"    loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
                             val nbPages = outputData.getInt(GetPagesWorker.KEY_NB_PAGES, 0)
                             val errorMessage = outputData.getString(GetPagesWorker.KEY_ERROR_MESSAGE) ?: ""
-                            Timber.d("    nbPages=$nbPages")
+                            Log.d(TAG,"    nbPages=$nbPages")
                             if (nbPages>0) {
                                 comic.nbPages = nbPages
                             }
@@ -440,7 +442,7 @@ class ComicLoadingManager private constructor() {
         currentComicLoadingCover = comicLoading
         var callbackResponse = ""
 
-        Timber.d("startLoadingCover(${comicLoading.comic.path})")
+        Log.d(TAG,"startLoadingCover(${comicLoading.comic.path})")
 
         val cacheFilePath = getComicEntryThumbnailFilePath(comic)
         val cacheFile = File(cacheFilePath)
@@ -449,7 +451,7 @@ class ComicLoadingManager private constructor() {
             if (cacheFile.exists()) {
                 // Extract nothing, just return the file path
                 // Don't initialize the workrequest
-                Timber.d("Image in cache ! (hashkey = ${comic.hashkey})")
+                Log.d(TAG,"Image in cache ! (hashkey = ${comic.hashkey})")
                 callbackResponse = cacheFilePath
                 null
             } else if (!comic.isDirectory) {
@@ -507,23 +509,23 @@ class ComicLoadingManager private constructor() {
         if (work != null) {
             currentWorkID = work.id
             workManager.enqueue(work)
-            Timber.d("   WORK ID = ${work.id}")
+            Log.d(TAG,"   WORK ID = ${work.id}")
             workManager.getWorkInfoByIdLiveData(work.id)
                 .observe(lifecycleOwner) { workInfo ->
-                    Timber.d("    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
+                    Log.d(TAG,"    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
 
                     if (workInfo != null) {
                         if (workInfo.state == WorkInfo.State.RUNNING) {
 /*                            val currentIndex = workInfo.progress.getInt("currentIndex", 0)
                             val size = workInfo.progress.getInt("size", 0)
                             if (size != 0) {
-                                Timber.i(" startLoadingCover loading :: $currentIndex/$size")
+                                Log.i(TAG," startLoadingCover loading :: $currentIndex/$size")
                                 if (comicLoading.listener != null) {
 //                                    comicLoading.listener.onRetreived(comic, currentIndex, size, "")
                                 }
                             }*/
                         } else if (workInfo.state.isFinished) {
-                            Timber.d(" loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
+                            Log.d(TAG," loading :: completed SUCCEEDED="+(workInfo.state == WorkInfo.State.SUCCEEDED))
                             val outputData = workInfo.outputData
                             val nbPages = outputData.getInt(GetCoverWorker.KEY_NB_PAGES, 0)
                             val imagePath = outputData.getString(GetCoverWorker.KEY_IMAGE_DESTINATION_PATH)?:""

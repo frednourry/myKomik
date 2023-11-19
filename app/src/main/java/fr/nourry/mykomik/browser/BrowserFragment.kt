@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.activity.addCallback
@@ -35,10 +36,13 @@ import fr.nourry.mykomik.loader.IdleController
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.*
-import timber.log.Timber
 import kotlin.collections.ArrayList
 
 class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListener, BrowserAdapter.OnComicAdapterListener {
+
+    companion object {
+        const val TAG = "BrowserFragment"
+    }
 
     private lateinit var viewModel: BrowserViewModel
     private lateinit var rootTreeUri : Uri
@@ -61,7 +65,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        Timber.i("onCreateView")
+        Log.i(TAG,"onCreateView")
 
 //        ComicLoadingManager.getInstance().initialize(requireContext(), App.thumbnailCacheDirectory, App.pageCacheDirectory)
         ComicLoadingManager.getInstance().setLivecycleOwner(this)
@@ -78,7 +82,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Timber.i("onViewCreated")
+        Log.i(TAG,"onViewCreated")
 
         // Update metrics
         App.physicalConstants.updateMetrics(requireContext())
@@ -165,11 +169,11 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         val thisFragment = this
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             // Handle the back button event
-            Timber.d("BACK PRESSED !")
+            Log.d(TAG,"BACK PRESSED !")
 
             // Check if we can bo back in the tree file AND if the previous fragment was this one
             if (!handleBackPressedToChangeDirectory() && !NavHostFragment.findNavController(thisFragment).popBackStack(R.id.browserFragment, false)) {
-                Timber.i("    No more stack, so exit!")
+                Log.i(TAG,"    No more stack, so exit!")
 
                 // Restore the preference if in guest mode
                 if (App.isGuestMode) {
@@ -189,14 +193,14 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
-            Timber.i("BrowserFragment::observer change state !!")
+            Log.i(TAG,"BrowserFragment::observer change state !!")
             updateUI(it!!)
         }
 
         // LiveData for the ViewModel :
         //  NOTE: Observer needs a livecycle owner that is not accessible by the ViewModel directly, so to observe a liveData, our ViewModel observers uses this Fragment...
         viewModel.comicEntriesFromDAO.observe(viewLifecycleOwner) { comicEntriesFromDAO ->
-//            Timber.w("UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
+//            Log.w(TAG,"UPDATED::comicEntriesFromDAO=$comicEntriesFromDAO")
             viewModel.updateComicEntriesFromDAO(comicEntriesFromDAO)
         }
         // End LiveDatas
@@ -209,7 +213,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         val switchGuest = menuItemGuest.actionView as SwitchCompat
         switchGuest.isChecked = switchGuest.isChecked
         switchGuest.setOnClickListener(View.OnClickListener {
-            Timber.d("switchGuest.onClick :: ${switchGuest.isChecked}")
+            Log.d(TAG,"switchGuest.onClick :: ${switchGuest.isChecked}")
             setGuestMode(switchGuest.isChecked)
         })
         sideMenuItemClearCache = binding.navigationView.menu.findItem(R.id.action_nav_clear_cache)
@@ -264,7 +268,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private var permissionIntentLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        Timber.i("permissionIntentLauncher:: result=$result")
+        Log.i(TAG,"permissionIntentLauncher:: result=$result")
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.let{ intent->
 
@@ -272,7 +276,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 flags = flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
 
                 intent.data?.let { treeUri ->
-                    Timber.i("  treeUri=$treeUri")
+                    Log.i(TAG,"  treeUri=$treeUri")
                     // treeUri is the Uri
 
                     val documentsTree = DocumentFile.fromTreeUri(requireContext(), treeUri)
@@ -292,7 +296,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                             val id = DocumentsContract.getTreeDocumentId(treeUri)
                             val trueUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
 
-                            Timber.i("  trueUri=$trueUri")
+                            Log.i(TAG,"  trueUri=$trueUri")
                             rootTreeUri = trueUri
                             viewModel.setPrefRootTreeUri(trueUri)
                             viewModel.setPrefLastDirUri(null)
@@ -306,14 +310,14 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 }
             }
         } else {
-            Timber.w("registerForActivityResult NOT OK !")
+            Log.w(TAG,"registerForActivityResult NOT OK !")
         }
     }
 
     private fun releasePermissionsInSharedStorage() {
         val perms = requireContext().contentResolver.persistedUriPermissions
         for (perm in perms) {
-            Timber.i("releaseOnePermission -> releasing ${perm.uri.path}}")
+            Log.i(TAG,"releaseOnePermission -> releasing ${perm.uri.path}}")
             requireContext().contentResolver.releasePersistableUriPermission(perm.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             break
         }
@@ -322,7 +326,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        Timber.d("onNavigationItemSelected $item")
+        Log.d(TAG,"onNavigationItemSelected $item")
         return when (item.itemId) {
             R.id.action_nav_guest_switch ->  {
                 val switchGuest = item.actionView as SwitchCompat
@@ -357,7 +361,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     // Update UI according to the model state events
     private fun updateUI(state: BrowserViewModelState) {
-        Timber.i("Calling updateUI, switch state=${state::class}")
+        Log.i(TAG,"Calling updateUI, switch state=${state::class}")
         when(state) {
             is BrowserViewModelState.Error -> handleStateError(state)
             is BrowserViewModelState.Init -> handleStateInit(state)
@@ -368,7 +372,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     // An error occurs
     private fun handleStateError(state: BrowserViewModelState.Error) {
-        Timber.i("handleStateError")
+        Log.i(TAG,"handleStateError")
         Snackbar.make(binding.coordinatorLayout, "ERROR: ${state.errorMessage}", Snackbar.LENGTH_LONG).show()
 
         // Exit app ?
@@ -376,7 +380,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun handleStateInit(state:BrowserViewModelState.Init) {
-        Timber.i("handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri} state.lastDirUri=${state.lastDirUri}")
+        Log.i(TAG,"handleStateInit state.rootUriPath=${state.rootUriPath} state.lastComicUri=${state.lastComicUri} state.lastDirUri=${state.lastDirUri}")
 
         if (state.currentTreeUri == null) {
             val alert = AlertDialog.Builder(requireContext())
@@ -390,9 +394,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun handleStateLoading(treeUri: Uri?) {
-        Timber.i("handleStateLoading")
+        Log.i(TAG,"handleStateLoading")
         if (treeUri != null) {
-            Timber.i("handleStateLoading "+treeUri)
+            Log.i(TAG,"handleStateLoading "+treeUri)
             viewModel.setAppCurrentTreeUri(treeUri)
 
             // Stop all loading...
@@ -401,8 +405,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun handleStateReady(state: BrowserViewModelState.ComicReady) {
-        Timber.i("handleStateReady")
-        Timber.i("  state.comics=${state.comics}")
+        Log.i(TAG,"handleStateReady")
+        Log.i(TAG,"  state.comics=${state.comics}")
 
         IdleController.getInstance().resetIdleTimer()
 
@@ -421,7 +425,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun initBrowser(treeUri: Uri, lastUri:Uri?, lastDirUri:Uri?, prefCurrentPage:String) {
-        Timber.d("initBrowser treeUri=$treeUri lastComicUri=$lastUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
+        Log.d(TAG,"initBrowser treeUri=$treeUri lastComicUri=$lastUri lastDirUri=$lastDirUri prefCurrentPage=$prefCurrentPage App.currentTreeUri=${App.currentTreeUri}")
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER
 
         if (App.currentTreeUri == null) {
@@ -438,7 +442,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 val alert = AlertDialog.Builder(requireContext())
                     .setMessage(getString(R.string.ask_continue_with_same_comic)+ " ("+lastComic.name+")")
                     .setPositiveButton(R.string.ok) { _,_ ->
-                        Timber.i("comic.parentTreeUriPath = ${lastComic.parentUriPath}")
+                        Log.i(TAG,"comic.parentTreeUriPath = ${lastComic.parentUriPath}")
                         App.currentTreeUri = Uri.parse(lastComic.parentUriPath)
 
                         // Call the fragment to view the last comic
@@ -468,19 +472,19 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     // Ask the viewModel to load comics informations in a given directory
     private fun loadComics(treeUri:Uri, lastComicUri: Uri? = null) {
-        Timber.v("loadComics treeUri=$treeUri lastComicUri=$lastComicUri")
+        Log.v(TAG,"loadComics treeUri=$treeUri lastComicUri=$lastComicUri")
 
         viewModel.loadComics(treeUri)
     }
 
     override fun onComicEntryClicked(comic: ComicEntry, position:Int) {
-        Timber.v("onComicEntryClicked position=$position comic=${comic.uri} ")
+        Log.v(TAG,"onComicEntryClicked position=$position comic=${comic.uri} ")
         if (comic.isDirectory) {
-            Timber.i("Directory !")
+            Log.i(TAG,"Directory !")
 
             loadComics(comic.uri)
         } else {
-            Timber.i("File ${comic.uri} !")
+            Log.i(TAG,"File ${comic.uri} !")
             lastComicUri= comic.uri
             viewModel.setPrefLastComicUri(comic.uri)
 
@@ -489,10 +493,10 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     override fun onComicEntryLongClicked(comic: ComicEntry, position:Int) {
-        Timber.v("onComicEntryLongClicked "+comic.uri)
+        Log.v(TAG,"onComicEntryLongClicked "+comic.uri)
 
         if (App.isGuestMode) {
-            Timber.i("onComicEntryLongClicked:: Guest Mode, so do nothing")
+            Log.i(TAG,"onComicEntryLongClicked:: Guest Mode, so do nothing")
         } else {
             // Show checkboxes and a new menu
             setFilterMode(true, arrayListOf(position))
@@ -531,7 +535,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun setFilterMode(bFilter:Boolean, selectedList:ArrayList<Int>? = null) {
-        Timber.v("setFilterMode($bFilter) isFilteredMode=$isFilteredMode")
+        Log.v(TAG,"setFilterMode($bFilter) isFilteredMode=$isFilteredMode")
         if (isFilteredMode == bFilter) return
 
         if (!isFilteredMode) {
@@ -562,7 +566,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     }
 
     private fun setGuestMode(isGuest:Boolean) {
-        Timber.v("setGuestMode:: $isGuest")
+        Log.v(TAG,"setGuestMode:: $isGuest")
         App.isGuestMode = isGuest
         if (isGuest) {
             // Save the user's choices
@@ -578,7 +582,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         browserAdapter.notifyDataSetChanged()
 
         // Update side menu
-        Timber.w("menuItemClearCache is null ! $sideMenuItemClearCache")
+        Log.w(TAG,"menuItemClearCache is null ! $sideMenuItemClearCache")
         sideMenuItemClearCache.isEnabled = !isGuest
         sideMenuItemChangeRootDirectory.isEnabled = !isGuest
     }
@@ -640,7 +644,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             alert = AlertDialog.Builder(requireContext())
                 .setMessage(message)
                 .setPositiveButton(R.string.ok) { _,_ ->
-                    Timber.d("selectedComicIndexes = $selectedComicIndexes")
+                    Log.d(TAG,"selectedComicIndexes = $selectedComicIndexes")
 
                     // Ask the viewModel to delete those files
                     viewModel.prepareDeleteComicEntries(deleteList)
@@ -692,7 +696,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             .setDuration(viewModel.TIME_BEFORE_DELETION)
             .setAction(R.string.message_undo) {
                 if (viewModel.undoDeleteComicEntries()) {
-                    Timber.d("Deleting undone, so need to refresh dir...")
+                    Log.d(TAG,"Deleting undone, so need to refresh dir...")
                     loadComics(App.currentTreeUri!!)
                 }
             }
@@ -701,7 +705,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     // Update the ActionBar title
     private fun updateTitle(name:String) {
-        Timber.v("updateTitle($name)")
+        Log.v(TAG,"updateTitle($name)")
         (requireActivity() as AppCompatActivity).supportActionBar?.title = name
     }
 
@@ -709,9 +713,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
     // Returns true if and only if we can
     private fun handleBackPressedToChangeDirectory():Boolean {
         if (::rootTreeUri.isInitialized)
-            Timber.d("handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=$rootTreeUri)")
+            Log.d(TAG,"handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=$rootTreeUri)")
         else
-            Timber.d("handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=uninitialized)")
+            Log.d(TAG,"handleBackPressedToChangeDirectory - current=${App.currentTreeUri} (root=uninitialized)")
 
         return if (isFilteredMode) {
             setFilterMode(false)

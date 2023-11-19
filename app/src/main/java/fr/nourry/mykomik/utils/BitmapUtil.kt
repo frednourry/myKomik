@@ -9,7 +9,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import androidx.annotation.ColorInt
 import fr.nourry.mykomik.App
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -22,11 +22,13 @@ import javax.microedition.khronos.egl.EGLContext
 
 class BitmapUtil {
     companion object {
+        const val TAG = "BitmapUtil"
+
         val maxTextureSize = getDeviceMaxTextureSize()
         val maxHalfTextureSize = maxTextureSize/2
 
         init {
-            Timber.i("BitmapUtil.maxTextureSize=$maxTextureSize")
+            Log.i(TAG,"BitmapUtil.maxTextureSize=$maxTextureSize")
         }
 
         // Get the maximum texture size for this device
@@ -80,13 +82,13 @@ class BitmapUtil {
          * Like BitmapFactory.decodeStream but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
          */
         fun decodeStream(f: File?, width: Int=-1, height: Int=-1, isSimplifyBitmapConfig:Boolean = false): Bitmap? {
-            Timber.v("decodeStream(${f?.absolutePath ?: ""}, width=$width, height=$height, isSimplifyBitmapConfig=$isSimplifyBitmapConfig)")
+            Log.v(TAG,"decodeStream(${f?.absolutePath ?: ""}, width=$width, height=$height, isSimplifyBitmapConfig=$isSimplifyBitmapConfig)")
             if (f == null) {
-                Timber.w("decodeStream :: File null ! Returns null")
+                Log.w(TAG,"decodeStream :: File null ! Returns null")
                 return null
             }
             if (!f.exists()) {
-                Timber.w("decodeStream :: File doesn't exist ! Returns null (${f.absolutePath})")
+                Log.w(TAG,"decodeStream :: File doesn't exist ! Returns null (${f.absolutePath})")
                 return null
             }
 
@@ -121,15 +123,15 @@ class BitmapUtil {
                 if (isSimplifyBitmapConfig)
                     options.inPreferredConfig = Bitmap.Config.RGB_565
 
-                Timber.v("  decodeStream => options.inSampleSize=$inSampleSize")
+                Log.v(TAG,"  decodeStream => options.inSampleSize=$inSampleSize")
 
                 FileInputStream(f).use {inputStream ->
                     return BitmapFactory.decodeStream(inputStream, null, options)
                 }
             } catch (e: OutOfMemoryError) {
-                Timber.w("decodeStream :: OutOfMemoryError ! f=${f.absolutePath}")
+                Log.w(TAG,"decodeStream :: OutOfMemoryError ! f=${f.absolutePath}")
             } catch (e: Error) {
-                Timber.w("decodeStream :: error ! f=${f.absolutePath}")
+                Log.w(TAG,"decodeStream :: error ! f=${f.absolutePath}")
                 e.printStackTrace()
             }
             return null
@@ -139,7 +141,7 @@ class BitmapUtil {
          * Like BitmapFactory.decodeByteArray but trying to avoid OOM by setting maximum width and height (see https://developer.android.com/topic/performance/graphics/load-bitmap)
          */
         private fun decodeByteArray(data: ByteArray?, offset:Int, length:Int, width: Int=-1, height: Int=-1):Bitmap? {
-            Timber.v("decodeStream(ByteArray, offset=$offset, length=$length, width=$width, height=$height)")
+            Log.v(TAG,"decodeStream(ByteArray, offset=$offset, length=$length, width=$width, height=$height)")
 
             // Set the maximum width and height (if given)
             val maxWidth = Math.min(if (width == -1) App.physicalConstants.metrics.widthPixels else width, maxHalfTextureSize)
@@ -170,13 +172,13 @@ class BitmapUtil {
                 options.inScaled = false
                 options.inPreferredConfig = Bitmap.Config.RGB_565
 
-                Timber.v("  decodeStream => options.inSampleSize=$inSampleSize")
+                Log.v(TAG,"  decodeStream => options.inSampleSize=$inSampleSize")
 
                 return BitmapFactory.decodeByteArray(data, offset, length, options)
             } catch (e: OutOfMemoryError) {
-                Timber.w("decodeStream :: OutOfMemoryError !")
+                Log.w(TAG,"decodeStream :: OutOfMemoryError !")
             } catch (e: Error) {
-                Timber.w("decodeStream :: error !")
+                Log.w(TAG,"decodeStream :: error !")
                 e.printStackTrace()
             }
             return null
@@ -221,7 +223,7 @@ class BitmapUtil {
          *  borderSize: size (thickness) of the frame
          */
         fun createFramedBitmap(byteArray:ByteArray, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap? {
-            Timber.v("createFramedBitmap(byteArray, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
+            Log.v(TAG,"createFramedBitmap(byteArray, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
             // Transform the ByteArray in Bitmap
             val bitmap = decodeByteArray(byteArray, 0, byteArray.size)
             if (bitmap == null) return bitmap
@@ -239,7 +241,7 @@ class BitmapUtil {
          *  borderSize: size (thickness) of the frame
          */
         fun createFramedBitmap(bitmap:Bitmap, thumbnailWidth:Int, thumbnailHeight:Int, innerImageMaxWidth: Int, innerImageMaxHeight:Int, borderSize:Int) : Bitmap?{
-            Timber.v("createFramedBitmap(bitmap, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
+            Log.v(TAG,"createFramedBitmap(bitmap, $thumbnailWidth, $thumbnailHeight, $innerImageMaxWidth, $innerImageMaxHeight, $borderSize)")
 
             var bitmapToReturn:Bitmap? = null
 
@@ -256,10 +258,10 @@ class BitmapUtil {
             if (trueInnerImageMaxWidth < 0) trueInnerImageMaxWidth = 100
             if (trueInnerImageMaxHeight < 0) trueInnerImageMaxHeight = 150
 
-            Timber.v("trueFrameWidth=$trueThumbnailWidth trueThumbnailHeight=$trueThumbnailHeight trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
+            Log.v(TAG,"trueFrameWidth=$trueThumbnailWidth trueThumbnailHeight=$trueThumbnailHeight trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
 
             try {
-                Timber.v("bitmap.width=${bitmap.width} bitmap.height=${bitmap.height}")
+                Log.v(TAG,"bitmap.width=${bitmap.width} bitmap.height=${bitmap.height}")
                 val shouldRotate = bitmap.width>bitmap.height
 
 /*                if (shouldRotate) {
@@ -284,7 +286,7 @@ class BitmapUtil {
                 if (imageRatio*trueInnerImageMaxHeight>trueInnerImageMaxWidth) {
                     trueInnerImageMaxHeight = (trueInnerImageMaxWidth/imageRatio).toInt()
                 }
-                Timber.v("imageRatio=$imageRatio  trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
+                Log.v(TAG,"imageRatio=$imageRatio  trueInnerImageMaxWidth=$trueInnerImageMaxWidth trueInnerImageMaxHeight=$trueInnerImageMaxHeight")
 
                 // Rescale it
                 var desiredScale = 0f
@@ -294,12 +296,12 @@ class BitmapUtil {
                     val scaleByWidth = trueInnerImageMaxWidth.toFloat() / bitmap.width.toFloat()
                     val scaleByHeight = trueInnerImageMaxHeight.toFloat() / bitmap.height.toFloat()
                     desiredScale = Math.min(scaleByWidth,scaleByHeight)
-                    Timber.v("desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
+                    Log.v(TAG,"desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
                 } else {
                     val scaleByWidth = trueInnerImageMaxHeight.toFloat() / bitmap.width.toFloat()
                     val scaleByHeight = trueInnerImageMaxWidth.toFloat() / bitmap.height.toFloat()
                     desiredScale = Math.min(scaleByWidth,scaleByHeight)
-                    Timber.v("desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
+                    Log.v(TAG,"desiredScale=$desiredScale scaleByWidth=$scaleByWidth scaleByHeight=$scaleByHeight")
 
                     transformMatrix.preRotate(270f)
 //                    transformMatrix.postRotate(270f, bitmap.width.toFloat()/2, bitmap.height.toFloat()/2)
@@ -307,12 +309,12 @@ class BitmapUtil {
                 transformMatrix.preScale(desiredScale, desiredScale)
 
                 val rescaledBitmap = Bitmap.createBitmap(bitmap,0,0, bitmap.width, bitmap.height, transformMatrix,true)
-                Timber.v("rescaleMatrix=$transformMatrix rescaledBitmap.width=${rescaledBitmap.width} rescaledBitmap.height=${rescaledBitmap.height}")
+                Log.v(TAG,"rescaleMatrix=$transformMatrix rescaledBitmap.width=${rescaledBitmap.width} rescaledBitmap.height=${rescaledBitmap.height}")
                 bitmap.recycle()
 
                 val trueFrameWidth = rescaledBitmap.width + 2*trueBorderSize
                 val trueFrameHeight = rescaledBitmap.height + 2*trueBorderSize
-                Timber.v("trueFrameWidth=$trueFrameWidth trueFrameHeight=$trueFrameHeight")
+                Log.v(TAG,"trueFrameWidth=$trueFrameWidth trueFrameHeight=$trueFrameHeight")
 
                 bitmapToReturn = Bitmap.createBitmap(trueThumbnailWidth, trueThumbnailHeight, rescaledBitmap.config)
                 val framedPaint = Paint()
@@ -323,7 +325,7 @@ class BitmapUtil {
                 val top = (trueThumbnailHeight-trueFrameHeight).toFloat() / 2
                 val right = left + trueFrameWidth
                 val bottom = top + trueFrameHeight
-                Timber.v("left=$left top=$top right=$right bottom=$bottom")
+                Log.v(TAG,"left=$left top=$top right=$right bottom=$bottom")
                 val frameRect = RectF(left, top, right, bottom)
 
 
@@ -337,7 +339,7 @@ class BitmapUtil {
                 rescaledBitmap.recycle()
 
             } catch (e: IllegalArgumentException) {
-                Timber.e("Error creating framed bitmap")
+                Log.e(TAG,"Error creating framed bitmap")
                 e.printStackTrace()
             }
             return bitmapToReturn
@@ -357,10 +359,10 @@ class BitmapUtil {
                 val ratio = if (ratioWidth>ratioHeight) ratioWidth else ratioHeight
                 val width: Int = (bitmap.width.toFloat()/ratio).toInt()
                 val height:Int = (bitmap.height.toFloat()/ratio).toInt()
-                Timber.v("createBitmap maxWidth=$maxWidth maxHeight=$maxHeight   bitmap.width=${bitmap.width} bitmap.height=${bitmap.height} width=$width height=$height")
+                Log.v(TAG,"createBitmap maxWidth=$maxWidth maxHeight=$maxHeight   bitmap.width=${bitmap.width} bitmap.height=${bitmap.height} width=$width height=$height")
                 bitmap = Bitmap.createScaledBitmap(bitmap, width, height,false)
             } catch (e: IllegalArgumentException) {
-                Timber.e("createBitmap: Error creating bitmap")
+                Log.e(TAG,"createBitmap: Error creating bitmap")
                 e.printStackTrace()
             }
             return bitmap
@@ -378,7 +380,7 @@ class BitmapUtil {
                         false)
                 }
 
-                Timber.d( "saveBitmapInFile:: Writing new file : $dstPath (${bitmapResized.width} x ${bitmapResized.height})")
+                Log.d(TAG, "saveBitmapInFile:: Writing new file : $dstPath (${bitmapResized.width} x ${bitmapResized.height})")
 
                 try {
                     val fOut = File(dstPath)
@@ -395,7 +397,7 @@ class BitmapUtil {
                     bitmapResized.recycle()
                     return true
                 } catch (e: IOException) {
-                    Timber.d( "Error writing file $dstPath")
+                    Log.d(TAG, "Error writing file $dstPath")
                     e.printStackTrace()
                 }
             }
@@ -425,7 +427,7 @@ class BitmapUtil {
                     pixelCount++
                 }
             }
-            Timber.v("getAverageColor :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+            Log.v(TAG,"getAverageColor :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
 
             return if (pixelCount != 0) {
                 Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)
@@ -463,7 +465,7 @@ class BitmapUtil {
                 averageBlue += Color.blue(pixelColor)
                 pixelCount++
             }
-            Timber.v("getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+            Log.v(TAG,"getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
 
             return if (pixelCount != 0) {
                 Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)
@@ -501,7 +503,7 @@ class BitmapUtil {
                 averageBlue += Color.blue(pixelColor)
                 pixelCount++
             }
-            Timber.v("getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
+            Log.v(TAG,"getAverageColorAtBorder :: averageRed=$averageRed averageGreen=$averageGreen averageBlue=$averageBlue pixelCount=$pixelCount")
 
             return if (pixelCount != 0) {
                 Color.rgb(averageRed/pixelCount, averageGreen/pixelCount, averageBlue/pixelCount)

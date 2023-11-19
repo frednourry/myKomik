@@ -13,28 +13,31 @@ import fr.nourry.mykomik.database.ComicEntry
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.utils.BitmapUtil
-import timber.log.Timber
+import android.util.Log
 import java.io.File
 
 
 class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: ComicEntry): RecyclerView.Adapter<PageSelectorSliderAdapter.MyViewHolder>(), View.OnClickListener {
+    companion object {
+        const val TAG = "PageSelectorSliderAdapter"
+    }
 
     data class InnerComicTag(val comic:ComicEntry, val position:Int, val imageView:ImageView, val textView:TextView)
 
     inner class MyCardView(private val cardView:CardView):ComicLoadingProgressListener {
 
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Timber.d("onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
+            Log.d(TAG,"onRetrieved:: currentIndex=$currentIndex size=$size path=$path")
             if (path != "") {
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
                 val pageNumberTextView = holderInnerComic.textView
-                Timber.d("     holderInnerComic.position=${holderInnerComic.position}")
-                Timber.d("     cardView=${cardView.width} ${cardView.height}")
+                Log.d(TAG,"     holderInnerComic.position=${holderInnerComic.position}")
+                Log.d(TAG,"     cardView=${cardView.width} ${cardView.height}")
 
                 // Check if the target is still waiting this image
                 if (holderComic.path == comic.path && currentIndex == holderInnerComic.position) {
-                    Timber.d("     UPDATING IMAGEVIEW... $path")
+                    Log.d(TAG,"     UPDATING IMAGEVIEW... $path")
 
                     val image = holderInnerComic.imageView
                     val bitmap = BitmapUtil.decodeStream(File(path), App.physicalConstants.metrics.widthPixels, App.physicalConstants.metrics.heightPixels, isSimplifyBitmapConfig = true)
@@ -42,7 +45,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
                         image.setImageBitmap(bitmap)
                     }
                 } else {
-                    Timber.w("onRetrieved:: To late. This view no longer requires this image...")
+                    Log.w(TAG,"onRetrieved:: To late. This view no longer requires this image...")
                 }
             }
         }
@@ -60,7 +63,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        Timber.d("onBindViewHolder:: position=$position")
+        Log.d(TAG,"onBindViewHolder:: position=$position")
 
         val cardView = holder.itemPicture.findViewById<CardView>(R.id.cardView)
         val imageView = holder.itemPicture.findViewById<ImageView>(R.id.imageView)
@@ -83,7 +86,7 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
 
 /*        imageView.parent.requestDisallowInterceptTouchEvent(true)
         imageView.setOnTouchListener(View.OnTouchListener() { view: View, motionEvent: MotionEvent ->
-            Timber.d("--> setOnTouchListener.motionEvent ${motionEvent.action} motionEvent.pointerCount=${motionEvent.pointerCount}")
+            Log.d(TAG,"--> setOnTouchListener.motionEvent ${motionEvent.action} motionEvent.pointerCount=${motionEvent.pointerCount}")
             false
         })*/
 
@@ -92,13 +95,13 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
     override fun getItemCount(): Int = comic.nbPages
 
     override fun onClick(v: View) {
-        Timber.d("onClick")
+        Log.d(TAG,"onClick")
         val innerComic = v.tag as InnerComicTag
         viewModel.onClickPageSelector(innerComic.position)
     }
 
     fun setNewComic(newComic:ComicEntry) {
-        Timber.d("setNewComic :: newComic=$newComic")
+        Log.d(TAG,"setNewComic :: newComic=$newComic")
         comic = newComic
         this.notifyDataSetChanged()
     }
