@@ -248,7 +248,11 @@ fun getComicEntriesFromUri(context: Context, comicExtensionList:List<String>, ur
             // Get the URIs
             while (c.moveToNext()) {
                 val documentId: String = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)?:0)
-                val name = URLDecoder.decode(c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1), "utf-8")
+                var name0 = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?:1)
+                name0 = name0.replace("%(?![0-9a-fA-F]{2})".toRegex(), "%25")
+                name0 = name0.replace("\\+".toRegex(), "%2B")
+                name0 = name0.replace("!", "\\!")
+                val name = URLDecoder.decode(name0, "utf-8")
                 val mime = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)?:2)
                 val size = c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)?:3)
                 val lastModified = c.getString(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)?:4)

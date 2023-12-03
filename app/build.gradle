@@ -17,8 +17,8 @@ android {
         applicationId = "fr.nourry.mykomik"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.0.2"
+        versionCode = 13
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -73,7 +73,7 @@ dependencies {
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
 
     // My 7zip library
-    implementation('io.github.frednourry:fnylib7z:0.9.3')
+    implementation('io.github.frednourry:fnylib7z:0.9.5')
 
     // Architecture components
     def nav_version = "2.7.5"

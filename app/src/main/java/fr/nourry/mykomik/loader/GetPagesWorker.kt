@@ -149,16 +149,17 @@ class GetPagesWorker (context: Context, workerParams: WorkerParameters): Worker(
             Log.v(TAG,"  unarchivePages :: nbPages=$nbPages")
 
             // Built the list of files to unarchive
-            val pathsToUnarchive = mutableListOf<String>()
+/*            val pathsToUnarchive = mutableListOf<String>()
             for (indexPage in indexPages) {
                 if (indexPage < nbPages)
                     pathsToUnarchive.add(currentContentList[indexPage].name)
                 else
                     Log.v(TAG,"  unarchivePages :: bad page index $indexPage (archive only contains $nbPages file(s))")
             }
-
+*/
             // Extract the pages
-            val result = FnyLib7z.getInstance().uncompress(fileUri, dirToExtract=tempPagesDirectory, filtersList=pathsToUnarchive)
+            val result = FnyLib7z.getInstance().uncompress(fileUri, dirToExtract=tempPagesDirectory, sortList = true, filtersList=ComicLoadingManager.imageExtensionFilterList, numListToExtract=indexPages)
+//            val result = FnyLib7z.getInstance().uncompress(fileUri, dirToExtract=tempPagesDirectory, filtersList=pathsToUnarchive) // Problem if the file contains some specials characters
             if (result == FnyLib7z.RESULT_OK) {
                 for (indexPage in indexPages) {
                     if (indexPage < nbPages) {

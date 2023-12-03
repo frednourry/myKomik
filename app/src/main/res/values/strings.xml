@@ -82,6 +82,8 @@
 
     <string name="about_description">©2023 All rights reserved\n\nDeveloped by Frederic Nourry</string>
     <string name="about_release_notes">\n\nRelease notes:
+    \n - Correct bug for files with special characters
+    \n1.0.2:
     \n - UI : Better contrasts
     \n - Correct save page option</string>
 
