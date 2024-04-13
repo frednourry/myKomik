@@ -12,7 +12,7 @@ I took the liberty of adding new features like a new side-menu, PDF and 7zip sup
 Download
 --------
 
-<a target="_blank" href='https://play.google.com/store/apps/details?id=fr.nourry.mykomik'><img alt='Get it on Google Play' height='80' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png'/></a>
+<a href='https://play.google.com/store/apps/details?id=fr.nourry.mykomik'><img alt='Get it on Google Play' height='80' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png'/></a>
 
 Author
 ------
