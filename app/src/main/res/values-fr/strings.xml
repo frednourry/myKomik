@@ -12,12 +12,12 @@
     <string name="ask_delete_files">Voulez-vous vraiment supprimer les %1$d fichiers suivant?</string>
     <string name="no_file_selected">Pas de fichier sélectionné!</string>
     <string name="ask_continue_with_same_comic">Continuer la lecture du dernier comic?</string>
-    <string name="dialog_choose_root_select">Selectionner</string>
+    <string name="dialog_choose_root_select">Sélectionner</string>
     <string name="action_delete_files">Supprimer</string>
-    <string name="action_select_all">Tous sélectionner</string>
+    <string name="action_select_all">Tout sélectionner</string>
     <string name="action_select_none">Ne rien sélectionner</string>
     <string name="page_number_info">Page %1$d sur %2$d</string>
-    <string name="about">A propos</string>
+    <string name="about">À propos</string>
     <string name="settings">Paramètres</string>
     <string name="comic_info">Information</string>
     <string name="actionbar_text_item_selected">%1$d Fichier choisi</string>
@@ -48,18 +48,21 @@
     <string name="popup_info_path">Chemin</string>
     <string name="unit_megabyte">Mo</string>
 
-    <string name="settings_library">Paramètre de la librairie</string>
-    <string name="settings_reader">Paramètre de lecture</string>
+    <string name="settings_library">Paramètres de la librairie</string>
+    <string name="settings_reader">Paramètres de lecture</string>
     <string name="settings_tap_to_change_page">Tap pour changer de page</string>
-    <string name="settings_tap_to_change_page_summary">Appuyer les bord d\'une page pour passer à la suivante</string>
+    <string name="settings_tap_to_change_page_summary">Appuyer sur les bords d\'une page pour passer à la suivante</string>
     <string name="settings_hide_read_comics">Cacher les comics "lus"</string>
     <string name="settings_hide_read_comics_summary">Cacher les comics marqués comme "lu" dans la librairie</string>
     <string name="settings_page_turn_direction">Sens de lecture des pages</string>
     <string name="settings_page_turn_direction_summary">Sens du balayage pour changer de page</string>
     <string name="settings_disable_rotation">Désactiver le mode paysage</string>
     <string name="settings_disable_rotation_summary">Activer cette option pour empêcher de passer en mode paysage</string>
+    <string name="settings_thumbnail_generation">Génération des miniatures</string>
+    <string name="settings_thumbnail_generation_summary">Génère les miniatures en arrière-plan, pour tous les répertoires</string>
     <string name="settings_hide_page_number">Cacher le numéro des pages</string>
     <string name="settings_adapt_page_background_auto">Adapter l\'arrière-plan des pages automatiquement</string>
+
     <string name="by_author">de Frédéric Nourry</string>
     <string name="menu_group_general">Général</string>
     <string name="menu_group_guest">Mode invité</string>

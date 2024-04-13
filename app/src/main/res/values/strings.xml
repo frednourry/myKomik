@@ -58,8 +58,12 @@
     <string name="settings_page_turn_direction_summary">The direction to swipe to change the page</string>
     <string name="settings_disable_rotation">Disable landscape mode</string>
     <string name="settings_disable_rotation_summary">Enabling this preference will prevent the device from rotating into landscape mode</string>
+    <string name="settings_thumbnail_generation">Thumbnails generation in background</string>
+    <string name="settings_thumbnail_generation_summary">Generate all the thumbnails in background, even in other directories</string>
     <string name="settings_hide_page_number">Hide page number display</string>
     <string name="settings_adapt_page_background_auto">Adapt the page background automatically</string>
+
+
     <string name="by_author">by Frédéric Nourry</string>
     <string name="menu_group_general">General</string>
     <string name="menu_group_guest">Guest mode</string>
