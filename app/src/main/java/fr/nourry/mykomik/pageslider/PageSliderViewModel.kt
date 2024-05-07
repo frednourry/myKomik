@@ -63,9 +63,12 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     private var currentIndexInDir = -1
     private var currentUri = MutableLiveData<Uri>()
     var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUri.switchMap { uri ->
-//        Log.d(TAG,"Transformations.switchMap(currentUri):: uri:$uri")
-        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(uri.toString())
-    }.distinctUntilChanged()
+        //Log.d(TAG,"Transformations.switchMap(currentUri):: uri:$uri")
+        val parentPath = getParentUriPath(uri)
+        Log.d(TAG,"    parentPath:$parentPath")
+        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(parentPath)
+//        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(uri.toString())
+    }/*.distinctUntilChanged()*/
 
     fun getCurrentPage():Int {
 //        Log.w(TAG,"   currentPage=$currentPage")
@@ -194,11 +197,11 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         val result: MutableList<ComicEntry> = mutableListOf()
         var found: Boolean
         for ((index, fe) in comicEntriesFromDisk.withIndex()) {
-//            Log.v(TAG," Looking for ${fe.dirPath}")
+//            Log.v(TAG," Looking for ${fe.path}")
             found = false
             // Search in comicEntriesFromDAO
             for (feDAO in comicEntriesFromDAO) {
-//                Log.v(TAG,"  -- ${fe.dirPath}")
+//                Log.v(TAG,"  -- ${fe.path}")
                 if (fe.hashkey == feDAO.hashkey) {
 //                    Log.v(TAG,"      -- ${fe.hashkey} == ${feDAO.hashkey}")
                     feDAO.uri = fe.uri
@@ -248,7 +251,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     override fun onFinished(result: ComicLoadingResult, comic: ComicEntry, errorMessage:String) {
-        Log.d(TAG,"onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages} errorMessage=$errorMessage")
+        Log.d(TAG,"onFinished result=$result comic=${comic.name} comic.nbPages=${comic.nbPages} currentPage=$currentPage errorMessage=$errorMessage")
         if (result == ComicLoadingResult.SUCCESS) {
             // Images were successfully load, so let's go
             state.value = PageSliderViewModelState.Ready(comic, currentPage, nbExpectedPages != comic.nbPages)

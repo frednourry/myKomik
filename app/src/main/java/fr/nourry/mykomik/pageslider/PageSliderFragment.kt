@@ -255,8 +255,10 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private fun changeCurrentComic(comic:ComicEntry) {
         Log.i(TAG,"changeCurrentComic")
         currentComic = comic
+        currentComic.currentPage = 0
 
         viewModel.changeCurrentComic(currentComic, comic.currentPage)
+        lockableViewPager.setCurrentItem(comic.currentPage, false)  // // Important: don't change the position (should be between viewModel.changeCurrentComic and pageSliderAdapter.setNewComic !!)
         pageSliderAdapter.setNewComic(comic)
         if (::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter.setNewComic(comic)

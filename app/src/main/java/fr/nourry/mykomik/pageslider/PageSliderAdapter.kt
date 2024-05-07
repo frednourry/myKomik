@@ -49,7 +49,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
 
         // Called when the  ComicLoadingManager has an image ready (an image path) for this CardView
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Log.d(TAG,"onRetrieved:: currentIndex=$currentIndex size=$size path=$path prout1 currentPage=$currentPage")
+            Log.d(TAG,"onRetrieved:: currentIndex=$currentIndex size=$size path=$path currentPage=$currentPage")
             if ((path != "")) {
                 val magnifyImageView:MagnifyImageView?
                 val holderInnerComic = cardView.tag as InnerComicTag
