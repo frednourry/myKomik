@@ -2,7 +2,6 @@ package fr.nourry.mykomik.pageslider
 
 import android.content.Context
 import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.*
 import fr.nourry.mykomik.App
@@ -20,9 +19,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
 
-sealed class  PageSliderViewModelState(
-    val isInitialized: Boolean = false,
-) {
+sealed class PageSliderViewModelState(val isInitialized: Boolean = false) {
     class Init : PageSliderViewModelState(
         isInitialized = false
     )
@@ -51,7 +48,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     private val state = MutableLiveData<PageSliderViewModelState>()
-    var currentComic : ComicEntry? = null
+    private var currentComic : ComicEntry? = null
     private var currentPage = 0
     private var nbExpectedPages = 0
     private var zoomOption = DisplayOption.FULL
@@ -61,13 +58,10 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     private var comicEntriesInCurrentDir: MutableList<ComicEntry> = mutableListOf()
     private var currentIndexInDir = -1
-    private var currentUri = MutableLiveData<Uri>()
-    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentUri.switchMap { uri ->
-        //Log.d(TAG,"Transformations.switchMap(currentUri):: uri:$uri")
-        val parentPath = getParentUriPath(uri)
-        Log.d(TAG,"    parentPath:$parentPath")
-        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(parentPath)
-//        App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(uri.toString())
+    private var currentParentPath = MutableLiveData<String>()
+    var comicEntriesFromDAO: LiveData<List<ComicEntry>> = currentParentPath.switchMap { path ->
+        Log.d(TAG," Transformations.switchMap:: UPDATE currentParentPath with path=$path ${App.currentTreeUri}")
+          App.db.comicEntryDao().getOnlyFileComicEntriesByDirPath(path)
     }/*.distinctUntilChanged()*/
 
     fun getCurrentPage():Int {
@@ -86,9 +80,13 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
         currentComic!!.currentPage = pageToGo
 
-//        currentDirFile.value = comic.file.parentFile
+        // Get the parent path uri, and trigger the LiveData currentParentPath
         if (comic.uri != null) {
-            currentUri.value = comic.uri!!
+            val parentPath = getParentUriPath(comic.uri)  // Same as App.currentTreeUri ...
+            if (currentParentPath.value != parentPath) {
+                // Update only if different (to avoid asking the database unnecessarily)
+                currentParentPath.value = parentPath
+            }
         } else {
             Log.w(TAG,"initialize:: comic.uri is null !")
         }
@@ -103,6 +101,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         // Uncompress the comic
         state.value = PageSliderViewModelState.Loading(comic, 0, 0)
         nbExpectedPages = comic.nbPages
+
+        Log.d(TAG, "initialize:: loading page...")
         ComicLoadingManager.getInstance().loadComicPages(comic, this, numPage, offset, this)
 
         Log.d(TAG,"initialize:: waiting....")
@@ -169,6 +169,8 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     fun updateComicEntriesFromDAO(context: Context, comicEntriesFromDAO: List<ComicEntry>) {
         Log.d(TAG,"updateComicEntriesFromDAO")
 //        Log.d(TAG,"    comicEntriesFromDAO=${comicEntriesFromDAO}")
+        if (comicEntriesInCurrentDir.isNotEmpty())
+            return
 
         val comicEntriesFromDisk = if (App.currentTreeUri != null) {
                                         getComicEntriesFromUri(
@@ -206,13 +208,27 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 //                    Log.v(TAG,"      -- ${fe.hashkey} == ${feDAO.hashkey}")
                     feDAO.uri = fe.uri
                     feDAO.fromDAO = true
+                    //Log.w(TAG, "    synchronizeDBWithDisk add 1 :: $feDAO")
                     result.add(feDAO)
                     found = true
+
+                    // Update currentComic if necessary
+                    currentComic?.let{
+                        if (!currentComic!!.fromDAO && currentComic!!.hashkey == feDAO.hashkey) {
+                            Log.w(TAG, "    Update currentComic with $feDAO")
+                            Log.w(TAG, "                   old value $currentComic")
+                            currentComic!!.id = feDAO.id
+                            currentComic!!.fromDAO = true
+                        }
+                    }
+
                     break
                 }
+
             }
             if (!found) {
                 fe.fromDAO = false
+                //Log.w(TAG, "    synchronizeDBWithDisk add 2 :: $fe")
                 result.add(fe)
             }
             if (fe.hashkey == currentComic!!.hashkey) {
@@ -246,7 +262,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
     }
 
     override fun onRetrieved(comic:ComicEntry, currentIndex: Int, size: Int, path:String) {
-        Log.d(TAG,"onRetrieved currentIndex=$currentIndex size=$size path=$path")
+        Log.d(TAG,"onRetrieved currentIndex=$currentIndex size=$size path=$path comic.nbPages=${comic.nbPages}")
         state.value = PageSliderViewModelState.Loading(currentComic!!, currentIndex, size)
     }
 

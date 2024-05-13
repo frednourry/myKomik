@@ -76,6 +76,8 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     private lateinit var currentComic:ComicEntry
     private var currentPage = 0
 
+    private lateinit var currentState:PageSliderViewModelState
+
     private lateinit var toast: Toast
 
     private var dialogComicLoading:DialogComicLoading = DialogComicLoading.newInstance()
@@ -287,6 +289,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     // Update UI according to the model state events
     private fun updateUI(state: PageSliderViewModelState) {
         Log.i(TAG,"Calling updateUI, switch state=${state::class}")
+        currentState = state
         return when(state) {
             is PageSliderViewModelState.Error -> handleStateError(state)
             is PageSliderViewModelState.Init -> handleStateInit(state)
@@ -386,6 +389,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         lockableViewPager.visibility = View.VISIBLE
 
         updateDisplayButtons(currentDisplayOption == displayOptionLocked)
+
+        currentPage = state.currentPage
+        showToastPageNumber(currentPage)
     }
 
     private fun handleStatePageSelection(state: PageSliderViewModelState.PageSelection) {
@@ -798,7 +804,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
     }
 
     override fun onPageSelected(position: Int) {
-        Log.i(TAG,"onPageSelected currentPage = $position oldPosition = $currentPage")
+        Log.i(TAG,"onPageSelected currentPage = $position oldPosition = $currentPage state=${currentState}")
 
         if (::pageSelectorSliderAdapter.isInitialized) {
             pageSelectorSliderAdapter.notifyItemChanged(currentPage)
@@ -806,15 +812,20 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         }
 
         currentPage = position
-
-        if (!UserPreferences.getInstance(requireContext()).shouldHidePageNumber()) {
-            showOrUpdateToast(resources.getString(R.string.page_number_info, (position+1), currentComic.nbPages))
-        }
+        if (currentState is PageSliderViewModelState.Ready)
+            showToastPageNumber(currentPage)
 
         currentDisplayOption = displayOptionLocked  // Set the displayOption to the locked one
         updateDisplayButtons()
 
         viewModel.onSetCurrentPage(position)
+    }
+
+    private fun showToastPageNumber(position: Int = currentPage) {
+        if (!UserPreferences.getInstance(requireContext()).shouldHidePageNumber()) {
+            if (currentComic.nbPages > 0)
+                showOrUpdateToast(resources.getString(R.string.page_number_info, (position+1), currentComic.nbPages))
+        }
     }
 
     private fun showOrUpdateToast(text:String) {
