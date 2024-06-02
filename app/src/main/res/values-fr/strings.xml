@@ -84,6 +84,9 @@
 
     <string name="about_description">©2023 Tout droits réservés\n\nDéveloppé par Frédéric Nourry</string>
     <string name="about_release_notes">\n\nNotes de version:
+    \n - Correction sur la progression de lecture
+    \n - Correction sur la traduction française
+    \n1.0.3:
     \n - Correction pour fichiers avec caractères spéciaux
     \n1.0.2:
     \n - UI : Contrastes améliorés
