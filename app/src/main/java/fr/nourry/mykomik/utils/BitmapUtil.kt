@@ -316,7 +316,7 @@ class BitmapUtil {
                 val trueFrameHeight = rescaledBitmap.height + 2*trueBorderSize
                 Log.v(TAG,"trueFrameWidth=$trueFrameWidth trueFrameHeight=$trueFrameHeight")
 
-                bitmapToReturn = Bitmap.createBitmap(trueThumbnailWidth, trueThumbnailHeight, rescaledBitmap.config)
+                bitmapToReturn = Bitmap.createBitmap(trueThumbnailWidth, trueThumbnailHeight, rescaledBitmap.config!!)
                 val framedPaint = Paint()
                 framedPaint.flags = Paint.ANTI_ALIAS_FLAG
                 framedPaint.color = Color.WHITE

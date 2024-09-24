@@ -232,7 +232,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             bRefreshSliderAdapter = true
 
             // Load default Image Display Option from SharedPref
-            val sharedImageDisplayOption = DisplayOption.values()[SharedPref.getInt(PREF_IMAGE_DISPLAY_OPTION_LOCKED, DisplayOption.FULL.ordinal)]
+            val sharedImageDisplayOption = DisplayOption.entries[SharedPref.getInt(PREF_IMAGE_DISPLAY_OPTION_LOCKED, DisplayOption.FULL.ordinal)]
             Log.e(TAG, "shared ImageDisplayOption = $sharedImageDisplayOption")
             currentDisplayOption = sharedImageDisplayOption
             displayOptionLocked = sharedImageDisplayOption

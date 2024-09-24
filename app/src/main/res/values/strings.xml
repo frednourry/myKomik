@@ -86,13 +86,11 @@
 
     <string name="about_description">©2023 All rights reserved\n\nDeveloped by Frederic Nourry</string>
     <string name="about_release_notes">\n\nRelease notes:
+    \n - Display image option saved now
+    \n - Correction crash (from an external app)
+    \n1.0.4:
     \n - Correct bug while saving the reading progress
-    \n - Correct some translation errors in French
-    \n1.0.3:
-    \n - Correct bug for files with special characters
-    \n1.0.2:
-    \n - UI : Better contrasts
-    \n - Correct save page option</string>
+    \n - Correct some translation errors in French</string>
 
     <string-array name="settings_page_turn_direction_labels">
         <item>Left to right</item>

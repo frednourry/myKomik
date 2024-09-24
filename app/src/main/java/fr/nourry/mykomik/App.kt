@@ -12,7 +12,6 @@ import io.github.frednourry.FnyLib7z
 import fr.nourry.mykomik.database.AppDatabase
 import fr.nourry.mykomik.database.DATABASE_NAME
 import fr.nourry.mykomik.loader.ComicLoadingManager
-import fr.nourry.mykomik.pageslider.DisplayOption
 import fr.nourry.mykomik.utils.PhysicalConstants
 import android.util.Log
 import java.io.File
@@ -73,7 +72,7 @@ class App: Application() {
         }
 
         // Init the ComicLoadingManger
-        ComicLoadingManager.getInstance().initialize(this, App.thumbnailCacheDirectory, App.pageCacheDirectory)
+        ComicLoadingManager.getInstance().initialize(this, thumbnailCacheDirectory, pageCacheDirectory)
 
         // Init the database
         db = Room.databaseBuilder(this, AppDatabase::class.java, DATABASE_NAME)
