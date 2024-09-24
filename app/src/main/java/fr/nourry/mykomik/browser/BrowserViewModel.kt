@@ -72,10 +72,10 @@ class BrowserViewModel : ViewModel() {
 
     fun init(treeUri: Uri?, skipReadComic:Boolean=false) {
         Log.d(TAG,"init treeUri=$treeUri")
-        val rootTreeUriString = SharedPref.get(PREF_ROOT_TREE_URI, "")
-        val lastComicUriString = SharedPref.get(PREF_LAST_COMIC_URI, "")
-        val lastDirUriString = SharedPref.get(PREF_LAST_DIR_URI, "")
-        val prefCurrentPage = SharedPref.get(PREF_CURRENT_PAGE_LAST_COMIC, "0")
+        val rootTreeUriString = SharedPref.getString(PREF_ROOT_TREE_URI, "")
+        val lastComicUriString = SharedPref.getString(PREF_LAST_COMIC_URI, "")
+        val lastDirUriString = SharedPref.getString(PREF_LAST_DIR_URI, "")
+        val prefCurrentPage = SharedPref.getString(PREF_CURRENT_PAGE_LAST_COMIC, "0")
         Log.i(TAG,"rootTreeUriString=$rootTreeUriString lastComicUriString=$lastComicUriString lastDirUriString=$lastDirUriString prefCurrentPage=$prefCurrentPage")
 
         val rootTreeUri:Uri? = if (rootTreeUriString == "") null else Uri.parse(rootTreeUriString)
@@ -167,20 +167,20 @@ class BrowserViewModel : ViewModel() {
 
     fun setPrefLastComicUri(uri: Uri?) {
         if (uri == null)
-            SharedPref.set(PREF_LAST_COMIC_URI, "")
+            SharedPref.setString(PREF_LAST_COMIC_URI, "")
         else
-            SharedPref.set(PREF_LAST_COMIC_URI, uri.toString())
+            SharedPref.setString(PREF_LAST_COMIC_URI, uri.toString())
     }
 
     fun setPrefLastDirUri(dirUri: Uri?) {
         if (dirUri == null)
-            SharedPref.set(PREF_LAST_DIR_URI, "")
+            SharedPref.setString(PREF_LAST_DIR_URI, "")
         else
-            SharedPref.set(PREF_LAST_DIR_URI, dirUri.toString())
+            SharedPref.setString(PREF_LAST_DIR_URI, dirUri.toString())
     }
 
     fun setPrefRootTreeUri(treeUri: Uri) {
-        SharedPref.set(PREF_ROOT_TREE_URI, treeUri.toString())
+        SharedPref.setString(PREF_ROOT_TREE_URI, treeUri.toString())
     }
 
     fun updateComicEntriesFromDAO(comicEntriesFromDAO: List<ComicEntry>) {

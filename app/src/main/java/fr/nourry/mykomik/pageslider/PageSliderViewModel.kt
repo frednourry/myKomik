@@ -128,7 +128,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
         Log.d(TAG,"onSetCurrentPage($n) comic = $currentComic")
 
         if (!App.isGuestMode && !App.isSimpleViewerMode)
-            SharedPref.set(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
+            SharedPref.setString(PREF_CURRENT_PAGE_LAST_COMIC, n.toString())
 
         currentPage = n
         if (forceUpdateDAO || currentComic!!.currentPage != n) {
@@ -310,7 +310,7 @@ class PageSliderViewModel : ViewModel(), ComicLoadingProgressListener, ComicLoad
 
     private fun setPrefLastComicPath(path: String) {
         if (!App.isGuestMode)
-            SharedPref.set(PREF_LAST_COMIC_URI, path)
+            SharedPref.setString(PREF_LAST_COMIC_URI, path)
     }
 
     // Save a page in a file

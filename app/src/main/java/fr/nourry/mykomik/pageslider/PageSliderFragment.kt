@@ -44,6 +44,8 @@ import fr.nourry.mykomik.utils.getLocalDirName
 import fr.nourry.mykomik.utils.getReadableDate
 import fr.nourry.mykomik.utils.getSizeInMo
 import android.util.Log
+import fr.nourry.mykomik.preference.PREF_IMAGE_DISPLAY_OPTION_LOCKED
+import fr.nourry.mykomik.preference.SharedPref
 import java.io.IOException
 
 
@@ -112,6 +114,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         // Update metrics
         App.physicalConstants.updateMetrics(requireContext())
+
+        // SharedPref
+        activity?.let { SharedPref.init(it) }
 
         lockableViewPager = view.findViewById(R.id.lockableViewPager) as LockableViewPager
 
@@ -226,8 +231,11 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             bRefreshSelectorSliderAdapter = false
             bRefreshSliderAdapter = true
 
-            currentDisplayOption = App.pageSliderCurrentDisplayOption
-            displayOptionLocked = App.pageSliderDisplayOptionLocked
+            // Load default Image Display Option from SharedPref
+            val sharedImageDisplayOption = DisplayOption.values()[SharedPref.getInt(PREF_IMAGE_DISPLAY_OPTION_LOCKED, DisplayOption.FULL.ordinal)]
+            Log.e(TAG, "shared ImageDisplayOption = $sharedImageDisplayOption")
+            currentDisplayOption = sharedImageDisplayOption
+            displayOptionLocked = sharedImageDisplayOption
         }
 
         viewModel = ViewModelProvider(this)[PageSliderViewModel::class.java]
@@ -469,10 +477,9 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
 
         // Update internal variable
         currentDisplayOption = dOption
-        App.pageSliderCurrentDisplayOption = currentDisplayOption   // Save value in App
         if (isLocked) {
             displayOptionLocked = dOption
-            App.pageSliderDisplayOptionLocked = displayOptionLocked // Save value in App
+            SharedPref.setInt(PREF_IMAGE_DISPLAY_OPTION_LOCKED, displayOptionLocked.ordinal) // Save in SharedPref
         }
 
         // Update ViewModel

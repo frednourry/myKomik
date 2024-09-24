@@ -32,8 +32,6 @@ class App: Application() {
         lateinit var thumbnailCacheDirectory : File
 
         var isGuestMode = false
-        var pageSliderCurrentDisplayOption = DisplayOption.FULL
-        var pageSliderDisplayOptionLocked = pageSliderCurrentDisplayOption
 
         var rootTreeUri: Uri? = null
         var currentTreeUri: Uri? = null
