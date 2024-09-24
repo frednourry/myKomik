@@ -197,7 +197,7 @@ fun getComicFromIntentUri(context: Context, uri:Uri?):ComicEntry? {
         DocumentsContract.Document.COLUMN_DISPLAY_NAME,
         DocumentsContract.Document.COLUMN_MIME_TYPE,
         DocumentsContract.Document.COLUMN_SIZE,
-        DocumentsContract.Document.COLUMN_LAST_MODIFIED
+//        DocumentsContract.Document.COLUMN_LAST_MODIFIED
     )
 
     var c:Cursor? = null
