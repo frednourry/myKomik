@@ -50,8 +50,8 @@
 
     <string name="settings_library">Library Settings</string>
     <string name="settings_reader">Reader Settings</string>
-    <string name="settings_tap_to_change_page">Tap to change page</string>
-    <string name="settings_tap_to_change_page_summary">Tap edge of screen to change page</string>
+    <string name="settings_tap_to_change_page">Tap to change/scroll page</string>
+    <string name="settings_tap_to_change_page_summary">Tap edge of screen to change/scroll page</string>
     <string name="settings_hide_read_comics">Hide "read" comics</string>
     <string name="settings_hide_read_comics_summary">Hides comics marked as "read" in the file browser</string>
     <string name="settings_page_turn_direction">Page turn direction</string>

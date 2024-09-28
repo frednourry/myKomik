@@ -16,6 +16,7 @@ import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.utils.BitmapUtil
 import android.util.Log
+import fr.nourry.mykomik.pageslider.LockableViewPager.Companion
 import java.io.File
 
 enum class MovementType {
@@ -181,6 +182,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     private fun onTouch(view: View, event: MotionEvent): Boolean {
+        Log.v(TAG,"onTouch ")
         return try {
             val cardView:CardView = view as CardView
             val imageView = cardView.findViewById<MagnifyImageView>(R.id.imageView)
@@ -206,6 +208,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     override fun onMagnifyImageViewClick(param: Any?, x:Float, y:Float) {
+        Log.v(TAG,"onMagnifyImageViewClick ")
         try {
             val cardView = param as CardView
             val innerComic = cardView.tag as InnerComicTag
@@ -220,6 +223,8 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
         Log.d(TAG,"onMagnifyImageDrag::  dx=$dx dy=$dy allowParentToScrollLeft=$allowParentToScrollLeft allowParentToScrollRight=$allowParentToScrollRight")
         this.allowParentToScrollLeft = allowParentToScrollLeft
         this.allowParentToScrollRight = allowParentToScrollRight
+
+        // Update the listener (PageSliderFragment)
         pageSliderAdapterListener?.onPageDrag(dx, dy)
     }
 }

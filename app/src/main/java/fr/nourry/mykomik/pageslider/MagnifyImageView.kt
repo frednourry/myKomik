@@ -7,7 +7,6 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatImageView
-import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
 import android.util.Log
 import kotlin.math.sqrt
@@ -94,8 +93,8 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
     private var movementMode:MovementType = MovementType.NONE
 
-    var allowParentToScrollLeft = true
-    var allowParentToScrollRight = true
+    var allowParentToScrollLeft = true  // Can scroll left (updated in checkParentScrollability())
+    var allowParentToScrollRight = true // Can scroll right (updated in checkParentScrollability())
 
     private fun printMatrix(label:String="printMatrix :: ") {
         val f = FloatArray(9)
@@ -294,7 +293,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
             }
             MotionEvent.ACTION_UP -> {
                 val deltaTime = SystemClock.elapsedRealtime()-lastActionDownDate
-                Log.d(TAG,"onTouchImageView :: deltaTime=$deltaTime")
+                Log.d(TAG,"onTouchImageView ACTION_UP :: deltaTime=$deltaTime")
                 if (deltaTime<clickDelay && movementMode == MovementType.CLICK) {
                     // It's a click !
                     magnifyImageViewListener?.onMagnifyImageViewClick(magnifyImageViewListenerParam, event.x, event.y)
@@ -377,6 +376,65 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
                 true
             }
             else -> false
+        }
+    }
+
+    fun scrollIfPossible(deltaX:Float, deltaY: Float): Boolean {
+        Log.v(TAG, "scrollIfPossible deltaX=$deltaX deltaY=$deltaY")
+
+        val f = FloatArray(9)
+        imageMatrix.getValues(f)
+
+        var newDeltaX = deltaX
+        var newDeltaY = deltaY
+
+        if (newDeltaX < 0f) {
+            Log.v(TAG, "  deltaX < 0")
+            val currentImageWidth = initialWidth*currentScale
+/*            Log.e(TAG, "  f[Matrix.MTRANS_X] = ${f[Matrix.MTRANS_X]}")
+            Log.e(TAG, "  currentImageWidth = $currentImageWidth")
+            Log.e(TAG, "  f[Matrix.MTRANS_X]+currentWidth = ${(f[Matrix.MTRANS_X]+currentImageWidth)}")
+            Log.e(TAG, "  width = $width")*/
+            if ((f[Matrix.MTRANS_X]+currentImageWidth) > width) {
+                Log.v(TAG, "  x SCROLL !")
+            } else {
+                Log.v(TAG, "  x NO SCROLL !")
+                newDeltaX = 0f
+            }
+        } else if (newDeltaX > 0f) {
+            Log.v(TAG, "  deltaX > 0")
+            if (f[Matrix.MTRANS_X]<0) {
+                Log.v(TAG, "  x SCROLL !")
+            } else {
+                Log.v(TAG, "  x NO SCROLL !")
+                newDeltaX = 0f
+            }
+        }
+
+        if (newDeltaY < 0f) {
+            Log.v(TAG, "  deltaY < 0")
+            val currentHeight = initialHeight*currentScale
+            if ((f[Matrix.MTRANS_Y]+currentHeight) > height) {
+                Log.v(TAG, "  y SCROLL !")
+            } else {
+                Log.v(TAG, "  y NO SCROLL !")
+                newDeltaY = 0f
+            }
+        } else if (newDeltaY > 0f) {
+            Log.v(TAG, "  deltaY > 0")
+            if (f[Matrix.MTRANS_Y]<0) {
+                Log.v(TAG, "  y SCROLL !")
+            } else {
+                Log.v(TAG, "  y NO SCROLL !")
+                newDeltaY = 0f
+            }
+        }
+
+        if (newDeltaX != 0f || newDeltaY != 0f) {
+            checkAndUpdateImageByDelta(newDeltaX, newDeltaY, 1f, 0f, 0f)
+            return true
+        } else {
+            return false
         }
     }
 

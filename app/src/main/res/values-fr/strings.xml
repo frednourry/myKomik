@@ -50,8 +50,8 @@
 
     <string name="settings_library">Paramètres de la librairie</string>
     <string name="settings_reader">Paramètres de lecture</string>
-    <string name="settings_tap_to_change_page">Tap pour changer de page</string>
-    <string name="settings_tap_to_change_page_summary">Appuyer sur les bords d\'une page pour passer à la suivante</string>
+    <string name="settings_tap_to_change_page">Tap pour changer/scroller la page</string>
+    <string name="settings_tap_to_change_page_summary">Appuyer sur les bords d\'une page pour passer à la suivante/scroller</string>
     <string name="settings_hide_read_comics">Cacher les comics "lus"</string>
     <string name="settings_hide_read_comics_summary">Cacher les comics marqués comme "lu" dans la librairie</string>
     <string name="settings_page_turn_direction">Sens de lecture des pages</string>

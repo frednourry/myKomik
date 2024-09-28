@@ -737,25 +737,52 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
         Log.i(TAG,"onPageTap x=$x y=$y")
 
         if (UserPreferences.getInstance(requireContext()).isTappingToChangePage()) {
-            // Check if the tap is near the border
+            // Check if the tap is near the left or right borders
             val width = App.physicalConstants.metrics.widthPixels
+            Log.i(TAG,"   onPageTap width=$width")
             val directionLTR = UserPreferences.getInstance(requireContext()).isReadingDirectionLTR()
-            Log.i(TAG,"   onPageTap "+(width*NEXT_PAGE_BORDER_ZONE)+" < $x < "+(width*(1-NEXT_PAGE_BORDER_ZONE)))
+            Log.i(TAG,"   onPageTap leftLimit="+(width*NEXT_PAGE_BORDER_ZONE)+"  x=$x  rightLimit="+(width*(1-NEXT_PAGE_BORDER_ZONE)))
+
+            val widthMinus = width * 0.6f  // NOTE: if we need to scroll this image, we don't scroll all the width but a little less...
 
             if (x<width*NEXT_PAGE_BORDER_ZONE) {
-                if (directionLTR)
-                    scrollToPreviousPage()
-                else
-                    scrollToNextPage()
+                if (currentMagnifyImageView.scrollIfPossible(widthMinus, 0f)) {
+                    Log.i(TAG,"   onPageTap:: scroll + image horizontally")
+                }  else if (directionLTR)
+                            scrollToPreviousPage()
+                        else
+                            scrollToNextPage()
                 return
             }
             if (x>width*(1-NEXT_PAGE_BORDER_ZONE)) {
-                if (directionLTR)
-                    scrollToNextPage()
-                else
-                    scrollToPreviousPage()
-
+                if (currentMagnifyImageView.scrollIfPossible(-widthMinus, 0f)) {
+                    Log.i(TAG,"   onPageTap:: scroll - image horizontally")
+                } else if (directionLTR)
+                            scrollToNextPage()
+                        else
+                            scrollToPreviousPage()
                 return
+            }
+
+            // SAME THING VERTICALLY...
+
+            // Check if the tap is near the top or bottom borders
+            val height = App.physicalConstants.metrics.heightPixels
+            Log.i(TAG,"   onPageTap topLimit="+(height*NEXT_PAGE_BORDER_ZONE)+"  y=$y  bottomLimit="+(height*(1-NEXT_PAGE_BORDER_ZONE)))
+
+            val heightMinus = width * 0.6f  // NOTE: if we need to scroll this image, we don't scroll all the height but a little less...
+
+            if (y<height*NEXT_PAGE_BORDER_ZONE) {
+                if (currentMagnifyImageView.scrollIfPossible(0f, heightMinus)) {
+                    Log.i(TAG,"   onPageTap:: scroll image vertically")
+                    return
+                }
+            }
+            if (y>height*(1-NEXT_PAGE_BORDER_ZONE)) {
+                if (currentMagnifyImageView.scrollIfPossible(0f, -heightMinus)) {
+                    Log.i(TAG,"   onPageTap:: scroll image vertically")
+                    return
+                }
             }
         }
 
