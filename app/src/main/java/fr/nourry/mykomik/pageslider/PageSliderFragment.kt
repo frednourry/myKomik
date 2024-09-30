@@ -786,6 +786,7 @@ class PageSliderFragment: Fragment(), ViewPager.OnPageChangeListener, PageSlider
             }
         }
 
+        // The event wasn't catch before, so show the page selector
         viewModel.showPageSelector(currentPage)
     }
 

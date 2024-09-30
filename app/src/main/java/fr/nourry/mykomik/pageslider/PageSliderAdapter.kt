@@ -38,6 +38,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     }
 
     private var imageViewModified: MagnifyImageView? = null
+    private var numPageImageViewModified = -1
     private var pageSliderAdapterListener:Listener? = null
 
     private var displayOption = DisplayOption.FULL
@@ -148,7 +149,8 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
 
         cardView.setOnTouchListener { view, motionEvent ->
             imageViewModified = magnifyImageView
-           onTouch(view, motionEvent)
+            numPageImageViewModified = this.currentPage
+            onTouch(view, motionEvent)
         }
 
         magnifyImageView.setMagnifyImageViewListener(this, cardView)
@@ -196,11 +198,14 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
     fun onPageChanged(newPageIndex:Int) {
         Log.d(TAG,"onPageChanged($newPageIndex) this.currentPage=${this.currentPage}")
         // Reset the last image when quitting it (the last image index is this.currentPage)
-        imageViewModified?.resetDisplayOption()
+        if (numPageImageViewModified != newPageIndex) {
+            // Reset the last page display option
+            imageViewModified?.resetDisplayOption()
 
-        if (this.currentPage == newPageIndex-1) {
-            Log.v(TAG,"MAGNET !! (onPageChanged($newPageIndex)) ${this.currentPage}::${imageViewModified?.imagePath}")
-            imageViewModified?.magnetRight()
+            if (this.currentPage == newPageIndex-1) {
+                Log.v(TAG,"MAGNET !! (onPageChanged($newPageIndex)) ${this.currentPage}::${imageViewModified?.imagePath}")
+                imageViewModified?.magnetRight()
+            }
         }
 
         // Update this.currentPage
