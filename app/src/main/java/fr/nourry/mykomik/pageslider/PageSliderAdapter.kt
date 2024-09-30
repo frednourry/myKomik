@@ -202,7 +202,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
             // Reset the last page display option
             imageViewModified?.resetDisplayOption()
 
-            if (this.currentPage == newPageIndex-1) {
+            if (/*this.currentPage == newPageIndex-1 || */numPageImageViewModified < newPageIndex) {
                 Log.v(TAG,"MAGNET !! (onPageChanged($newPageIndex)) ${this.currentPage}::${imageViewModified?.imagePath}")
                 imageViewModified?.magnetRight()
             }
