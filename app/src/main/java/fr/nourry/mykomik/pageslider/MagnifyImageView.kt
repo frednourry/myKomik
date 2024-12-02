@@ -43,7 +43,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
         // For debug purpose
         fun printFloatArray(f:FloatArray, label:String="printMatrix") {
-            Log.v(TAG,"$label${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
+            Log.v(TAG,"$label ${f[0]} ${f[1]} ${f[2]} ${f[3]} ${f[4]} ${f[5]} ${f[6]} ${f[7]} ${f[8]}")
         }
 
     }
@@ -443,7 +443,7 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
     }
 
     fun setDisplayOption(d:DisplayOption) {
-        Log.v(TAG,"setDisplayOption($d)")
+        Log.v(TAG,"setDisplayOption($d) $imagePath firstDrawDone=$firstDrawDone")
 
         if (displayOption != d) {
             hasDisplayOptionChanged = true
@@ -465,9 +465,9 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
 
     private fun applyDisplayOption() {
         Log.v(TAG,"applyDisplayOption() $displayOption imagePath=$imagePath")
-/*        Log.v(TAG,"    initialWidth=$initialWidth initialHeight=${initialHeight}")
-        Log.v(TAG,"    width=$width height=${height} currentScale=$currentScale")
-        Log.v(TAG,"    App.physicalConstants.metrics.widthPixels=${App.physicalConstants.metrics.widthPixels} App.physicalConstants.metrics.heightPixels=${App.physicalConstants.metrics.heightPixels}")
+/*        Log.v(TAG,"   applyDisplayOption initialWidth=$initialWidth initialHeight=${initialHeight}")
+        Log.v(TAG,"   applyDisplayOption width=$width height=${height} currentScale=$currentScale")
+        Log.v(TAG,"   applyDisplayOption App.physicalConstants.metrics.widthPixels=${App.physicalConstants.metrics.widthPixels} App.physicalConstants.metrics.heightPixels=${App.physicalConstants.metrics.heightPixels}")
 */
         var ratio = 1f
         var dx = 0f
@@ -500,8 +500,9 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         dx /= ratio
         dy /= ratio
 
-        Log.v(TAG,"    initialWidth*ratio=${initialWidth*ratio}   initialHeight*ratio=${initialHeight*ratio}")
-        Log.v(TAG,"    dx=$dx dy=${dy}")
+        Log.v(TAG,"   applyDisplayOption initialWidth=$initialWidth initialHeight=$initialHeight ratio=${ratio}")
+        Log.v(TAG,"   applyDisplayOption initialWidth*ratio=${initialWidth*ratio}   initialHeight*ratio=${initialHeight*ratio}")
+        Log.v(TAG,"   applyDisplayOption dx=$dx dy=${dy}")
 
         currentScale = ratio
         fingersDistance0 = 0f
@@ -522,7 +523,11 @@ class MagnifyImageView(context: Context, attrs: AttributeSet?=null):AppCompatIma
         // This view was rescaled, so need to get the new values
         // Surely the ActionBar that disappeared (when it's appear, it resize the image automatically...)
         //  so need to resize the image if necessary
-        if (h > oldh && oldh!= 0) {
+
+        if (!firstDrawDone) {
+            // No need to do something...
+            Log.v(TAG,"    Don't alter the matrix (image not still draw)")
+        } else if (h > oldh && oldh!= 0) {
             if (hasDisplayOptionChanged) {
                 Log.v(TAG,"    DO SOMETHING !!")
                 val widthF = w.toFloat()
