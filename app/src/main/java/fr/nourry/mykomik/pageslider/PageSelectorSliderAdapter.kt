@@ -31,7 +31,6 @@ class PageSelectorSliderAdapter(val viewModel:PageSliderViewModel, var comic: Co
             if (path != "") {
                 val holderInnerComic = cardView.tag as InnerComicTag
                 val holderComic = holderInnerComic.comic
-                val pageNumberTextView = holderInnerComic.textView
                 Log.d(TAG,"     holderInnerComic.position=${holderInnerComic.position}")
                 Log.d(TAG,"     cardView=${cardView.width} ${cardView.height}")
 

@@ -194,9 +194,6 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         binding.recyclerView.layoutManager = GridLayoutManager(context, numberOfColumns)
         binding.recyclerView.adapter = browserAdapter
 
-        val gridLayoutManager = binding.recyclerView.layoutManager!!
-
-
         browserAdapter.registerAdapterDataObserver(object : AdapterDataObserver() {
             override fun onChanged() {
                 super.onChanged()

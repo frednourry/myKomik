@@ -78,7 +78,7 @@ class PageSliderAdapter(val context: Context, var comic:ComicEntry, private val 
 
                         if (currentIndex == currentPage-1) {
                             Log.v(TAG,"MAGNET !! (onRetrieved) currentIndex=$currentIndex currentPage=$currentPage ")
-                            magnifyImageView?.magnetRight()
+                            magnifyImageView.magnetRight()
                         }
                         // Set the background color according a pixel
                         if (isAdaptPageBackgroundAuto) {
