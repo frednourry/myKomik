@@ -368,9 +368,8 @@ class ComicLoadingManager private constructor() {
 
             workManager.getWorkInfoByIdLiveData(work.id)
                 .observe(lifecycleOwner) { workInfo ->
-                    Log.d(TAG,"  observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
-
                     if (workInfo != null) {
+                        Log.d(TAG,"  observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
                         if (workInfo.state == WorkInfo.State.RUNNING) {
                             Log.i(TAG,"    RUNNING")
                             val currentIndex = workInfo.progress.getInt(GetPagesWorker.KEY_CURRENT_INDEX, -1)
@@ -512,9 +511,8 @@ class ComicLoadingManager private constructor() {
             Log.d(TAG,"   WORK ID = ${work.id}")
             workManager.getWorkInfoByIdLiveData(work.id)
                 .observe(lifecycleOwner) { workInfo ->
-                    Log.d(TAG,"    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
-
                     if (workInfo != null) {
+                        Log.d(TAG,"    observe(${workInfo.id} state=${workInfo.state}  progress=${workInfo.progress})")
                         if (workInfo.state == WorkInfo.State.RUNNING) {
 /*                            val currentIndex = workInfo.progress.getInt("currentIndex", 0)
                             val size = workInfo.progress.getInt("size", 0)
