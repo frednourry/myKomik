@@ -1,9 +1,14 @@
 package fr.nourry.mykomik.browser
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.TransitionDrawable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import androidx.core.content.ContextCompat.getColor
 import androidx.recyclerview.widget.RecyclerView
 import fr.nourry.mykomik.App
 import fr.nourry.mykomik.R
@@ -12,7 +17,6 @@ import fr.nourry.mykomik.databinding.ItemComicBinding
 import fr.nourry.mykomik.loader.ComicLoadingManager
 import fr.nourry.mykomik.loader.ComicLoadingProgressListener
 import fr.nourry.mykomik.utils.BitmapUtil
-import android.util.Log
 import java.io.File
 
 
@@ -30,7 +34,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
         val percentView = binding.percentView
 
         override fun onRetrieved(comic: ComicEntry, currentIndex: Int, size: Int, path: String) {
-            Log.d(TAG,"onRetrieved currentIndex=$currentIndex size=$size path=$path")
+            Log.d(TAG,"onRetrieved currentIndex=$currentIndex layoutPosition=$layoutPosition size=$size path=$path")
             if (path != "" && File(path).exists()) {
                 // Check if the target is still waiting this image
                 val holderInnerComic = cardView.tag as InnerComicEntry
@@ -58,6 +62,7 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
 
     private var showFilterMode = false
     private var arrCheckedItems:MutableList<Int> = ArrayList(0)
+    private var positionToHighlight = -1
 
     data class InnerComicEntry(val comic:ComicEntry, val position:Int, var checked:Boolean)
 
@@ -95,6 +100,20 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
                 checkBox.visibility = View.VISIBLE
             } else
                 checkBox.visibility = View.INVISIBLE
+
+            if (position == positionToHighlight) {
+                Log.d(TAG, "onBindViewHolder:: Highlight position $position ")
+
+                // Play a little animation (change alpha and size)
+                cardView.scaleX = 0.8f
+                cardView.scaleY = 0.8f
+                cardView.alpha = 0.1f
+                cardView.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .alpha(1f)
+                    .duration = 800
+            }
 
             if (!comic.isDirectory) {
                 if (comic.nbPages>0 && !App.isGuestMode) {
@@ -159,6 +178,10 @@ class BrowserAdapter(private val comics:List<ComicEntry>, private val listener:O
         val innerComic = v.tag as InnerComicEntry
         listener?.onComicEntryLongClicked(innerComic.comic, innerComic.position)
         return true
+    }
+
+    fun setPositionToHighlight(position: Int) {
+        positionToHighlight = position
     }
 
 }

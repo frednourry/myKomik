@@ -195,7 +195,10 @@ class BrowserViewModel : ViewModel() {
         comicEntriesToShow.clear()
         comicEntriesToShow = synchronizeDBWithDisk(comicEntriesFromDAO, comicEntriesFromDisk)
 
-        state.value = BrowserViewModelState.ComicReady(currentTreeUri!!, comicEntriesToShow)
+        Log.d(TAG,"updateComicEntriesFromDAO list size = ${comicEntriesToShow.size}")
+
+        if (comicEntriesToShow.size > 0 )  // Needed ?
+            state.value = BrowserViewModelState.ComicReady(currentTreeUri!!, comicEntriesToShow)
     }
 
     private fun synchronizeDBWithDisk(comicEntriesFromDAO: List<ComicEntry>, comicEntriesFromDisk: List<ComicEntry>): MutableList<ComicEntry> {

@@ -25,6 +25,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import fr.nourry.mykomik.App
@@ -36,7 +37,7 @@ import fr.nourry.mykomik.loader.IdleController
 import fr.nourry.mykomik.preference.SharedPref
 import fr.nourry.mykomik.settings.UserPreferences
 import fr.nourry.mykomik.utils.*
-import kotlin.collections.ArrayList
+
 
 class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListener, BrowserAdapter.OnComicAdapterListener {
 
@@ -46,7 +47,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     private lateinit var viewModel: BrowserViewModel
     private lateinit var rootTreeUri : Uri
-    private var lastComicUri : Uri? = null
+    private var lastComicUri : Uri? = null      // Last read comic
+    private var previousUri : Uri? = null       // Last comic item visited (a real comic or a directory)
 
     private lateinit var browserAdapter: BrowserAdapter
     private var comics = mutableListOf<ComicEntry>()
@@ -188,8 +190,44 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
         }
 
         browserAdapter = BrowserAdapter(comics, this)
-        binding.recyclerView.layoutManager = GridLayoutManager(context, getNbColumns(180))  // Should be higher, but cool result so keep it...
+        val numberOfColumns = getNbColumns(180) // Should be higher, but cool result so keep it...
+        binding.recyclerView.layoutManager = GridLayoutManager(context, numberOfColumns)
         binding.recyclerView.adapter = browserAdapter
+
+        val gridLayoutManager = binding.recyclerView.layoutManager!!
+
+
+        browserAdapter.registerAdapterDataObserver(object : AdapterDataObserver() {
+            override fun onChanged() {
+                super.onChanged()
+
+                // Focus and highlight the previous item
+                if (previousUri != null) {
+                    // Looking for the position of 'previousUri'
+                    var position=0
+                    var cpt=0
+                    for( comic in comics) {
+                        if (comic.uri == previousUri) {
+                            position = cpt
+                            break
+                        }
+                        cpt++
+                    }
+
+                    // Scroll to this position and highlight it
+                    binding.recyclerView.postDelayed(Runnable {
+                        browserAdapter.setPositionToHighlight(position)
+                        browserAdapter.notifyItemChanged(position)
+                        if (position != 0) {
+                            binding.recyclerView.scrollToPosition(position)
+                        }
+                    }, 50)
+                } else {
+                    // No highlight
+                    browserAdapter.setPositionToHighlight(-1)
+                }
+            }
+        })
 
         viewModel = ViewModelProvider(this)[BrowserViewModel::class.java]
         viewModel.getState().observe(viewLifecycleOwner) {
@@ -389,6 +427,8 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
                 .create()
             alert.show()
         } else {
+            previousUri = state.lastComicUri
+
             initBrowser(state.currentTreeUri, state.lastComicUri, state.lastDirUri, state.prefCurrentPage)
         }
     }
@@ -479,6 +519,9 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
 
     override fun onComicEntryClicked(comic: ComicEntry, position:Int) {
         Log.v(TAG,"onComicEntryClicked position=$position comic=${comic.uri} ")
+
+        previousUri = null // Entering a new item, so forget the previous uri...
+
         if (comic.isDirectory) {
             Log.i(TAG,"Directory !")
 
@@ -730,6 +773,7 @@ class BrowserFragment : Fragment(), NavigationView.OnNavigationItemSelectedListe
             val parentPath = getParentUriPath(App.currentTreeUri!!)
             if (parentPath != "") {
                 val parentUri = Uri.parse(parentPath)
+                previousUri = App.currentTreeUri
                 loadComics(parentUri)
                 true
             } else
