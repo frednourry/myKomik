@@ -84,9 +84,11 @@
 
     <string name="about_description">©2023 Tout droits réservés\n\nDéveloppé par Frédéric Nourry</string>
     <string name="about_release_notes">\n\nNotes de version:
-    \n - Option pour la dimensions des pages enregistrée
-    \n - Correction crash (d\'une app externe)
-    \n1.0.4:
+    \n - Enregistre l\'option d\'affichage
+    \n - Si Retour, scrolle le browser et souligne le dernier comic vu
+    \n - [Option] Toucher le bord d\'une page zommée pour scroller à gauche ou à droite
+    \n - Corrections pour une meilleure stabilité
+    \n\n1.0.4:
     \n - Correction sur la progression de lecture
     \n - Correction sur la traduction française</string>
 
